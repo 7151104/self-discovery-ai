@@ -20,8 +20,15 @@ const TYPES = {
 
 createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
-  const requested = url.pathname === "/" ? "/prototype/index.html" : url.pathname;
-  const path = join(root, normalize(requested).replace(/^(\.\.[/\\])+/, ""));
+
+  // Редирект, а не отдача файла: иначе относительные ./style.css и ./app.js
+  // разрешаются от корня и отваливаются в 404.
+  if (url.pathname === "/") {
+    response.writeHead(302, { location: "/prototype/" }).end();
+    return;
+  }
+
+  const path = join(root, normalize(url.pathname).replace(/^(\.\.[/\\])+/, ""));
 
   if (!path.startsWith(root)) {
     response.writeHead(403).end("forbidden");

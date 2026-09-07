@@ -68,4 +68,10 @@
 | NODE_EXTERNAL_DEADLINE | slice_motivation (590₽) |
 | NODE_OVERLOAD | slice_stress (590₽) |
 | NODE_CRITICISM_INTERNAL | slice_reactivity (590₽) |
+| NODE_POTENTIAL_VS_DETAIL | slice_work (1290₽) |
 | default | slice_node_finish |
+
+Узел «потенциал против деталей» — единственный, который ведёт сразу в прикладной срез:
+он про реализацию, а узлового среза под него нет. Это допускает `docs/07-monetization-route.md`
+(срез «Работа и реализация» может быть первым предложением). Кандидат на проверку: если
+конверсия в 1290 ₽ первым чеком окажется низкой, писать под него узловой срез за 590 ₽.

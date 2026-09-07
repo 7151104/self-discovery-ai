@@ -17,6 +17,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Сгенерировано из content/*.md сборщиком (npm run build:content)
+engine/src/generated/
+
 # Dependencies (when code appears)
 node_modules/
 dist/

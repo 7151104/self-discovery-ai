@@ -10,7 +10,7 @@ import { loadConfig, type ServerConfig } from "./config.js";
 import type { Db } from "./db/driver.js";
 import { readMigrations, up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
-import { rawContent } from "./engine.js";
+import { consentVersion as documentConsentVersion, rawContent } from "./engine.js";
 import { createHttpServer } from "./http/server.js";
 import { saveBlockContent } from "./store.js";
 import { fakeWebhook, FAKE_SIGNATURE_HEADER } from "./payments/fake.js";
@@ -115,12 +115,22 @@ export function answersForStep(step: 1 | 2 | 3 | 4): AnswerInput[] {
 
 export const portionKey = (step: 1 | 2 | 3 | 4): PortionKey => `step:${step}`;
 
+/** Отпечаток текущего полного текста согласия — тот же, что запишет сервер. */
+export const currentConsentVersion = (): string => documentConsentVersion();
+
+/** Тело создания профиля с отметкой согласия: без неё ответы не сохраняются. */
+export const profileBody = (
+  name = "Аня",
+  birthDate: string | null = "1990-05-05",
+): { name: string; birthDate: string | null; consentVersion: string } => ({
+  name,
+  birthDate,
+  consentVersion: documentConsentVersion(),
+});
+
 /** Профиль, доведённый до указанной ступени. */
 export async function profileAtStep(origin: string, step: 0 | 1 | 2 | 3 | 4): Promise<PageStateDto> {
-  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", {
-    name: "Аня",
-    birthDate: "1990-05-05",
-  });
+  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", profileBody());
   let page = created.body;
 
   for (let current = 1; current <= step; current += 1) {

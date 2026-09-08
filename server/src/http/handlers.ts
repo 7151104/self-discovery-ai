@@ -31,7 +31,7 @@ import type {
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
 import { schemaVersion } from "../db/migrate.js";
-import { rawContent } from "../engine.js";
+import { consentVersion as documentConsentVersion, rawContent } from "../engine.js";
 import { isValidId, newProfileId, newRecordId, newShareToken } from "../ids.js";
 import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl } from "../page.js";
 import { canTransition } from "../payments/order-state.js";
@@ -42,6 +42,7 @@ import {
   findActiveOrderForSlice,
   findActiveShareToken,
   findBlockById,
+  findConsent,
   findDelivery,
   findOrder,
   findOrderById,
@@ -49,6 +50,7 @@ import {
   findProfile,
   findProfileByShareToken,
   findSubmission,
+  insertConsent,
   insertDelivery,
   insertDisagreement,
   insertOrder,
@@ -200,6 +202,14 @@ export function health(context: Context): HandlerResult {
   return { status: 200, body };
 }
 
+/** Отпечаток текущего полного текста согласия: 64 шестнадцатеричных знака. */
+const CONSENT_VERSION = /^[a-f0-9]{64}$/;
+
+const acceptedConsent = (raw: string | null): string | null => {
+  if (raw === null || !CONSENT_VERSION.test(raw)) return null;
+  return raw === documentConsentVersion() ? raw : null;
+};
+
 export function createProfile(context: Context, raw: unknown): HandlerResult {
   const body = asObject(raw);
   const name = body ? asString(body["name"])?.trim() : null;
@@ -210,17 +220,24 @@ export function createProfile(context: Context, raw: unknown): HandlerResult {
   const birthDate = typeof birthRaw === "string" && birthRaw.length ? birthRaw : null;
   if (birthDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return fail(400, "bad_request");
 
+  const version = acceptedConsent(body ? asString(body["consentVersion"]) : null);
+
   const profile = context.db.transaction(() => {
     const created = insertProfile(context.db, { profileId: newProfileId(), name, birthDate });
+    if (version !== null) insertConsent(context.db, created.profileId, version);
     recordEvent(context.db, "profile.created", {
       profileId: created.profileId,
-      payload: { hasBirthDate: birthDate === null ? 0 : 1 },
+      payload: { hasBirthDate: birthDate === null ? 0 : 1, ...(version === null ? {} : { consentVersion: version }) },
     });
     return created;
   });
 
   return { status: 201, body: page(context, profile) };
 }
+
+/** Без отметки согласия ответы не пишутся: имя уже лежит в профиле, ответов нет. */
+const refuseWithoutConsent = (context: Context, profileId: string): HandlerResult | null =>
+  findConsent(context.db, profileId) ? null : fail(403, "consent_required");
 
 export function pageState(context: Context, params: Record<string, string>): HandlerResult {
   const profile = loadProfile(context, params["profileId"]);
@@ -236,6 +253,8 @@ export function pageState(context: Context, params: Record<string, string>): Han
 export function submitPortion(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
   const profile = loadProfile(context, params["profileId"]);
   if (!profile) return fail(404, "profile_not_found");
+  const denied = refuseWithoutConsent(context, profile.profileId);
+  if (denied) return denied;
 
   const body = asObject(raw);
   const portion = body ? (asString(body["portion"]) as PortionKey | null) : null;
@@ -286,6 +305,8 @@ export function submitPortion(context: Context, params: Record<string, string>, 
 export function editAnswer(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
   const profile = loadProfile(context, params["profileId"]);
   if (!profile) return fail(404, "profile_not_found");
+  const denied = refuseWithoutConsent(context, profile.profileId);
+  if (denied) return denied;
 
   const questionId = params["questionId"];
   const body = asObject(raw);

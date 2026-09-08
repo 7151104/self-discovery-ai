@@ -27,7 +27,7 @@ import { buildKeyring, generateKey } from "./db/crypto.js";
 import { up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
 import { findProfile, insertProfile, saveAnswers } from "./store.js";
-import { TEST_KEY } from "./test-support.js";
+import { TEST_KEY, latestMigration } from "./test-support.js";
 
 const keys = buildKeyring(TEST_KEY, []);
 
@@ -68,7 +68,7 @@ test("копия снимается с живой базы и знает, как
   assert.ok(existsSync(record.archivePath), "архива нет");
   assert.ok(existsSync(record.manifestPath), "манифеста нет");
   assert.match(record.manifest.archive, /^app-\d{8}T\d{6}Z\.db\.gz$/);
-  assert.equal(record.manifest.schemaVersion, "0005");
+  assert.equal(record.manifest.schemaVersion, latestMigration());
 
   // В копии не осталось ничего открытого, и ключ назван отпечатком, а не сам.
   assert.deepEqual(Object.keys(record.manifest.encryption), [`aes-256-gcm:${keys.active?.id ?? ""}`]);
@@ -92,7 +92,7 @@ test("восстановление возвращает базу и расшиф
   const report = restoreBackup({ archivePath: record.archivePath, targetPath: box.databasePath, keys });
   assert.equal(report.profiles, 1);
   assert.equal(report.readable, true);
-  assert.equal(report.schemaVersion, "0005");
+  assert.equal(report.schemaVersion, latestMigration());
 
   const db = openDatabase({ path: box.databasePath, keys });
   t.after(() => db.close());

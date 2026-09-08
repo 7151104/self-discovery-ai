@@ -4,12 +4,12 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { answersForStep, call, portionKey, startTestServer } from "./test-support.js";
+import { answersForStep, call, portionKey, profileBody, startTestServer } from "./test-support.js";
 import { countProfileVersions, countSubmissions, listAnswers } from "./store.js";
 import type { PageStateDto } from "./contract/index.js";
 
 async function newProfile(origin: string): Promise<string> {
-  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", { name: "Аня", birthDate: null });
+  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", profileBody("Аня", null));
   return created.body.profileId;
 }
 

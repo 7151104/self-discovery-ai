@@ -11,6 +11,7 @@ import {
   collectKeys,
   portionKey,
   profileAtStep,
+  profileBody,
   purchaseSlice,
   startTestServer,
 } from "./test-support.js";
@@ -96,7 +97,7 @@ test("удаление профиля уносит ответы, блоки, з�
   assert.equal(listOrders(server.db, profileId).length, 0);
   assert.equal(listEvents(server.db, profileId).length, 0);
 
-  for (const table of ["profile_versions", "portion_submissions", "share_tokens", "order_events", "disagreements"]) {
+  for (const table of ["profile_versions", "portion_submissions", "share_tokens", "order_events", "disagreements", "consents"]) {
     const left = server.db.get<{ total: number }>(
       `SELECT COUNT(*) AS total FROM ${table} WHERE profile_id = ?`,
       [profileId],
@@ -158,8 +159,7 @@ test("дата рождения не влияет ни на один вывод 
 
   for (const birthDate of birthDates) {
     const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", {
-      name: "Аня",
-      birthDate,
+      ...profileBody("Аня", birthDate),
     });
     let page = created.body;
     for (const step of [1, 2, 3, 4] as const) {

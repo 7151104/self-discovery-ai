@@ -21,7 +21,7 @@ import { openDatabase } from "./db/sqlite.js";
 import { up } from "./db/migrate.js";
 import { ConfigError, loadConfig } from "./config.js";
 import { insertProfile, listAnswers, listBlocks, saveAnswers, saveBlockContent, findProfile } from "./store.js";
-import { answersForStep, call, portionKey, startTestServer, TEST_KEY } from "./test-support.js";
+import { answersForStep, call, portionKey, profileBody, startTestServer, TEST_KEY } from "./test-support.js";
 import type { Db } from "./db/driver.js";
 import type { PageStateDto } from "./contract/index.js";
 
@@ -197,8 +197,7 @@ test("сквозной путь работает на зашифрованной
   t.after(() => server.close());
 
   const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", {
-    name: "Аня",
-    birthDate: "1990-05-01",
+    ...profileBody("Аня", "1990-05-01"),
   });
   const profileId = created.body.profileId;
 

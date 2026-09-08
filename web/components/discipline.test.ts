@@ -25,6 +25,7 @@ import { renderConsent } from "./consent.js";
 import { renderDisclaimerList } from "./disclaimer.js";
 import { renderFooter } from "./footer.js";
 import { renderLegalDoc } from "./legal-doc.js";
+import { renderIntro } from "./intro.js";
 import { renderMissing } from "./missing.js";
 import { renderToString, type VNode } from "../src/dom.js";
 import { componentFiles } from "../src/test-support.js";

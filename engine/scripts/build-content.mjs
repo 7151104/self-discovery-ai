@@ -139,6 +139,78 @@ function parseQuestions() {
   return { questions: out, leads };
 }
 
+// ── Полный банк 35+3 ──────────────────────────────────────────────────────────
+
+const BANK_TYPES = ["шкала", "выбор", "открытый"];
+const BANK_DIRECTIONS = ["прямой", "обратный"];
+const BANK_ROLES = ["ключевой", "низкий вес"];
+
+/** Ячейка вариантов: `**A** ровно · **B** рывками`. Пустая ячейка — «—». */
+function parseBankOptions(cell, id) {
+  if (cell === "—") return [];
+  const out = cell.split("·").map((part) => {
+    const m = /^\*\*([A-G])\*\*\s+(.+)$/.exec(part.trim());
+    if (!m) throw new Error(`${id}: не разобран вариант «${part.trim()}»`);
+    return { key: m[1], text: m[2].trim() };
+  });
+  const keys = out.map((option) => option.key);
+  if (new Set(keys).size !== keys.length) throw new Error(`${id}: варианты повторяются`);
+  return out;
+}
+
+function parseFullBank() {
+  const src = lines(read("content/questions-full-bank.md"));
+  const out = [];
+  let block = "";
+  let inFormat = false;
+
+  for (const line of src) {
+    const heading = /^## (.+)$/.exec(line);
+    if (heading) {
+      block = heading[1].trim();
+      inFormat = block.startsWith("Формат записи");
+      continue;
+    }
+    if (inFormat || !line.trim().startsWith("|")) continue;
+
+    const cells = tableRows([line])[0];
+    if (!cells || cells.length !== 7) continue;
+    const [id, text, type, coordinates, direction, role, options] = cells;
+    if (!/^(Q\d+|О\d+)$/.test(id)) continue;
+
+    if (!text || /\*\*|\||·/.test(text)) throw new Error(`${id}: в тексте вопроса осталась разметка`);
+    if (!BANK_TYPES.includes(type)) throw new Error(`${id}: неизвестный тип «${type}»`);
+    if (!BANK_DIRECTIONS.includes(direction)) throw new Error(`${id}: неизвестное направление «${direction}»`);
+    if (role !== "—" && !BANK_ROLES.includes(role)) throw new Error(`${id}: неизвестная роль «${role}»`);
+    if (type !== "шкала" && direction !== "прямой")
+      throw new Error(`${id}: инверсия определена только для шкал, направление обязано быть прямым`);
+
+    const ids = coordinates.split(",").map((n) => Number(n.trim()));
+    if (!ids.length || ids.some((n) => !Number.isInteger(n) || n < 1 || n > 16))
+      throw new Error(`${id}: не разобраны координаты «${coordinates}»`);
+
+    const parsed = parseBankOptions(options, id);
+    if (type === "выбор" && parsed.length < 2) throw new Error(`${id}: у вопроса типа «выбор» меньше двух вариантов`);
+    if (type !== "выбор" && parsed.length) throw new Error(`${id}: варианты есть только у типа «выбор»`);
+
+    out.push({ id, type, text, coordinates: ids, direction, role: role === "—" ? null : role, options: parsed, block });
+  }
+
+  const closed = out.filter((question) => question.type !== "открытый");
+  const open = out.filter((question) => question.type === "открытый");
+  if (closed.length !== 35 || open.length !== 3)
+    throw new Error(`questions-full-bank.md: закрытых ${closed.length}, открытых ${open.length}, ожидалось 35 и 3`);
+
+  closed.forEach((question, i) => {
+    if (question.id !== `Q${i + 1}`) throw new Error(`questions-full-bank.md: вместо Q${i + 1} записан ${question.id}`);
+  });
+  open.forEach((question, i) => {
+    if (question.id !== `О${i + 1}`) throw new Error(`questions-full-bank.md: вместо О${i + 1} записан ${question.id}`);
+  });
+
+  return out;
+}
+
 // ── Ступень 0 ─────────────────────────────────────────────────────────────────
 
 function parseStep0() {
@@ -399,6 +471,7 @@ const ladder = parseQuestions();
 const content = {
   coordinates: parseCoordinates(),
   questions: ladder.questions,
+  bank: parseFullBank(),
   leads: ladder.leads,
   step0: parseStep0(),
   step1: parseStep1(),
@@ -425,6 +498,6 @@ if (sliceFiles.length !== listed)
   throw new Error(`content/slices: файлов ${sliceFiles.length}, в таблице ${listed}`);
 
 console.log(
-  `content.ts собран: ${content.coordinates.length} координат, ${content.questions.length} вопросов, ` +
-    `${content.step3.nodes.length} узлов, ${content.slices.length} срезов`,
+  `content.ts собран: ${content.coordinates.length} координат, ${content.questions.length} вопросов лестницы, ` +
+    `${content.bank.length} вопросов банка, ${content.step3.nodes.length} узлов, ${content.slices.length} срезов`,
 );

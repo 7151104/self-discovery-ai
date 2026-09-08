@@ -21,6 +21,28 @@ export interface RawQuestion {
   scale: { low: string; high: string } | null;
 }
 
+/** Направление вопроса относительно группы вопросов его основной координаты. */
+export type QuestionDirection = "прямой" | "обратный";
+
+/** Роль вопроса в координате: ключевой побеждает при расхождении, «низкий вес» даёт только low. */
+export type QuestionRole = "ключевой" | "низкий вес";
+
+/** Вопрос полного банка 35+3 (content/questions-full-bank.md). */
+export interface RawBankQuestion {
+  /** Q1–Q35 для закрытых, О1–О3 для открытых. */
+  id: string;
+  type: QuestionType;
+  text: string;
+  /** Первая координата — основная, остальные вопрос дополняет. */
+  coordinates: number[];
+  /** У типов «выбор» и «открытый» всегда «прямой»: инверсия определена только для шкал. */
+  direction: QuestionDirection;
+  role: QuestionRole | null;
+  options: { key: string; text: string }[];
+  /** Тематический блок банка, в котором записан вопрос. */
+  block: string;
+}
+
 export interface RawBranch {
   label: string;
   text: string;
@@ -52,6 +74,8 @@ export interface RawRangeRow {
 export interface RawContent {
   coordinates: RawCoordinate[];
   questions: RawQuestion[];
+  /** Полный банк: 35 закрытых и 3 открытых вопроса. */
+  bank: RawBankQuestion[];
   /** Подводка к порции по номеру ступени. */
   leads: Record<string, string>;
   step0: {

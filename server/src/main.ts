@@ -43,7 +43,13 @@ function configure(): ServerConfig {
 }
 
 const config = configure();
-const db = openDatabase({ path: config.databasePath });
+const db = openDatabase({ path: config.databasePath, keys: config.keys });
+
+if (!config.keys.active) {
+  // Разработка без ключа: чувствительные поля лягут открытым текстом.
+  // В рабочем окружении сюда не попасть — там ключ обязателен.
+  log("encryption.disabled", { environment: config.environment });
+}
 
 if (config.autoMigrate) {
   const applied = up(db);
@@ -59,6 +65,8 @@ server.listen(config.port, config.host, () => {
     port: config.port,
     database: config.databasePath,
     rateLimit: config.rateLimit.enabled,
+    payments: config.payments.provider,
+    encryption: config.keys.active?.id ?? "off",
   });
 });
 

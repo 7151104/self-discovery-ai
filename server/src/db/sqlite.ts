@@ -9,13 +9,16 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Db, Row, SqlValue } from "./driver.js";
+import { NO_KEYS, type Keyring } from "./crypto.js";
 
 export interface OpenOptions {
   /** Путь к файлу базы или `:memory:` для теста. */
   path: string;
+  /** Ключи шифрования. По умолчанию пустая связка: записи пишутся открытым текстом. */
+  keys?: Keyring;
 }
 
-export function openDatabase({ path }: OpenOptions): Db {
+export function openDatabase({ path, keys = NO_KEYS }: OpenOptions): Db {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
 
   const db = new DatabaseSync(path, { enableForeignKeyConstraints: true });
@@ -25,6 +28,7 @@ export function openDatabase({ path }: OpenOptions): Db {
   let depth = 0;
 
   return {
+    keys,
     exec(sql) {
       db.exec(sql);
     },

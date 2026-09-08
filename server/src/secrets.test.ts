@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { ConfigError, loadConfig } from "./config.js";
+import { TEST_KEY } from "./test-support.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -27,12 +28,22 @@ test("без обязательной переменной конфигурац�
   } catch (error) {
     assert.ok(error instanceof ConfigError);
     assert.equal(error.reason, "missing-required");
-    assert.deepEqual(error.variables, ["SDAI_PUBLIC_ORIGIN"]);
-    // В сообщении имя переменной, а не её значение.
+    assert.deepEqual(error.variables, [
+      "SDAI_PUBLIC_ORIGIN",
+      "SDAI_ENCRYPTION_KEY",
+      "SDAI_PAYMENT_WEBHOOK_SECRET",
+    ]);
+    // В сообщении имена переменных, а не их значения.
     assert.match(error.message, /SDAI_PUBLIC_ORIGIN/);
   }
 
-  const production = loadConfig({ SDAI_ENV: "production", SDAI_PUBLIC_ORIGIN: "https://example.com" });
+  const production = loadConfig({
+    SDAI_ENV: "production",
+    SDAI_PUBLIC_ORIGIN: "https://example.com",
+    SDAI_ENCRYPTION_KEY: TEST_KEY,
+    SDAI_PAYMENT_WEBHOOK_SECRET: "секрет-из-окружения",
+    SDAI_PAYMENT_PROVIDER: "будущий-провайдер",
+  });
   assert.equal(production.environment, "production");
   assert.equal(production.publicOrigin, "https://example.com");
 

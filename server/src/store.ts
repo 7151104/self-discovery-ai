@@ -36,10 +36,10 @@ interface ProfileRow {
   updated_at: string;
 }
 
-const toProfile = (row: ProfileRow): ProfileRecord => ({
+const toProfile = (db: Db, row: ProfileRow): ProfileRecord => ({
   profileId: row.profile_id,
-  name: unseal({ payload: row.name_payload, enc: row.name_enc }),
-  birthDate: unsealOptional(row.birth_date_payload, row.birth_date_enc),
+  name: unseal(db.keys, { payload: row.name_payload, enc: row.name_enc }),
+  birthDate: unsealOptional(db.keys, row.birth_date_payload, row.birth_date_enc),
   version: row.version,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -50,8 +50,8 @@ export function insertProfile(
   input: { profileId: string; name: string; birthDate: string | null },
 ): ProfileRecord {
   const timestamp = now();
-  const name = seal(input.name);
-  const birth = input.birthDate === null ? null : seal(input.birthDate);
+  const name = seal(db.keys, input.name);
+  const birth = input.birthDate === null ? null : seal(db.keys, input.birthDate);
 
   db.run(
     `INSERT INTO profiles
@@ -76,7 +76,7 @@ export function findProfile(db: Db, profileId: string): ProfileRecord | null {
        FROM profiles WHERE profile_id = ?`,
     [profileId],
   );
-  return row ? toProfile(row) : null;
+  return row ? toProfile(db, row) : null;
 }
 
 // ── Ответы ────────────────────────────────────────────────────────────────────
@@ -99,8 +99,8 @@ interface AnswerRow {
   revision: number;
 }
 
-const toAnswer = (row: AnswerRow): AnswerRecord => {
-  const text = unseal({ payload: row.payload, enc: row.payload_enc });
+const toAnswer = (db: Db, row: AnswerRow): AnswerRecord => {
+  const text = unseal(db.keys, { payload: row.payload, enc: row.payload_enc });
   return {
     questionId: row.question_id,
     kind: row.question_kind,
@@ -117,7 +117,7 @@ export function listAnswers(db: Db, profileId: string): AnswerRecord[] {
          FROM answers WHERE profile_id = ? ORDER BY question_id`,
       [profileId],
     )
-    .map(toAnswer);
+    .map((row) => toAnswer(db, row));
 }
 
 export interface AnswerInputRecord {
@@ -131,7 +131,7 @@ export interface AnswerInputRecord {
 export function saveAnswers(db: Db, profileId: string, answers: AnswerInputRecord[]): void {
   const timestamp = now();
   for (const answer of answers) {
-    const stored = seal(String(answer.value));
+    const stored = seal(db.keys, String(answer.value));
     db.run(
       `INSERT INTO answers
          (profile_id, question_id, question_kind, portion, payload, payload_enc, revision, created_at, updated_at)
@@ -267,7 +267,7 @@ export function recordProfileVersion(
   db.run("UPDATE profiles SET version = version + 1, updated_at = ? WHERE profile_id = ?", [timestamp, profileId]);
   const row = db.get<{ version: number }>("SELECT version FROM profiles WHERE profile_id = ?", [profileId]);
   const version = row?.version ?? 0;
-  const stored = seal(JSON.stringify(snapshot));
+  const stored = seal(db.keys, JSON.stringify(snapshot));
 
   db.run(
     `INSERT INTO profile_versions (version_id, profile_id, version, reason, snapshot, snapshot_enc, created_at)
@@ -318,8 +318,8 @@ interface BlockBody {
   highlight: string | null;
 }
 
-const toBlock = (row: BlockRow): BlockRecord => {
-  const raw = unseal({ payload: row.body_payload, enc: row.body_enc });
+const toBlock = (db: Db, row: BlockRow): BlockRecord => {
+  const raw = unseal(db.keys, { payload: row.body_payload, enc: row.body_enc });
   const body: BlockBody = raw ? (JSON.parse(raw) as BlockBody) : { paragraphs: [], highlight: null };
   return {
     blockId: row.block_id,
@@ -329,7 +329,7 @@ const toBlock = (row: BlockRow): BlockRecord => {
     origin: row.origin,
     purchased: row.purchased === 1,
     stale: row.stale === 1,
-    heading: unseal({ payload: row.heading_payload, enc: row.heading_enc }),
+    heading: unseal(db.keys, { payload: row.heading_payload, enc: row.heading_enc }),
     paragraphs: body.paragraphs,
     highlight: body.highlight,
   };
@@ -341,7 +341,7 @@ const BLOCK_COLUMNS = `block_id, slot, profile_version, status, origin, purchase
 export function listBlocks(db: Db, profileId: string): BlockRecord[] {
   return db
     .all<BlockRow>(`SELECT ${BLOCK_COLUMNS} FROM blocks WHERE profile_id = ? ORDER BY slot`, [profileId])
-    .map(toBlock);
+    .map((row) => toBlock(db, row));
 }
 
 export function findBlockById(db: Db, profileId: string, blockId: string): BlockRecord | null {
@@ -349,7 +349,7 @@ export function findBlockById(db: Db, profileId: string, blockId: string): Block
     profileId,
     blockId,
   ]);
-  return row ? toBlock(row) : null;
+  return row ? toBlock(db, row) : null;
 }
 
 export interface BlockInput {
@@ -369,12 +369,12 @@ export function ensureBlock(db: Db, profileId: string, input: BlockInput): Block
     profileId,
     input.slot,
   ]);
-  if (existing) return toBlock(existing);
+  if (existing) return toBlock(db, existing);
 
   const timestamp = now();
   const blockId = newRecordId();
-  const heading = seal(input.heading);
-  const body = seal(JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
+  const heading = seal(db.keys, input.heading);
+  const body = seal(db.keys, JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
 
   db.run(
     `INSERT INTO blocks
@@ -439,8 +439,8 @@ export function saveBlockContent(
     highlight: null,
   });
 
-  const heading = seal(input.heading);
-  const body = seal(JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
+  const heading = seal(db.keys, input.heading);
+  const body = seal(db.keys, JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
 
   db.run(
     `UPDATE blocks SET status = 'ready', stale = 0, purchased = ?, profile_version = ?,
@@ -464,7 +464,7 @@ export function saveBlockContent(
     input.slot,
   ]);
   if (!saved) throw new Error(`block-not-saved:${input.slot}`);
-  return toBlock(saved);
+  return toBlock(db, saved);
 }
 
 /**

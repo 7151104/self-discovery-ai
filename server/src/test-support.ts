@@ -29,12 +29,23 @@ export const latestMigration = (): string => {
   return versions[versions.length - 1] ?? "";
 };
 
-/** Сервер на случайном порту с чистой базой в памяти. */
+/**
+ * Ключ шифрования для тестов. Не секрет: он лежит в репозитории именно потому,
+ * что защищать в тестовой базе нечего. Рабочий ключ приходит из окружения и в
+ * репозитории отсутствует.
+ */
+export const TEST_KEY = "dGVzdC1rZXktZm9yLXVuaXQtdGVzdHMtMzItYnl0ZXM=";
+
+/**
+ * Сервер на случайном порту с чистой базой в памяти.
+ * По умолчанию поднимается с шифрованием: тесты идут тем же путём, что рабочее
+ * окружение, а не более коротким.
+ */
 export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<TestServer> {
-  const db = openDatabase({ path: ":memory:" });
+  const config: ServerConfig = loadConfig({ SDAI_ENCRYPTION_KEY: TEST_KEY, ...env });
+  const db = openDatabase({ path: ":memory:", keys: config.keys });
   up(db);
 
-  const config: ServerConfig = loadConfig(env);
   const server = createHttpServer({ db, config, version: "test" });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;

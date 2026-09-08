@@ -17,6 +17,7 @@ import { buildKeyring } from "./db/crypto.js";
 import { up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
 import { crisisGate, enqueueStep4 } from "./generation.js";
+import { setLogSink } from "./log.js";
 import { parseSliceQuestionId } from "./page.js";
 import {
   countJobs,
@@ -31,7 +32,7 @@ import {
   saveCache,
   saveJobResult,
 } from "./store.js";
-import { call, deliverWebhook, drainServer, profileBody, startTestServer, TEST_KEY } from "./test-support.js";
+import { call, deliverWebhook, drainServer, profileAtStep, profileBody, startTestServer, TEST_KEY } from "./test-support.js";
 
 const LLM_FAST = {
   SDAI_LLM_ATTEMPTS: "1",
@@ -601,4 +602,80 @@ test("платный срез: пройденный порог даёт отчё
   );
   assert.ok(block);
   assert.ok((block.paragraphs.length ?? 0) > 0);
+});
+
+test("провайдер по умолчанию доводит ступень 4 до ready на живом профиле", async (t) => {
+  const server = await startTestServer(LLM_FAST);
+  t.after(() => server.close());
+
+  const page = await profileAtStep(server.origin, 4);
+  await drainServer(server);
+
+  const job = findLatestJob(server.db, page.profileId, "step4");
+  assert.equal(job?.status, "ready", job?.failureCode ?? "задания нет");
+  const state = (await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`)).body;
+  const block = state.blocks.find((item) => item.id === "step4");
+  assert.ok(block);
+  assert.equal(block.generation?.status, "ready");
+  assert.ok(block.paragraphs.length >= 3, "блок ступени 4 пришёл без текста");
+  assert.notEqual(block.generation?.status, "failed");
+});
+
+test("провайдер по умолчанию доводит оплаченный срез до ready", async (t) => {
+  const server = await startTestServer(LLM_FAST);
+  t.after(() => server.close());
+
+  const page = await profileAtDemoLadder(server.origin);
+  await drainServer(server);
+  const slice = "slice_node_finish";
+
+  const order = await call<{ order: { orderId: string; price: number; payment: { url: string } | null } }>(
+    server.origin,
+    "POST",
+    `/api/p/${page.profileId}/orders`,
+    { slice, requestId: `buy-stub-${slice}` },
+  );
+  await deliverWebhook(server.origin, {
+    kind: "payment.succeeded",
+    orderId: order.body.order.orderId,
+    reference: order.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "",
+    amount: order.body.order.price,
+  });
+
+  await answerSliceWith(server.origin, page.profileId, slice, sliceAnswers(slice));
+  await drainServer(server);
+
+  const job = findLatestJob(server.db, page.profileId, `slice:${slice}`);
+  assert.equal(job?.status, "ready", job?.failureCode ?? "задания нет");
+  const block = (await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`)).body.blocks.find(
+    (item) => item.id === `slice:${slice}`,
+  );
+  assert.ok(block);
+  assert.equal(block.generation?.status, "ready");
+  assert.ok((block.paragraphs.length ?? 0) > 0);
+});
+
+test("generation.failed не кладёт фразу человека в журнал", async (t) => {
+  const lines: string[] = [];
+  setLogSink((line) => lines.push(line));
+  t.after(() => setLogSink(null));
+
+  const provider = answering(envelope());
+  const server = await startTestServer(LLM_FAST, { provider });
+  t.after(() => server.close());
+
+  const page = await profileAtStep(server.origin, 4);
+  await drainServer(server);
+
+  const job = findLatestJob(server.db, page.profileId, "step4");
+  assert.equal(job?.status, "failed");
+  assert.equal(job?.failureCode, "validation");
+
+  const journal = lines.join("\n");
+  assert.ok(journal.includes("generation.failed"), journal);
+  const leaked = ["берусь за дело", "без всякого желания", "Ты сам назвал круг", "тащу всё сам", "крендельковый"];
+  for (const phrase of leaked) {
+    assert.equal(journal.includes(phrase), false, `в журнал попала фраза «${phrase}»\n${journal}`);
+  }
+  assert.match(journal, /quote_not_from_answer|register_gt_confidence/);
 });

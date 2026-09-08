@@ -47,6 +47,10 @@ test("машинные значения проходят, человечески
   assert.equal(scrubValue("detail", "a".repeat(65)), HIDDEN);
   assert.equal(scrubValue("name", "abc"), HIDDEN);
   assert.equal(scrubValue("detail", { nested: "объект" }), HIDDEN);
+  assert.equal(
+    scrubValue("problems", "quote_not_from_answer,register_gt_confidence_probability_low_c7"),
+    "quote_not_from_answer,register_gt_confidence_probability_low_c7",
+  );
 });
 
 test("строка журнала уходит уже очищенной", () => {

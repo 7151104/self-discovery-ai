@@ -597,13 +597,61 @@ function parseSliceInterludes(slices) {
   return out;
 }
 
+/**
+ * Подписи закрытых дверей (E5-05). Три реестра: по узлу — дверь его собственного
+ * среза; прикладные двери под узел — тот же механизм в области жизни; по срезу —
+ * общая подпись, когда тема человеку ещё не известна. Прочерк в прикладной
+ * таблице означает «подпись берётся из реестра узлов».
+ */
+function parseDoorLabels() {
+  const src = lines(read("content/doors.md"));
+  const where = "content/doors.md";
+
+  const nodes = {};
+  for (const cells of tableUnder(src, "## Подписи дверей по узлу", where)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^NODE_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${where}: у узла ${id} пустая подпись двери`);
+    nodes[id] = cells[1];
+  }
+
+  const slices = {};
+  for (const cells of tableUnder(src, "## Подписи дверей по срезу", where)) {
+    const id = unwrap(cells[0] ?? "");
+    if (id === "slice_id" || !/^slice_[a-z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${where}: у среза ${id} пустая подпись двери`);
+    slices[id] = cells[1];
+  }
+
+  const appliedRows = tableUnder(src, "## Подписи прикладных дверей под узел", where);
+  const header = (appliedRows[0] ?? []).map(unwrap);
+  if (header.length < 2) throw new Error(`${where}: в таблице прикладных дверей нет колонок со срезами`);
+  const applied = {};
+  for (const cells of appliedRows.slice(1)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^NODE_[A-Z_]+$/.test(id)) continue;
+    const row = {};
+    for (let i = 1; i < header.length; i += 1) {
+      const value = (cells[i] ?? "").trim();
+      if (!value) throw new Error(`${where}: у пары ${id} × ${header[i]} пустая ячейка`);
+      row[header[i]] = value === "—" ? null : value;
+    }
+    applied[id] = row;
+  }
+
+  if (!Object.keys(nodes).length || !Object.keys(slices).length || !Object.keys(applied).length)
+    throw new Error(`${where}: один из реестров подписей пуст`);
+  return { nodes, slices, applied };
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
+  doors: parseDoorLabels(),
 };
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md и content/doors.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -612,5 +660,7 @@ writeFileSync(
 
 console.log(
   `content-extra.ts собран: ${extra.interludes.length} промежуточных блоков ` +
-    `(${extra.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар)`,
+    `(${extra.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар), ` +
+    `${Object.keys(extra.doors.nodes).length} подписей дверей по узлам, ` +
+    `${Object.keys(extra.doors.slices).length} по срезам`,
 );

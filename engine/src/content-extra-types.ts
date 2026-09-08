@@ -29,6 +29,23 @@ export interface RawSliceInterlude {
   pairs: { first: string; second: string; text: string }[];
 }
 
+/**
+ * Подписи закрытых дверей (content/doors.md).
+ *
+ * `nodes` — дверь собственного среза узла, подпись под профиль.
+ * `applied` — узел × прикладной срез: тот же механизм в области жизни.
+ * `slices` — общая подпись, когда тема двери человеку ещё не известна.
+ *
+ * `null` в `applied` означает «подпись берётся из `nodes`»: этот срез и есть
+ * собственный срез узла, второй подписи у него быть не должно.
+ */
+export interface RawDoorLabels {
+  nodes: Record<string, string>;
+  slices: Record<string, string>;
+  applied: Record<string, Record<string, string | null>>;
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
+  doors: RawDoorLabels;
 }

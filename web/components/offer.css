@@ -51,9 +51,16 @@
   transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
 }
 
-.offer__buy-price {
+.offer__buy-label {
   font-weight: var(--weight-strong);
-  white-space: nowrap;
+}
+
+/* Почему цена одна: строка мелкая, но она и есть обещание «без сюрпризов». */
+.offer__one-door {
+  max-width: var(--measure-block);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
 }
 
 @media (hover: hover) {

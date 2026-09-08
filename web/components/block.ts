@@ -35,6 +35,11 @@ export interface BlockProps {
   stale?: boolean;
   disagreed?: boolean;
   pending?: boolean;
+  /**
+   * Блок появился только что и проявляется один раз (E6-09). Блок, который
+   * человек уже видел, при следующей отрисовке страницы не мигает.
+   */
+  entering?: boolean;
 }
 
 export function blockState(props: BlockProps): BlockState {
@@ -49,7 +54,12 @@ export function renderBlock(props: BlockProps): VNode {
   const state = blockState(props);
   return h(
     "article",
-    { class: "block", "data-block": props.id, "data-state": state },
+    {
+      class: "block",
+      "data-block": props.id,
+      "data-state": state,
+      "data-enter": props.entering === true ? "on" : "off",
+    },
     h("h2", { class: "block__heading" }, props.heading),
     props.note ? h("p", { class: "block__note" }, props.note) : null,
     ...props.paragraphs.map((paragraph) => h("p", { class: "block__paragraph" }, paragraph)),

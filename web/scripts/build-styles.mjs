@@ -19,13 +19,16 @@ const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distRoot = join(webRoot, "dist");
 
 /** База идёт первой: на ней держатся сброс и кольцо фокуса. */
-const ORDER = ["base.css"];
+const FIRST = ["base.css"];
+
+/** Слой движения идёт последним: он заканчивается выключателем анимаций. */
+const LAST = ["motion.css"];
 
 const componentStyles = () => {
   const directory = join(webRoot, "components");
   const files = readdirSync(directory).filter((name) => name.endsWith(".css"));
-  const rest = files.filter((name) => !ORDER.includes(name)).sort();
-  return [...ORDER, ...rest].map((name) => ({ name, source: readFileSync(join(directory, name), "utf8") }));
+  const rest = files.filter((name) => !FIRST.includes(name) && !LAST.includes(name)).sort();
+  return [...FIRST, ...rest, ...LAST].map((name) => ({ name, source: readFileSync(join(directory, name), "utf8") }));
 };
 
 const showcaseStyles = () => {

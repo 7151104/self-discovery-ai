@@ -90,16 +90,14 @@ const cases: { name: string; node: VNode }[] = [
     name: "точка оплаты",
     node: renderPaymentStep({
       offer: { slice: "s", title: "T", price: 590, promise: "P", questionCount: "10" },
-      labels: { buy: "B", contents: "C", decline: "D" },
-      formatPrice: (price) => String(price),
+      labels: { buy: "B", contents: "C", decline: "D", oneDoor: "O" },
     }),
   },
   {
     name: "предложение",
     node: renderOffer({
       offer: { slice: "s", title: "T", price: 590, promise: "P", questionCount: "10" },
-      labels: { buy: "B", contents: "C", decline: "D" },
-      formatPrice: (price) => String(price),
+      labels: { buy: "B", contents: "C", decline: "D", oneDoor: "O" },
     }),
   },
   { name: "шапка", node: renderHead({ name: "N", season: null, theme: "T", metaphor: "M", cta: "C" }) },
@@ -114,18 +112,28 @@ for (const item of cases) {
   });
 }
 
+/**
+ * Слои — стили без компонента: общая основа (сброс, кольцо фокуса) и движение
+ * (появление блока, выключатель анимаций). Список закрытый: файл стилей без
+ * компонента и без места в этом списке — ошибка, а не новый слой.
+ */
+const LAYERS = new Set(["base.css", "motion.css"]);
+
 test("компоненты не знают о витрине и её моках", () => {
   for (const name of componentFiles()) {
-    if (name === "base.css") continue;
+    if (LAYERS.has(name)) continue;
     const source = readFileSync(join(webRoot, "components", name.replace(".css", ".ts")), "utf8");
     assert.equal(source.includes("showcase"), false, `${name}: компонент тянет витрину`);
   }
 });
 
 test("каждому файлу стилей соответствует компонент, и наоборот", () => {
-  const styles = componentFiles().map((name) => name.replace(".css", ""));
-  for (const name of styles) {
-    if (name === "base") continue;
-    assert.doesNotThrow(() => readFileSync(join(webRoot, "components", `${name}.ts`), "utf8"), `${name}.css без компонента`);
+  for (const file of componentFiles()) {
+    const component = join(webRoot, "components", file.replace(".css", ".ts"));
+    if (LAYERS.has(file)) {
+      assert.throws(() => readFileSync(component, "utf8"), `${file} объявлен слоем, но у него есть компонент`);
+      continue;
+    }
+    assert.doesNotThrow(() => readFileSync(component, "utf8"), `${file} без компонента`);
   }
 });

@@ -22,6 +22,8 @@ export interface ScaleProps {
   poles: { low: string; high: string };
   /** Имя каждой из пяти отметок для скринридера, слева направо. */
   markLabels: readonly [string, string, string, string, string];
+  /** Пояснение под вопросом: чем вообще является этот ряд отметок. */
+  hint?: string | null;
   value?: ScaleValue | null;
   disabled?: boolean;
   onSelect?: Handler;
@@ -38,6 +40,7 @@ export function renderScale(props: ScaleProps): VNode {
       disabled,
     },
     h("legend", { class: "scale__question" }, props.label),
+    props.hint ? h("p", { class: "scale__hint" }, props.hint) : null,
     h(
       "div",
       { class: "scale__marks" },

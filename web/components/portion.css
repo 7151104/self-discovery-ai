@@ -1,0 +1,71 @@
+/*
+ * Карточка порции: «что дальше» внизу заполненной части страницы.
+ *
+ * Один вопрос на экране, точки прогресса — только внутри порции. Общего
+ * числа вопросов на карточке нет и быть не может: печатать его нечем.
+ */
+
+.portion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+.portion__lead {
+  max-width: var(--measure-block);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.portion__progress {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.portion__dot {
+  width: var(--size-dot);
+  height: var(--size-dot);
+  border: var(--border-hair) solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+/* Отвеченный — залит, текущий — крупнее и с рамкой: различимо без цвета. */
+.portion__dot[data-state="done"] {
+  background: var(--color-text-soft);
+  border-color: var(--color-text-soft);
+}
+
+.portion__dot[data-state="current"] {
+  border-width: var(--border-strong);
+  border-color: var(--color-text-strong);
+  transform: scale(1.4);
+}
+
+.portion__back {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  transition: border-color var(--duration-fast) ease;
+}
+
+@media (hover: hover) {
+  .portion__back:hover {
+    border-color: var(--color-line-strong);
+    color: var(--color-text);
+  }
+}

@@ -1,0 +1,58 @@
+/*
+ * Экран ожидания.
+ *
+ * Выглядит как будущий блок разбора: те же поля, тот же ритм, на месте
+ * абзацев — приглушённые линии. Человек видит форму того, что собирается,
+ * а не индикатор.
+ *
+ * Линии неподвижны. Бегущая полоса и точки — имитация работы, а имитация
+ * запрещена приёмкой: ждать всё равно столько же, а доверие тратится.
+ */
+
+.wait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-hair) dashed var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+}
+
+.wait__title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.wait__topics {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.wait__note {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.wait__shape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wait__line {
+  height: var(--size-wait-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-inset);
+}
+
+.wait__line[data-line="last"] {
+  width: 60%;
+}

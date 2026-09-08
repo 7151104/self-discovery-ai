@@ -26,7 +26,7 @@ const route = (context: RouteContext, doors = mock.doors) =>
   });
 
 const payment = () =>
-  renderPaymentStep({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice });
+  renderPaymentStep({ offer: mock.offer, labels: mock.offerLabels });
 
 const priceOccurrences = (markup: string): number =>
   [...markup.matchAll(new RegExp(String(mock.offer.price), "g"))].length;
@@ -143,15 +143,20 @@ test("подписи дверей приходят с сервера и меня
 // ── Предложение ───────────────────────────────────────────────────────────────
 
 test("предложение показывает состав, а не список выгод, и оставляет выход", () => {
-  const text = visibleText(renderOffer({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice }));
+  const text = visibleText(renderOffer({ offer: mock.offer, labels: mock.offerLabels }));
   assert.ok(text.includes(mock.offerLabels.contents));
   assert.ok(text.includes(mock.offerLabels.decline));
 });
 
 test("кнопка покупки — единственное место, где напечатана цена", () => {
-  const node = renderOffer({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice });
-  const price = findAll(node, "span").filter((item) => item.attrs["class"] === "offer__buy-price");
-  assert.equal(price.length, 1);
+  const node = renderOffer({ offer: mock.offer, labels: mock.offerLabels });
+  assert.equal(priceOccurrences(renderToString(node)), 1);
+
+  // Цена напечатана внутри кнопки, а не рядом с ней: формат приходит готовой
+  // строкой из реестра микрокопии, компонент цену не собирает.
+  const buttons = findAll(node, "button").filter((item) => item.attrs["class"] === "offer__buy");
+  assert.equal(buttons.length, 1);
+  assert.equal(priceOccurrences(renderToString(buttons[0] ?? null)), 1);
 });
 
 test("предложение приподнято тенью из шкалы, а не выкрашено в праздничный цвет", () => {

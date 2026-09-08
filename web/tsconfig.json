@@ -5,5 +5,5 @@
     "outDir": "dist",
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "include": ["tokens/**/*.ts", "src/**/*.ts", "components/**/*.ts", "showcase/**/*.ts"]
+  "include": ["tokens/**/*.ts", "src/**/*.ts", "components/**/*.ts", "share/**/*.ts", "showcase/**/*.ts"]
 }

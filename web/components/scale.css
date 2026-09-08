@@ -19,6 +19,13 @@
   color: var(--color-text-strong);
 }
 
+.scale__hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
 .scale__marks {
   display: flex;
   justify-content: space-between;

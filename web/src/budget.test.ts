@@ -1,10 +1,8 @@
 /**
- * Вес первой загрузки (E6-01).
+ * Вес первой загрузки и бюджеты производительности (E6-01, E10-09).
  *
- * Критерий выбора стека, записанный в маршруте: бюджет из
- * `docs/12-target-state.md`, раздел 5.9 — не больше 150 КБ скриптов и 30 КБ
- * стилей после сжатия. Здесь он перестаёт быть намерением: тест считает
- * настоящий граф модулей от точки входа и настоящую таблицу стилей.
+ * Критерий из `docs/12-target-state.md`, раздел 5.9. Превышение ломает сборку:
+ * `assertBudget` бросает, `npm run lint:budget` роняет конвейер.
  *
  * Заодно проверяется, что рантайм-зависимостей нет вовсе: голый импорт
  * (`import … from "какой-нибудь-пакет"`) ломает тест.
@@ -15,11 +13,16 @@ import test from "node:test";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
+import {
+  MODULE_COUNT_BUDGET,
+  SCRIPT_BUDGET_KB,
+  STYLE_BUDGET_KB,
+  STYLESHEET_BUDGET,
+  assertBudget,
+} from "./budgets.js";
 import { webRoot } from "./paths.js";
 
-/** Бюджет из docs/12-target-state.md, раздел «Производительность». */
-export const SCRIPT_BUDGET_KB = 150;
-export const STYLE_BUDGET_KB = 30;
+export { SCRIPT_BUDGET_KB, STYLE_BUDGET_KB };
 
 const IMPORT_PATTERN = /(?:^|\n)\s*(?:import|export)[^;\n]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)/g;
 
@@ -67,17 +70,32 @@ test("точка входа собрана: без неё бюджет не пр
   assert.ok(existsSync(entry()), "нет web/dist/showcase/showcase.js — сначала npm run build:web");
 });
 
+test("превышение бюджета бросает, а не пишет предупреждение", () => {
+  assert.throws(() => assertBudget("скрипты", 151, 150), /скрипты: 151 при бюджете 150/);
+  assert.doesNotThrow(() => assertBudget("скрипты", 150, 150));
+});
+
 test("вес скриптов первой загрузки укладывается в бюджет 150 КБ", () => {
   const graph = moduleGraph(entry());
   const sources = graph.files.map((file) => readFileSync(file, "utf8")).join("\n");
   const weight = gzipKb(sources);
-  assert.ok(weight <= SCRIPT_BUDGET_KB, `скрипты ${weight.toFixed(1)} КБ при бюджете ${SCRIPT_BUDGET_KB} КБ`);
+  assertBudget(`скрипты ${weight.toFixed(1)} КБ`, weight, SCRIPT_BUDGET_KB);
 });
 
 test("вес стилей первой загрузки укладывается в бюджет 30 КБ", () => {
   const css = readFileSync(join(webRoot, "dist", "app.css"), "utf8");
   const weight = gzipKb(css);
-  assert.ok(weight <= STYLE_BUDGET_KB, `стили ${weight.toFixed(1)} КБ при бюджете ${STYLE_BUDGET_KB} КБ`);
+  assertBudget(`стили ${weight.toFixed(1)} КБ`, weight, STYLE_BUDGET_KB);
+});
+
+test("число модулей первой загрузки укладывается в бюджет", () => {
+  const graph = moduleGraph(entry());
+  assertBudget(`модулей ${graph.files.length}`, graph.files.length, MODULE_COUNT_BUDGET);
+});
+
+test("в стилях продукта нет @font-face: системный шрифт не даёт перескока", () => {
+  const css = readFileSync(join(webRoot, "dist", "app.css"), "utf8");
+  assert.equal(/@font-face/i.test(css), false, "веб-шрифт в app.css дал бы FOIT/FOUT");
 });
 
 test("рантайм-зависимостей нет: ни одного голого импорта в графе клиента", () => {
@@ -95,5 +113,5 @@ test("страница витрины подключает ровно одну �
   const page = readFileSync(join(webRoot, "showcase", "index.html"), "utf8");
   const links = [...page.matchAll(/<link[^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(links.includes("../dist/app.css"), "витрина обязана грузить собранные стили продукта");
-  assert.equal(links.filter((href) => href?.endsWith("app.css")).length, 1);
+  assert.equal(links.filter((href) => href?.endsWith("app.css")).length, STYLESHEET_BUDGET);
 });

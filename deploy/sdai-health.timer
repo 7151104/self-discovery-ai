@@ -1,0 +1,17 @@
+# Расписание проверки доступности (E10-09): каждые пять минут.
+#
+# Чаще, чем копии базы: копия ловит порчу данных, эта проверка — что процесс
+# отвечает. Persistent=true догоняет пропущенный запуск после перезагрузки.
+# RandomizedDelaySec разводит проверки, если на машине несколько служб.
+
+[Unit]
+Description=Проверка доступности сервиса самопознания каждые пять минут
+
+[Timer]
+OnCalendar=*:0/5
+RandomizedDelaySec=30
+Persistent=true
+Unit=sdai-health.service
+
+[Install]
+WantedBy=timers.target

@@ -15,6 +15,9 @@ systemd и Node. Площадка и домен ждут ответа основ
 | `sdai.service` | Служба: запускает сервер, читает переменные из файла окружения |
 | `sdai-backup.service` | Копия базы и удаление копий старше срока |
 | `sdai-backup.timer` | Расписание копий: раз в сутки |
+| `sdai-health.service` | Проверка `GET /api/health`, код возврата — сигнал |
+| `sdai-health.timer` | Расписание проверки: каждые пять минут |
+| `sdai-health-alert.service` | Оповещение в журнал машины, если проверка не прошла |
 | `release.sh` | Выпуск: проверка миграций, копия базы, применение миграций, переключение |
 | `rollback.sh` | Откат на предыдущий выпуск одной командой |
 
@@ -67,9 +70,9 @@ chown -R sdai:sdai /srv/sdai /var/lib/sdai /var/backups/sdai
 install -m 0600 /dev/null /etc/sdai/production.env
 # ключ шифрования печатает `npm run keygen`, в репозиторий он не попадает
 
-cp deploy/sdai.service deploy/sdai-backup.service deploy/sdai-backup.timer /etc/systemd/system/
+cp deploy/sdai.service deploy/sdai-backup.service deploy/sdai-backup.timer deploy/sdai-health.service deploy/sdai-health.timer deploy/sdai-health-alert.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now sdai.service sdai-backup.timer
+systemctl enable --now sdai.service sdai-backup.timer sdai-health.timer
 ```
 
 ## Выпуск
@@ -120,5 +123,10 @@ node /srv/sdai/current/server/dist/db/migrate.js down --steps=<сколько>
 `.github/workflows/deploy.yml`, который делает ровно то же, что `release.sh`,
 через доступ из секретов репозитория; сами скрипты не изменятся.
 
-Внешней проверки доступности (E10-09) и трекинга ошибок (E10-06) — по той же
-причине: обе смотрят на работающий адрес.
+Внешней проверки доступности по живому домену в GitHub пока нет: домена нет
+(вопрос 4). Скрипт `tools/check-health.mjs` и таймер `sdai-health.timer` уже
+на месте; конвейер `.github/workflows/uptime.yml` начнёт падать на отказе,
+когда в секретах репозитория появится `SDAI_HEALTH_URL`.
+
+Трекинг ошибок (E10-06) тоже без внешнего сервиса: порт приёмника и поддельная
+реализация пишут в память и файл, настоящий адаптер добавится строкой в реестре.

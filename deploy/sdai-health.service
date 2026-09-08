@@ -1,0 +1,29 @@
+# Проверка доступности (E10-09). Запускается таймером sdai-health.timer.
+#
+# Код возврата скрипта — сигнал: 0 сервис жив, иначе — отказ, и срабатывает
+# OnFailure. Внешнего аккаунта оповещений нет, поэтому оповещение — запись
+# в журнал машины (sdai-health-alert.service) плюс падение задания в GitHub,
+# когда задан секрет SDAI_HEALTH_URL.
+
+[Unit]
+Description=Проверка доступности сервиса самопознания
+Documentation=https://github.com/7151104/self-discovery-ai
+OnFailure=sdai-health-alert.service
+
+[Service]
+Type=oneshot
+User=sdai
+Group=sdai
+WorkingDirectory=/srv/sdai/current
+EnvironmentFile=/etc/sdai/production.env
+EnvironmentFile=-/srv/sdai/current/release.env
+
+# По умолчанию смотрим на локальный порт службы. Внешний адрес — переменная
+# SDAI_HEALTH_URL в файле окружения, когда появится домен.
+Environment=SDAI_HEALTH_URL=http://127.0.0.1:8787/api/health
+ExecStart=/usr/bin/node /srv/sdai/current/tools/check-health.mjs
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

@@ -22,7 +22,7 @@ import { REDUCED_MOTION_QUERY, type MotionHost } from "./motion.js";
 
 const { startTestServer, answersForStep } = (await import(
   pathToFileURL(join(repoRoot, "server/dist/test-support.js")).href
-)) as typeof import("../../server/src/test-support.ts");
+)) as typeof import("../../server/dist/test-support.js");
 
 const reducedMotion = (): MotionHost => ({
   matchMedia: (query: string) => ({ matches: query === REDUCED_MOTION_QUERY }),

@@ -16,7 +16,7 @@ import { renderMissing } from "../components/missing.js";
 
 const { startTestServer, profileAtStep } = (await import(
   pathToFileURL(join(repoRoot, "server/dist/test-support.js")).href
-)) as typeof import("../../server/src/test-support.ts");
+)) as typeof import("../../server/dist/test-support.js");
 
 const MISSING_ID = "aaaaaaaaaaaaaaaaaaaaaa";
 const TECHNICAL = ["404", "profile_not_found", "internal_error", "stack", "TypeError"];

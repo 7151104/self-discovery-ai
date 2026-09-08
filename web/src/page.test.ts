@@ -32,9 +32,11 @@ test("без даты шапка не показывает тему период
 });
 
 test("крючок — отдельный блок, читается без контекста и помещается на один экран", () => {
-  const hooks = [pageStates.s1.hook, pageStates.s3.hook, pageStates.s4.hook];
+  const hooks = [pageStates.s1.hook, pageStates.s3.hook, pageStates.s4.hook].filter(
+    (item): item is string => typeof item === "string" && item.length > 0,
+  );
+  assert.equal(hooks.length, 3);
   for (const hook of hooks) {
-    assert.ok(typeof hook === "string" && hook.length > 0);
     const node = draw(hook === pageStates.s1.hook ? "s1" : hook === pageStates.s3.hook ? "s3" : "s4");
     const blocks = byClass(node, "hook");
     assert.equal(blocks.length, 1);

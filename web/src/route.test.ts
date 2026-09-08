@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import {
   API_CREATE_PROFILE,
   API_DISAGREE,
+  API_GENERATION_STATUS,
   API_PAGE_STATE,
   API_PUBLIC_PAGE,
   API_PURCHASE,
@@ -36,6 +37,7 @@ test("шаблоны адресов совпадают с контрактом",
   assert.equal(API_SHARE, contract.API.share.path);
   assert.equal(API_PUBLIC_PAGE, contract.API.publicPage.path);
   assert.equal(API_PURCHASE, contract.API.purchase.path);
+  assert.equal(API_GENERATION_STATUS, contract.API.generationStatus.path);
 });
 
 test("подстановка параметров совпадает с buildPath контракта", () => {
@@ -43,6 +45,10 @@ test("подстановка параметров совпадает с buildPat
   assert.equal(fillPath(PAGE_PATH, { profileId }), `/p/${profileId}`);
   assert.equal(fillPath(API_PAGE_STATE, { profileId }), contract.buildPath("pageState", { profileId }));
   assert.equal(fillPath(API_SUBMIT_PORTION, { profileId }), contract.buildPath("submitPortion", { profileId }));
+  assert.equal(
+    fillPath(API_GENERATION_STATUS, { profileId, generationId: "gen" }),
+    contract.buildPath("generationStatus", { profileId, generationId: "gen" }),
+  );
 });
 
 test("ссылка /p/{profileId} открывает страницу профиля", () => {

@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DEFAULTS, loadConfig } from "./config.js";
-import { BAR_DEFINITIONS, rawContent } from "./engine.js";
+import { BAR_DEFINITIONS, payScreen, rawContent } from "./engine.js";
 import { matchApi, matchPage } from "./http/router.js";
 import { answersForStep, call, latestMigration, portionKey, profileAtStep, startTestServer } from "./test-support.js";
 import { countProfileVersions, listEvents } from "./store.js";
@@ -145,10 +145,14 @@ test("предложение появляется после ступени 4 и
   const page = await profileAtStep(server.origin, 4);
   assert.ok(page.offer, "нет предложения");
   assert.ok(page.offer.price > 0);
+  const screen = payScreen(page.offer.slice);
+  assert.deepEqual(page.offer.contents, screen.contents);
+  assert.equal(page.offer.decline, screen.decline);
 
   const priced = page.doors.filter((door) => door.price !== null);
   assert.equal(priced.length, 1);
   assert.equal(priced[0]?.slice, page.offer.slice);
+  assert.equal(priced[0]?.price, page.offer.price);
 });
 
 test("правка ответа пересчитывает профиль и не переписывает готовые блоки молча", async (t) => {

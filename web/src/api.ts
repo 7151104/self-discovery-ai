@@ -7,6 +7,7 @@ import type {
   CreateProfileRequest,
   DisagreementKind,
   ErrorCode,
+  GenerationDto,
   PageStateDto,
   PublicPageDto,
   ShareDto,
@@ -15,6 +16,7 @@ import type {
 import {
   API_CREATE_PROFILE,
   API_DISAGREE,
+  API_GENERATION_STATUS,
   API_PAGE_STATE,
   API_PUBLIC_PAGE,
   API_PURCHASE,
@@ -41,6 +43,11 @@ export type PublicResult =
 
 export type ShareResult =
   | { ok: true; page: PageStateDto; share: ShareDto | null }
+  | { ok: false; missing: true }
+  | { ok: false; missing: false; code: ErrorCode };
+
+export type GenerationResult =
+  | { ok: true; generation: GenerationDto }
   | { ok: false; missing: true }
   | { ok: false; missing: false; code: ErrorCode };
 
@@ -100,6 +107,12 @@ const toResult = (status: number, body: unknown): PageResult => {
 };
 
 const nestedPage = (body: unknown): unknown => (isRecord(body) && "page" in body ? body["page"] : body);
+
+const isGeneration = (value: unknown): value is GenerationDto =>
+  isRecord(value) &&
+  typeof value["id"] === "string" &&
+  typeof value["blockId"] === "string" &&
+  typeof value["status"] === "string";
 
 const shareFrom = (body: unknown): ShareDto | null => {
   if (!isRecord(body)) return null;
@@ -203,6 +216,27 @@ export async function revokeShare(profileId: string, transport: Transport): Prom
     const page = nestedPage(reply.body);
     if (!isPage(page)) return { ok: false, missing: false, code: "internal_error" };
     return { ok: true, page, share: null };
+  } catch {
+    return { ok: false, missing: false, code: "internal_error" };
+  }
+}
+
+/** Статус генерации блока: клиент опрашивает его, пока текст пишется. */
+export async function loadGeneration(
+  profileId: string,
+  generationId: string,
+  transport: Transport,
+): Promise<GenerationResult> {
+  try {
+    const path = fillPath(API_GENERATION_STATUS, { profileId, generationId });
+    const reply = await send(transport, "GET", path);
+    if (reply.status === 404 || errorCode(reply.body) === "profile_not_found" || errorCode(reply.body) === "not_found") {
+      return { ok: false, missing: true };
+    }
+    if (reply.status >= 400) return { ok: false, missing: false, code: errorCode(reply.body) };
+    const generation = isRecord(reply.body) ? reply.body["generation"] : null;
+    if (!isGeneration(generation)) return { ok: false, missing: false, code: "internal_error" };
+    return { ok: true, generation };
   } catch {
     return { ok: false, missing: false, code: "internal_error" };
   }

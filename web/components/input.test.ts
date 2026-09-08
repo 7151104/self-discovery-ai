@@ -13,6 +13,9 @@ import { renderScale, SCALE_VALUES } from "./scale.js";
 import { COUNTER_FROM_WORDS, SUBMIT_FROM_WORDS, countWords, openFieldState, renderOpenField } from "./open-field.js";
 import { findAll, renderToString, visibleText } from "../src/dom.js";
 import * as mock from "../showcase/mocks.js";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { repoRoot } from "../src/paths.js";
 
 const scale = (value?: 1 | 2 | 3 | 4 | 5, disabled = false) =>
   renderScale({
@@ -124,6 +127,13 @@ test("кнопка включается ровно от пятнадцати с�
   assert.equal(fourteen.submitEnabled, false);
   const fifteen = openFieldState(Array.from({ length: SUBMIT_FROM_WORDS }, () => "слово").join(" "));
   assert.equal(fifteen.submitEnabled, true);
+});
+
+test("порог кнопки совпадает с порогом из content/questions-ladder.md", async () => {
+  const engine = (await import(
+    pathToFileURL(join(repoRoot, "engine/dist/index.js")).href
+  )) as typeof import("../../engine/dist/index.js");
+  assert.equal(SUBMIT_FROM_WORDS, engine.openMinWords());
 });
 
 test("пороги в разметке совпадают с порогами в состоянии", () => {

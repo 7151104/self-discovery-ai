@@ -124,7 +124,7 @@ export const offerTexts = {
    */
   contents: (parts: string[]): string =>
     `${copy("UI_PAY_CONTENTS_LABEL")}${LIST_SEPARATOR}${parts.join(LIST_SEPARATOR)}`,
-  /** Пока в контракте нет поля состава — на экране только подпись. */
+  /** Запас, если список состава пуст: на экране остаётся только подпись. */
   contentsLabel: (): string => copy("UI_PAY_CONTENTS_LABEL"),
   decline: (): string => copy("UI_PAY_DECLINE"),
   oneDoor: (): string => copy("UI_PAY_ONE_DOOR"),
@@ -212,4 +212,5 @@ export const errorTexts = {
   load: (): string => copy("UI_ERROR_LOAD"),
   offline: (): string => copy("UI_ERROR_OFFLINE"),
   unknown: (): string => copy("UI_ERROR_UNKNOWN"),
+  tooShort: (): string => copy("UI_ERROR_TOO_SHORT"),
 };

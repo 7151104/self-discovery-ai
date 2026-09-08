@@ -130,6 +130,16 @@ test("пауза «собираю» стоит на месте порции", ()
   assert.ok(visibleText(node).includes(copy("UI_WAIT_COLLECTING")));
 });
 
+test("пока сюжет пишется, предложение не показывается", () => {
+  const waiting = {
+    ...pageStates.s4Waiting,
+    offer: mock.offer,
+  };
+  const node = renderPersonalPage(waiting, viewLabels(waiting));
+  assert.ok(byClass(node, "wait").length === 1);
+  assert.equal(byClass(node, "offer").length, 0);
+});
+
 test("публичный вид скрывает блоки 3 и 4, маршрут и действия блока", () => {
   const node = renderPersonalPage(pageStates.s3, viewLabels(pageStates.s3), { publicView: true });
   assert.equal(node.attrs["data-view"], "public");

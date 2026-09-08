@@ -34,6 +34,13 @@ export interface Session {
   paymentFailed: boolean;
   /** Возврат на порцию, где часть вопросов уже сохранена. */
   returned: boolean;
+  /**
+   * Страница открыта заново, а генерация ещё пишется. Ожидание то же,
+   * пометка «продолжилась» — чтобы не выглядело как новый запуск.
+   */
+  waitResumed: boolean;
+  /** Сервер отбил открытый ответ: подсказка поля, не заметка страницы. */
+  portionError: string | null;
   missingKind: "missing" | "revoked";
 }
 
@@ -57,6 +64,8 @@ export function emptySession(): Session {
     offerDeclined: false,
     paymentFailed: false,
     returned: false,
+    waitResumed: false,
+    portionError: null,
     missingKind: "missing",
   };
 }
@@ -123,8 +132,16 @@ export function showMissing(session: Session, kind: "missing" | "revoked" = "mis
   return { ...session, screen: "missing", page: null, collecting: false, missingKind: kind };
 }
 
+/** Блоки, которые человек уже видел как текст. Ожидание в этот набор не входит: когда сюжет приедет, он проявится. */
+export const shownBlockIds = (page: PageStateDto): Set<string> =>
+  new Set(page.blocks.filter((block) => block.generation?.status !== "pending").map((block) => block.id));
+
+const pendingGeneration = (page: PageStateDto): boolean =>
+  page.blocks.some((block) => block.generation?.status === "pending");
+
 export function showPage(session: Session, page: PageStateDto, mode: "load" | "advance"): Session {
-  const seenBlocks = mode === "load" ? new Set(page.blocks.map((block) => block.id)) : session.seenBlocks;
+  const waiting = pendingGeneration(page);
+  const seenBlocks = mode === "load" ? shownBlockIds(page) : session.seenBlocks;
   const seenBars = mode === "load" ? new Set(page.map.filter((bar) => bar.fill !== "empty").map((bar) => bar.id)) : session.seenBars;
   const returned =
     mode === "load" && (page.nextPortion?.answered.length ?? 0) > 0;
@@ -145,6 +162,8 @@ export function showPage(session: Session, page: PageStateDto, mode: "load" | "a
     offerDeclined: mode === "load" ? false : session.offerDeclined,
     paymentFailed: mode === "load" ? false : session.paymentFailed,
     returned,
+    waitResumed: mode === "load" && waiting,
+    portionError: null,
   };
 }
 
@@ -181,7 +200,7 @@ export function rememberShown(session: Session): Session {
   if (session.page === null) return session;
   return {
     ...session,
-    seenBlocks: new Set(session.page.blocks.map((block) => block.id)),
+    seenBlocks: shownBlockIds(session.page),
     seenBars: new Set(session.page.map.filter((bar) => bar.fill !== "empty").map((bar) => bar.id)),
   };
 }
@@ -206,7 +225,7 @@ export function goBack(session: Session): Session {
 }
 
 export function setDraft(session: Session, draft: string): Session {
-  return { ...session, draft };
+  return { ...session, draft, portionError: null };
 }
 
 export function setNameError(session: Session, error: string | null): Session {

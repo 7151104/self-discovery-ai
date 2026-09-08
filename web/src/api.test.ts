@@ -7,7 +7,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createProfile, disagree, enableShare, loadPage, loadPublic, revokeShare } from "./api.js";
+import { createProfile, disagree, enableShare, loadGeneration, loadPage, loadPublic, revokeShare } from "./api.js";
 import { visibleText } from "./dom.js";
 import { filledBars } from "./page.js";
 import { missingTexts } from "./page-copy.js";
@@ -113,5 +113,18 @@ test("клиент включает и отзывает публичную сс�
   assert.equal(missing.ok, false);
   if (missing.ok) return;
   assert.equal(missing.missing, true);
+});
+
+test("клиент читает статус генерации по идентификатору из блока", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const page = await profileAtStep(server.origin, 4);
+  const pending = page.blocks.find((item) => item.id === "step4")?.generation;
+  assert.ok(pending?.id);
+  const status = await loadGeneration(page.profileId, pending.id, { fetch, origin: server.origin });
+  assert.equal(status.ok, true);
+  if (!status.ok) return;
+  assert.equal(status.generation.status, "pending");
+  assert.equal(status.generation.id, pending.id);
 });
 

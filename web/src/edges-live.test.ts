@@ -44,8 +44,9 @@ const hostOf = (origin: string, pathname: string): AppHost => {
   };
 };
 
-async function openPage(origin: string, profileId: string) {
+async function openPage(t: { after: (fn: () => void) => void }, origin: string, profileId: string) {
   const app = createPageApp(hostOf(origin, `/p/${profileId}`));
+  t.after(() => app.stop());
   await app.start();
   return app;
 }
@@ -61,6 +62,7 @@ test("дата не введена: шапка без темы, заметка n
   t.after(() => server.close());
   const host = hostOf(server.origin, "/");
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   app.consent(true);
   await app.intro("Аня", null);
@@ -74,7 +76,7 @@ test("ответ L12 короче 15 слов: кнопка неактивна, 
   const server = await startTestServer();
   t.after(() => server.close());
   const page = await profileAtStep(server.origin, 3);
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   app.draft("один два три четыре пять шесть");
   const field = byClass(app.tree(), "field")[0];
   assert.ok(field);
@@ -94,7 +96,7 @@ test("кризисные признаки в L12: нет блока 4 и пре�
     answers: [{ questionId: "L12", kind: "открытый", text: CRISIS_L12 }],
     requestId: "crisis-l12",
   });
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   const state = app.session().page;
   assert.ok(state);
   assert.equal(state.state, "s4");
@@ -124,7 +126,7 @@ test("ни один узел не сработал: крючка нет, зам�
   assert.equal(page.hook, null);
   assert.ok(page.blocks.some((item) => item.id === "step3"));
 
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   assert.equal(app.session().page?.hook, null);
   assert.equal(app.tree().attrs["data-edge"], "no-node");
   assert.ok(visibleText(app.tree()).includes(copy("UI_EDGE_NO_NODE")));
@@ -141,7 +143,7 @@ test("возврат на середине: та же порция, заметк
     answers: [first],
     requestId: "half-portion",
   });
-  const app = await openPage(server.origin, created.body.profileId);
+  const app = await openPage(t, server.origin, created.body.profileId);
   assert.equal(app.session().returned, true);
   assert.ok((app.session().page?.nextPortion?.answered.length ?? 0) > 0);
   assert.equal(app.tree().attrs["data-edge"], "return");
@@ -153,7 +155,7 @@ test("отказ от оплаты: страница полная, предло�
   const server = await startTestServer();
   t.after(() => server.close());
   const page = await profileAtStep(server.origin, 4);
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   assert.ok(app.session().page?.offer);
   app.decline();
   assert.equal(app.session().offerDeclined, true);
@@ -180,6 +182,7 @@ test("оплата не прошла: страница не меняется, д
     return inner(input, init);
   }) as typeof fetch;
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   const before = app.session().page;
   assert.ok(before?.offer);
@@ -197,7 +200,7 @@ test("изменение ответа: lookup без stale, хранимый б�
   await call(server.origin, "PATCH", `/api/p/${page.profileId}/answers/L1`, {
     answer: { questionId: "L1", kind: "выбор", option: "B" },
   });
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   const after = app.session().page;
   assert.ok(after);
   for (const block of after.blocks.filter((item) => item.id === "step1" || item.id === "step2" || item.id === "step3")) {
@@ -219,7 +222,7 @@ test("текст не собрался: блок скрыт, ответы на �
     page.profileId,
   ]);
   server.db.run("UPDATE blocks SET status = 'failed' WHERE profile_id = ? AND slot = 'step4'", [page.profileId]);
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   const after = app.session().page;
   assert.ok(after);
   assert.ok(after.blocks.some((item) => item.generation?.status === "failed"));

@@ -1,6 +1,6 @@
 /**
  * Живой клиент личной страницы: адрес `/p/{profileId}`, ступень 0, порции,
- * несогласие, публичный вид и краевые состояния.
+ * несогласие, ступень 4 с ожиданием генерации, публичный вид и краевые состояния.
  *
  * Состояние страницы приходит с сервера. Сборку экрана делает
  * `renderPersonalPage` — та же функция, что у витрины.
@@ -12,12 +12,14 @@ import { renderFooter } from "../components/footer.js";
 import { renderIntro } from "../components/intro.js";
 import { renderMissing } from "../components/missing.js";
 import type { SharePanelProps } from "../components/share-panel.js";
+import { countWords, SUBMIT_FROM_WORDS } from "../components/open-field.js";
 import { h, mount, type VNode } from "./dom.js";
 import type { AnswerInput, DisagreementKind, PageStateDto, QuestionDto } from "./contract.js";
 import {
   createProfile,
   disagree,
   enableShare,
+  loadGeneration,
   loadPage,
   loadPublic,
   purchase,
@@ -27,6 +29,7 @@ import {
 } from "./api.js";
 import { edgeNotice } from "./edges.js";
 import { collectingPause, scrollToNewBlock, windowHost, type MotionHost } from "./motion.js";
+import { startPoll, windowTimer, type Poller, type TimerHost } from "./poll.js";
 import {
   consentCopy,
   consentVersionOf,
@@ -78,6 +81,9 @@ export interface AppHost extends Transport {
   location: { pathname: string };
   history?: { pushState: (data: unknown, title: string, url: string) => void };
   motion?: MotionHost | null;
+  /** Часы опроса. Не движение: при снижении движения опрос не схлопывается. */
+  timer?: TimerHost | null;
+  now?: () => number;
   title?: (text: string) => void;
   scrollRoot?: { querySelector: (selector: string) => { scrollIntoView: (options: { behavior: "smooth" | "auto"; block: "start" }) => void } | null };
 }
@@ -99,6 +105,10 @@ export interface PageApp {
   closePublicLink: () => Promise<void>;
   decline: () => void;
   buy: () => Promise<void>;
+  /** Остановить опрос статуса. Уход со страницы и тесты. */
+  stop: () => void;
+  /** Дождаться текущего тика опроса. Нужно тестам: сеть внутри тика асинхронна. */
+  flushWatch: () => Promise<void>;
 }
 
 const introLabels = () => ({
@@ -169,6 +179,7 @@ export function renderSession(
     onDecline?: () => void;
     onBuy?: () => void;
   },
+  clock: { now: number } = { now: Date.now() },
 ): VNode {
   if (session.screen === "missing") {
     const revoked = session.missingKind === "revoked";
@@ -210,13 +221,17 @@ export function renderSession(
 
   const question = currentQuestion(session);
   const value = question === null ? null : storedValue(question, session.answers, session.draft);
+  const labels = pageLabels(page);
+  if (session.portionError) labels.portion.openHint = session.portionError;
 
-  return renderPersonalPage(page, pageLabels(page), {
+  return renderPersonalPage(page, labels, {
     portionIndex: page.nextPortion ? session.questionIndex : undefined,
     portionValue: value,
     collecting: session.collecting,
     seenBars: session.seenBars,
     seenBlocks: session.seenBlocks,
+    reopened: session.waitResumed,
+    now: clock.now,
     notice: edgeNotice(page, {
       returned: session.returned,
       offerDeclined: session.offerDeclined,
@@ -244,11 +259,67 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
   let session = emptySession();
   let pause: ReturnType<typeof collectingPause> | null = null;
   let consented = false;
+  let watching: Poller | null = null;
+  let watchId: string | null = null;
 
   const paint = () => onChange?.();
   const set = (next: Session) => {
     session = next;
     paint();
+  };
+  const now = (): number => host.now?.() ?? Date.now();
+  const timer = (): TimerHost =>
+    host.timer ??
+    windowTimer() ?? {
+      setTimeout: (handler, ms) => setTimeout(handler, ms) as unknown as number,
+      clearTimeout: (id) => clearTimeout(id),
+    };
+
+  const stopWatch = (): void => {
+    watching?.stop();
+    watching = null;
+    watchId = null;
+  };
+
+  const pendingOf = (page: PageStateDto | null) =>
+    page?.blocks.find((block) => block.generation?.status === "pending")?.generation ?? null;
+
+  const revealPage = (page: PageStateDto, mode: "load" | "advance"): void => {
+    set(showPage(session, page, mode));
+    if (mode === "advance") scrollToEntering();
+    session = rememberShown(session);
+    watchIfNeeded(session.page);
+  };
+
+  const watchIfNeeded = (page: PageStateDto | null): void => {
+    const pending = pendingOf(page);
+    if (page === null || pending === null) {
+      stopWatch();
+      return;
+    }
+    if (watching !== null && watchId === pending.id) return;
+
+    stopWatch();
+    const profileId = page.profileId;
+    const generationId = pending.id;
+    watchId = generationId;
+    watching = startPoll({
+      host: timer(),
+      tick: async () => {
+        if (session.page?.profileId !== profileId) return false;
+        const status = await loadGeneration(profileId, generationId, host);
+        if (!status.ok) return !status.missing;
+        if (status.generation.status === "pending") {
+          set({ ...session });
+          return true;
+        }
+        const result = await loadPage(profileId, host);
+        if (!result.ok) return !result.missing;
+        stopWatch();
+        revealPage(result.page, "advance");
+        return false;
+      },
+    });
   };
 
   const chrome = (view: VNode): VNode => {
@@ -308,9 +379,7 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
     let arrived: PageStateDto | null = null;
     const reveal = () => {
       if (arrived === null) return;
-      set(showPage(session, arrived, "advance"));
-      scrollToEntering();
-      session = rememberShown(session);
+      revealPage(arrived, "advance");
     };
 
     pause = collectingPause({
@@ -325,7 +394,10 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
     if (!result.ok) {
       pause?.skip();
       pause = null;
-      set({ ...session, collecting: false });
+      const open = session.answers.find((answer) => answer.kind === "открытый");
+      const draft = open && open.kind === "открытый" ? open.text : session.draft;
+      const portionError = !result.missing && result.code === "answer_too_short" ? errorTexts.tooShort() : null;
+      set({ ...session, collecting: false, draft, portionError });
       return;
     }
     arrived = result.page;
@@ -335,7 +407,9 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
   const app: PageApp = {
     tree: () =>
       chrome(
-        renderSession(session, {
+        renderSession(
+          session,
+          {
           onIntro: (name, birthDate) => {
             void app.intro(name, birthDate);
           },
@@ -376,10 +450,13 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
           },
           consent: session.screen === "intro" ? consentSlot() : undefined,
           submitDisabled: session.screen === "intro" ? !consented : undefined,
-        }),
+          },
+          { now: now() },
+        ),
       ),
     session: () => session,
     start: async () => {
+      stopWatch();
       const route = parseRoute(host.location.pathname);
       if (route.kind === "intro") {
         set(showIntro(session));
@@ -407,10 +484,14 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
         set(showMissing(session));
         return;
       }
-      set(showPage(session, result.page, "load"));
+      revealPage(result.page, "load");
       host.title?.(result.page.card.name || missingTexts.title());
     },
     accept: async (input) => {
+      if (input.kind === "открытый" && countWords(input.text) < SUBMIT_FROM_WORDS) {
+        set(setDraft(session, input.text));
+        return;
+      }
       const next = acceptAnswer(session, input);
       set(next);
       if (next.collecting) await finishPortion();
@@ -430,7 +511,7 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
         return;
       }
       host.history?.pushState(null, "", result.page.url || pageHref(result.page.profileId));
-      set(showPage(session, result.page, "load"));
+      revealPage(result.page, "load");
       host.title?.(result.page.card.name);
     },
     consent: (checked) => {
@@ -438,6 +519,7 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       paint();
     },
     goOwn: () => {
+      stopWatch();
       consented = false;
       host.history?.pushState(null, "", "/");
       set(showIntro(session));
@@ -489,8 +571,19 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
         return;
       }
       set(replacePage(session, result.page));
+      watchIfNeeded(result.page);
     },
+    stop: () => {
+      pause?.skip();
+      pause = null;
+      stopWatch();
+    },
+    flushWatch: () => watching?.idle() ?? Promise.resolve(),
   };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("pagehide", () => app.stop());
+  }
 
   return app;
 }
@@ -502,6 +595,7 @@ if (root !== null) {
     history,
     fetch,
     motion: windowHost(),
+    timer: windowTimer(),
     scrollRoot: document,
     title: (text) => {
       document.title = text;

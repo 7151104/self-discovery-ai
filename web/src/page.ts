@@ -355,6 +355,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     "div",
     {
       class: "page",
+      lang: "ru",
       "data-page": page.state,
       "data-edge": options.notice?.id ?? null,
       "data-collecting": options.collecting === true ? "on" : "off",

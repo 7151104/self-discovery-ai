@@ -1,0 +1,856 @@
+снимок v1
+источник: витрина
+состояние: s0
+ширина: desktop
+окно: 1280
+
+--- дерево ---
+<div class="page" data-collecting="off" data-page="s0" data-profiled="false" data-view="owner" lang="ru">
+  <header class="head">
+    <h1 class="head__name">
+      Кирилл
+    </h1>
+    <p class="head__theme">
+      Сейчас у тебя период: Период, когда важнее закончить, чем начать
+    </p>
+    <p class="head__metaphor">
+      Как чтение книги, дочитанной до середины дважды
+    </p>
+  </header>
+  <ul aria-label="Карта" class="map">
+    <li class="bar" data-animate="on" data-bar="tempo" data-fill="empty" data-kind="axis">
+      <span class="visually-hidden">
+        Темп: Пока закрыто. Откроется на первых трёх вопросах
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Темп
+          </span>
+          <span class="bar__track"></span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на первых трёх вопросах
+        </p>
+      </details>
+      <div aria-hidden="true" class="bar__poles">
+        <span class="bar__pole">
+          ровный поток
+        </span>
+        <span class="bar__pole">
+          импульсы
+        </span>
+      </div>
+    </li>
+    <li class="bar" data-animate="on" data-bar="completion" data-fill="empty" data-kind="axis">
+      <span class="visually-hidden">
+        Доведение: Пока закрыто. Откроется на первых трёх вопросах
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Доведение
+          </span>
+          <span class="bar__track"></span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на первых трёх вопросах
+        </p>
+      </details>
+      <div aria-hidden="true" class="bar__poles">
+        <span class="bar__pole">
+          до конца
+        </span>
+        <span class="bar__pole">
+          обрыв
+        </span>
+      </div>
+    </li>
+    <li class="bar" data-animate="on" data-bar="pressure" data-fill="empty" data-kind="axis">
+      <span class="visually-hidden">
+        Под давлением: Пока закрыто. Откроется на первых трёх вопросах
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Под давлением
+          </span>
+          <span class="bar__track"></span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на первых трёх вопросах
+        </p>
+      </details>
+      <div aria-hidden="true" class="bar__poles">
+        <span class="bar__pole">
+          замирание
+        </span>
+        <span class="bar__pole">
+          ускорение
+        </span>
+      </div>
+    </li>
+    <li class="bar" data-animate="on" data-bar="trigger" data-fill="empty" data-kind="category">
+      <span class="visually-hidden">
+        Что задевает: Пока закрыто. Откроется на вопросах про то, что задевает
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Что задевает
+          </span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на вопросах про то, что задевает
+        </p>
+      </details>
+      <ul class="bar__dots">
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда меня не воспринимают всерьёз
+          </span>
+        </li>
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда я теряю контроль над происходящим
+          </span>
+        </li>
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда меня оставляют одного
+          </span>
+        </li>
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда обо мне думают хуже, чем есть
+          </span>
+        </li>
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда меня торопят
+          </span>
+        </li>
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда решают за меня
+          </span>
+        </li>
+        <li class="bar__dot" data-selected="false">
+          <span class="visually-hidden">
+            когда я подвожу тех, кто рассчитывал
+          </span>
+        </li>
+      </ul>
+    </li>
+    <li class="bar" data-animate="on" data-bar="attention" data-fill="empty" data-kind="axis">
+      <span class="visually-hidden">
+        Внимание: Пока закрыто. Откроется на вопросах про то, как ты обрабатываешь
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Внимание
+          </span>
+          <span class="bar__track"></span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на вопросах про то, как ты обрабатываешь
+        </p>
+      </details>
+      <div aria-hidden="true" class="bar__poles">
+        <span class="bar__pole">
+          конкретика
+        </span>
+        <span class="bar__pole">
+          связи
+        </span>
+      </div>
+    </li>
+    <li class="bar" data-animate="on" data-bar="structure" data-fill="empty" data-kind="axis">
+      <span class="visually-hidden">
+        Структура: Пока закрыто. Откроется на вопросах про планы и решения
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Структура
+          </span>
+          <span class="bar__track"></span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на вопросах про планы и решения
+        </p>
+      </details>
+      <div aria-hidden="true" class="bar__poles">
+        <span class="bar__pole">
+          определённость
+        </span>
+        <span class="bar__pole">
+          открытый финал
+        </span>
+      </div>
+    </li>
+    <li class="bar" data-animate="on" data-bar="holding" data-fill="empty" data-kind="axis">
+      <span class="visually-hidden">
+        Удержание: Пока закрыто. Откроется на вопросах про то, как тебя задевает
+      </span>
+      <details class="bar__explain">
+        <summary class="bar__row">
+          <span class="bar__label">
+            Удержание
+          </span>
+          <span class="bar__track"></span>
+        </summary>
+        <p class="bar__hint">
+          Откроется на вопросах про то, как тебя задевает
+        </p>
+      </details>
+      <div aria-hidden="true" class="bar__poles">
+        <span class="bar__pole">
+          отпускает
+        </span>
+        <span class="bar__pole">
+          держит долго
+        </span>
+      </div>
+    </li>
+  </ul>
+  <section class="portion" data-index="0" data-kind="choice" data-portion="step:1" data-total="3">
+    <p class="portion__lead">
+      Три вопроса — и я скажу, как ты работаешь
+    </p>
+    <p aria-label="Вопрос 1 из 3 в этой порции" class="portion__progress" role="status">
+      <span aria-hidden="true" class="portion__dot" data-state="current"></span>
+      <span aria-hidden="true" class="portion__dot" data-state="rest"></span>
+      <span aria-hidden="true" class="portion__dot" data-state="rest"></span>
+    </p>
+    <div class="portion__choice">
+      <p class="portion__question">
+        Как обычно начинается твоя работа над большим делом?
+      </p>
+      <div aria-label="Как обычно начинается твоя работа над большим делом?" class="options" role="radiogroup">
+        <label class="option" data-state="rest" for="Q1-A">
+          <input class="option__input" id="Q1-A" name="Q1" type="radio" value="A">
+          <span aria-hidden="true" class="option__mark"></span>
+          <span class="option__text">
+            когда меня не воспринимают всерьёз
+          </span>
+        </label>
+        <label class="option" data-state="rest" for="Q1-B">
+          <input class="option__input" id="Q1-B" name="Q1" type="radio" value="B">
+          <span aria-hidden="true" class="option__mark"></span>
+          <span class="option__text">
+            когда я теряю контроль над происходящим
+          </span>
+        </label>
+        <label class="option" data-state="rest" for="Q1-C">
+          <input class="option__input" id="Q1-C" name="Q1" type="radio" value="C">
+          <span aria-hidden="true" class="option__mark"></span>
+          <span class="option__text">
+            когда обо мне думают хуже, чем есть
+          </span>
+        </label>
+        <label class="option" data-state="rest" for="Q1-D">
+          <input class="option__input" id="Q1-D" name="Q1" type="radio" value="D">
+          <span aria-hidden="true" class="option__mark"></span>
+          <span class="option__text">
+            когда я подвожу тех, кто на меня рассчитывал
+          </span>
+        </label>
+      </div>
+    </div>
+  </section>
+  <ul aria-label="Маршрут" class="route">
+    <li class="door" data-door="door-work" data-state="opens_with_answers">
+      <button class="door__face" type="button">
+        <span aria-hidden="true" class="door__mark"></span>
+        <span class="door__body">
+          <span class="door__title">
+            Как ты работаешь
+          </span>
+          <span class="door__note">
+            открывается ответами
+          </span>
+        </span>
+      </button>
+    </li>
+    <li class="door" data-door="door-decisions" data-state="opens_with_answers">
+      <button class="door__face" type="button">
+        <span aria-hidden="true" class="door__mark"></span>
+        <span class="door__body">
+          <span class="door__title">
+            Как ты принимаешь решения
+          </span>
+          <span class="door__note">
+            открывается ответами
+          </span>
+        </span>
+      </button>
+    </li>
+    <li class="door" data-door="door-finish" data-state="locked_generic">
+      <div class="door__face" data-static="true">
+        <span aria-hidden="true" class="door__mark"></span>
+        <span class="door__body">
+          <span class="door__title">
+            Почему ты останавливаешься у финиша
+          </span>
+          <span class="door__note">
+            закрыто
+          </span>
+        </span>
+      </div>
+    </li>
+    <li class="door" data-door="door-close" data-state="locked_generic">
+      <div class="door__face" data-static="true">
+        <span aria-hidden="true" class="door__mark"></span>
+        <span class="door__body">
+          <span class="door__title">
+            Как этот механизм работает в близких
+          </span>
+          <span class="door__note">
+            закрыто
+          </span>
+        </span>
+      </div>
+    </li>
+    <li class="door" data-door="door-map" data-state="locked_generic">
+      <div class="door__face" data-static="true">
+        <span aria-hidden="true" class="door__mark"></span>
+        <span class="door__body">
+          <span class="door__title">
+            Полная карта
+          </span>
+          <span class="door__note">
+            закрыто
+          </span>
+        </span>
+      </div>
+    </li>
+  </ul>
+</div>
+
+--- стили ---
+:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 4px;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar__dot {
+  background: transparent;
+  border: 1px solid #b4b5b1;
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.bar__dot[data-selected="true"] {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  border-width: 2px;
+  transform: scale(1.4);
+}
+
+.bar__dots {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bar__explain {
+  border-radius: 8px;
+}
+
+.bar__explain > summary {
+  cursor: pointer;
+}
+
+.bar__explain > summary::marker {
+  content: "";
+}
+
+.bar__explain > summary:hover .bar__label {
+  color: #14161a;
+}
+
+.bar__hint {
+  color: #4f5563;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 8px 0;
+}
+
+.bar__label {
+  color: #14161a;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.bar__poles {
+  color: #4f5563;
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  justify-content: space-between;
+  line-height: 1.4;
+}
+
+.bar__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  list-style: none;
+  min-height: 44px;
+}
+
+.bar__track {
+  background: #e8e8e5;
+  border: 1px solid #dcdcd8;
+  border-radius: 999px;
+  display: block;
+  height: 20px;
+  position: relative;
+}
+
+.bar[data-fill="approximate"] .bar__track {
+  border-style: solid;
+  border-width: 1px;
+}
+
+.bar[data-fill="empty"] .bar__label {
+  color: #4f5563;
+}
+
+.bar[data-fill="empty"] .bar__track {
+  background: transparent;
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.bar[data-fill="precise"] .bar__track {
+  border-color: #b4b5b1;
+  border-style: solid;
+  border-width: 2px;
+}
+
+.door__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.door__face {
+  align-items: center;
+  background: transparent;
+  border: 1px dashed #b4b5b1;
+  border-radius: 14px;
+  color: #4f5563;
+  display: flex;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 16px;
+  text-align: left;
+  transition: border-color 240ms ease, background-color 240ms ease;
+  width: 100%;
+}
+
+.door__face:not([data-static="true"]):hover {
+  border-color: #4f5563;
+}
+
+.door__mark {
+  background: transparent;
+  border: 2px dashed #b4b5b1;
+  border-radius: 999px;
+  flex: none;
+  height: 20px;
+  width: 20px;
+}
+
+.door__note {
+  color: #4f5563;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.door__title {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.door[data-state="locked_generic"] .door__face {
+  color: #666a73;
+}
+
+.door[data-state="locked_profiled"] .door__face {
+  color: #14161a;
+}
+
+.door[data-state="locked_profiled"] .door__title {
+  font-weight: 500;
+}
+
+.door[data-state="offered"] .door__face {
+  background: #ffffff;
+  border-color: #1d4ed8;
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: 0 2px 4px rgba(11, 13, 16, 0.06), 0 12px 32px rgba(11, 13, 16, 0.08);
+  color: #14161a;
+}
+
+.door[data-state="offered"] .door__mark {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  border-style: solid;
+}
+
+.door[data-state="offered"] .door__title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.door[data-state="open"] .door__face {
+  background: #ffffff;
+  border-color: #dcdcd8;
+  border-style: solid;
+  color: #14161a;
+}
+
+.door[data-state="open"] .door__mark {
+  background: #0b0d10;
+  border-color: #0b0d10;
+  border-style: solid;
+}
+
+.door[data-state="opens_with_answers"] .door__face {
+  color: #14161a;
+}
+
+.door[data-state="opens_with_answers"] .door__mark {
+  background: radial-gradient(circle at center, #14161a 30%, transparent 32%);
+  border-color: #14161a;
+  border-style: dotted;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.head__metaphor {
+  color: #4f5563;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 36ch;
+}
+
+.head__name {
+  color: #0b0d10;
+  font-size: 30px;
+  font-weight: 640;
+  line-height: 1.25;
+}
+
+.head__theme {
+  color: #4f5563;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.map {
+  background: #ffffff;
+  border: 1px solid #dcdcd8;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 16px;
+}
+
+.option {
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #dcdcd8;
+  border-radius: 14px;
+  color: #14161a;
+  cursor: pointer;
+  display: flex;
+  font-size: 16px;
+  gap: 12px;
+  line-height: 1.4;
+  min-height: 44px;
+  padding: 12px 16px;
+  position: relative;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.option__input {
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.option__mark {
+  background: #ffffff;
+  border: 2px solid #b4b5b1;
+  border-radius: 999px;
+  flex: none;
+  height: 20px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+  width: 20px;
+}
+
+.option__text {
+  min-width: 0;
+}
+
+.option:has(.option__input:focus-visible) {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 4px;
+}
+
+.option[data-state="disabled"] {
+  background: #f1f1ef;
+  border-color: #dcdcd8;
+  color: #666a73;
+  cursor: not-allowed;
+}
+
+.option[data-state="disabled"] .option__mark {
+  background: #f1f1ef;
+  border-color: #b4b5b1;
+}
+
+.option[data-state="rest"]:active {
+  background: #f1f1ef;
+}
+
+.option[data-state="rest"]:hover {
+  border-color: #b4b5b1;
+}
+
+.option[data-state="selected"] {
+  background: #eef2ff;
+  border-color: #1d4ed8;
+}
+
+.option[data-state="selected"] .option__mark {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin: 0 auto;
+  max-width: 560px;
+  padding: 24px;
+}
+
+.portion {
+  background: #ffffff;
+  border: 1px solid #dcdcd8;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(11, 13, 16, 0.04), 0 8px 24px rgba(11, 13, 16, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 16px;
+}
+
+.portion__choice,
+.portion__number {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portion__dot {
+  background: transparent;
+  border: 1px solid #b4b5b1;
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.portion__dot[data-state="current"] {
+  border-color: #0b0d10;
+  border-width: 2px;
+  transform: scale(1.4);
+}
+
+.portion__dot[data-state="done"] {
+  background: #4f5563;
+  border-color: #4f5563;
+}
+
+.portion__lead {
+  color: #0b0d10;
+  font-size: 20px;
+  font-weight: 640;
+  line-height: 1.25;
+  max-width: 36ch;
+}
+
+.portion__progress {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.portion__question {
+  color: #0b0d10;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 36ch;
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.visually-hidden {
+  clip-path: inset(50%);
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+body {
+  background: #fbfbfa;
+  color: #14161a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.55;
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+h1,
+h2,
+h3 {
+  color: #0b0d10;
+  font-size: 20px;
+  font-weight: 640;
+  line-height: 1.25;
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+p {
+  margin: 0;
+}
+
+--- токены ---
+--border-hair: 1px;
+--border-heavy: 3px;
+--border-strong: 2px;
+--color-accent: #1d4ed8;
+--color-accent-contrast: #ffffff;
+--color-accent-quiet: #eef2ff;
+--color-alert: #a3161c;
+--color-focus: #1d4ed8;
+--color-line: #dcdcd8;
+--color-line-strong: #b4b5b1;
+--color-surface-card: #ffffff;
+--color-surface-inset: #e8e8e5;
+--color-surface-muted: #f1f1ef;
+--color-surface-page: #fbfbfa;
+--color-text: #14161a;
+--color-text-faint: #666a73;
+--color-text-soft: #4f5563;
+--color-text-strong: #0b0d10;
+--duration-base: 240ms;
+--duration-fast: 120ms;
+--duration-instant: 0ms;
+--duration-marker: 480ms;
+--font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+--leading-normal: 1.55;
+--leading-snug: 1.4;
+--leading-tight: 1.25;
+--measure-block: 36ch;
+--measure-hook: 28ch;
+--radius-md: 14px;
+--radius-pill: 999px;
+--radius-sm: 8px;
+--shadow-card: 0 1px 2px rgba(11, 13, 16, 0.04), 0 8px 24px rgba(11, 13, 16, 0.05);
+--shadow-none: none;
+--shadow-raised: 0 2px 4px rgba(11, 13, 16, 0.06), 0 12px 32px rgba(11, 13, 16, 0.08);
+--size-bar-marker: 14px;
+--size-bar-track: 20px;
+--size-container: 560px;
+--size-dot: 10px;
+--size-field: 152px;
+--size-mark: 20px;
+--size-screen: 360px;
+--size-target: 44px;
+--size-wait-line: 12px;
+--space-1: 4px;
+--space-2: 8px;
+--space-3: 12px;
+--space-4: 16px;
+--space-5: 24px;
+--space-6: 32px;
+--space-7: 48px;
+--text-2xl: 30px;
+--text-lg: 20px;
+--text-md: 16px;
+--text-sm: 14px;
+--text-xl: 24px;
+--text-xs: 13px;
+--weight-medium: 500;
+--weight-regular: 400;
+--weight-strong: 640;
+--zone-center: 50%;
+--zone-far-high: 94%;
+--zone-far-low: 6%;
+--zone-high: 80%;
+--zone-low: 20%;
+--zone-mid-high: 65%;
+--zone-mid-low: 35%;

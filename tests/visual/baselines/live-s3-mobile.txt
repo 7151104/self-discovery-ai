@@ -1,0 +1,1139 @@
+снимок v1
+источник: живой
+состояние: s3
+ширина: mobile
+окно: 360
+
+--- дерево ---
+<div class="page-shell" data-collecting="off" data-edge="no-date" data-page="s3" data-profiled="true" data-view="owner">
+  <div class="page" data-collecting="off" data-edge="no-date" data-page="s3" data-profiled="true" data-view="owner" lang="ru">
+    <header class="head">
+      <h1 class="head__name">
+        Аня
+      </h1>
+    </header>
+    <p class="page__notice" data-edge="no-date" data-tone="rest">
+      Дата не введена, поэтому карточки периода нет. На разбор это не влияет
+    </p>
+    <p class="hook">
+      Тебе физически тяжело от незакрытого — и ты сам его создаёшь.
+    </p>
+    <ul aria-label="Карта" class="map">
+      <li class="bar" data-animate="off" data-bar="tempo" data-fill="approximate" data-kind="axis">
+        <span class="visually-hidden">
+          Темп: сильный перевес — ровный поток. Пока предположение
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Темп
+          </span>
+          <span class="bar__track">
+            <span class="bar__marker" data-zone="far-low"></span>
+          </span>
+        </div>
+        <div aria-hidden="true" class="bar__poles">
+          <span class="bar__pole">
+            ровный поток
+          </span>
+          <span class="bar__pole">
+            импульсы
+          </span>
+        </div>
+      </li>
+      <li class="bar" data-animate="off" data-bar="completion" data-fill="precise" data-kind="axis">
+        <span class="visually-hidden">
+          Доведение: сильный перевес — обрыв. Точно
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Доведение
+          </span>
+          <span class="bar__track">
+            <span class="bar__marker" data-zone="far-high"></span>
+          </span>
+        </div>
+        <div aria-hidden="true" class="bar__poles">
+          <span class="bar__pole">
+            до конца
+          </span>
+          <span class="bar__pole">
+            обрыв
+          </span>
+        </div>
+      </li>
+      <li class="bar" data-animate="off" data-bar="pressure" data-fill="precise" data-kind="axis">
+        <span class="visually-hidden">
+          Под давлением: сильный перевес — ускорение. Точно
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Под давлением
+          </span>
+          <span class="bar__track">
+            <span class="bar__marker" data-zone="far-high"></span>
+          </span>
+        </div>
+        <div aria-hidden="true" class="bar__poles">
+          <span class="bar__pole">
+            замирание
+          </span>
+          <span class="bar__pole">
+            ускорение
+          </span>
+        </div>
+      </li>
+      <li class="bar" data-animate="off" data-bar="trigger" data-fill="precise" data-kind="category">
+        <span class="visually-hidden">
+          Что задевает: когда меня не воспринимают всерьёз. Точно
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Что задевает
+          </span>
+        </div>
+        <ul class="bar__dots">
+          <li class="bar__dot" data-selected="true">
+            <span class="visually-hidden">
+              когда меня не воспринимают всерьёз
+            </span>
+          </li>
+          <li class="bar__dot" data-selected="false">
+            <span class="visually-hidden">
+              когда я теряю контроль над ситуацией
+            </span>
+          </li>
+          <li class="bar__dot" data-selected="false">
+            <span class="visually-hidden">
+              когда меня отвергают
+            </span>
+          </li>
+          <li class="bar__dot" data-selected="false">
+            <span class="visually-hidden">
+              когда я оказываюсь ненужным
+            </span>
+          </li>
+          <li class="bar__dot" data-selected="false">
+            <span class="visually-hidden">
+              когда я оказываюсь неправ
+            </span>
+          </li>
+          <li class="bar__dot" data-selected="false">
+            <span class="visually-hidden">
+              когда меня ограничивают
+            </span>
+          </li>
+          <li class="bar__dot" data-selected="false">
+            <span class="visually-hidden">
+              когда всё оказывается бессмысленным
+            </span>
+          </li>
+        </ul>
+        <p class="bar__selected">
+          когда меня не воспринимают всерьёз
+        </p>
+      </li>
+      <li class="bar" data-animate="off" data-bar="attention" data-fill="approximate" data-kind="axis">
+        <span class="visually-hidden">
+          Внимание: сильный перевес — конкретика. Пока предположение
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Внимание
+          </span>
+          <span class="bar__track">
+            <span class="bar__marker" data-zone="far-low"></span>
+          </span>
+        </div>
+        <div aria-hidden="true" class="bar__poles">
+          <span class="bar__pole">
+            конкретика
+          </span>
+          <span class="bar__pole">
+            связи
+          </span>
+        </div>
+      </li>
+      <li class="bar" data-animate="off" data-bar="structure" data-fill="approximate" data-kind="axis">
+        <span class="visually-hidden">
+          Структура: посередине, без перевеса. Пока предположение
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Структура
+          </span>
+          <span class="bar__track">
+            <span class="bar__marker" data-zone="center"></span>
+          </span>
+        </div>
+        <div aria-hidden="true" class="bar__poles">
+          <span class="bar__pole">
+            определённость
+          </span>
+          <span class="bar__pole">
+            открытый финал
+          </span>
+        </div>
+      </li>
+      <li class="bar" data-animate="off" data-bar="holding" data-fill="approximate" data-kind="axis">
+        <span class="visually-hidden">
+          Удержание: сильный перевес — держит долго. Пока предположение
+        </span>
+        <div class="bar__row">
+          <span class="bar__label">
+            Удержание
+          </span>
+          <span class="bar__track">
+            <span class="bar__marker" data-zone="far-high"></span>
+          </span>
+        </div>
+        <div aria-hidden="true" class="bar__poles">
+          <span class="bar__pole">
+            отпускает
+          </span>
+          <span class="bar__pole">
+            держит долго
+          </span>
+        </div>
+      </li>
+    </ul>
+    <article class="block" data-block="step1" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Как ты работаешь
+      </h2>
+      <p class="block__paragraph">
+        Ты держишь ровный темп: от начала до конца примерно одинаково, без рывков и провалов. Твоя сила в дистанции — ты доезжаешь там, где другие выдыхаются на середине. Плата за это в другом: тебе тяжело даются ситуации, где надо резко вложиться разово. Ты не умеешь сжигать себя, и в авралах проигрываешь тем, кто умеет.
+      </p>
+      <p class="block__paragraph">
+        У тебя разрыв на самом входе: решение принято, а первый шаг не делается. Обычно это не про энергию, а про масштаб: в голове ты видишь задачу целиком, и её размер парализует ещё до старта. Люди с таким разрывом сдвигаются только тогда, когда первый шаг становится унизительно маленьким.
+      </p>
+      <p class="block__paragraph">
+        В момент, когда правильнее всего снять с себя половину, ты добавляешь себе объём. Помощи не просишь, потому что объяснять кажется дольше, чем сделать самому. К концу аврала у тебя двойная нагрузка и уверенность, что иначе было нельзя, — а люди вокруг чаще всего даже не знали, что могли помочь.
+      </p>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+        <button class="block__action" data-action="share" type="button">
+          Поделиться
+        </button>
+      </div>
+    </article>
+    <article class="block" data-block="step2" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Как ты обрабатываешь и как тебя задевает
+      </h2>
+      <p class="block__paragraph">
+        Ты не оставляешь неверную версию о себе висеть в воздухе — тебе нужно вернуть точность здесь и сейчас. Это делает тебя неудобным, но с тобой ясно. Цена в том, что окружающие запоминают напряжение спора, а не твою правоту.
+      </p>
+      <p class="block__paragraph">
+        Ты держишься за проверяемое и не покупаешь обещания. Это спасает от глупых решений, но иногда отсекает то, что на старте нельзя посчитать, а посчитать можно только уже опоздав.
+      </p>
+      <p class="block__paragraph">
+        Тебя задевает надолго: событие закончилось, а обработка идёт ещё дни. Это делает тебя точным — ты действительно разбираешь то, что произошло. И это же означает, что каждая неприятность обходится тебе в несколько раз дороже, чем человеку рядом.
+      </p>
+      <p class="block__paragraph">
+        Ты требуешь опоры на проверяемое и быстро чувствуешь пустоту в чужих словах. Слабое место — идеи без доказательств; ты отбрасываешь их вместе с болтовнёй.
+      </p>
+      <p class="block__highlight">
+        Ты требуешь доказательств от мира и долго перевариваешь, когда мир их не даёт.
+      </p>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+        <button class="block__action" data-action="share" type="button">
+          Поделиться
+        </button>
+      </div>
+    </article>
+    <article class="block" data-block="step3" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Где ты сам себе мешаешь
+      </h2>
+      <p class="block__paragraph">
+        Тебе физически тяжело от незакрытого — и ты сам его создаёшь. Ты называешь это свободой, но выбираешь не свободу, а отсутствие обязательства. Плата — постоянный фоновый гул из нерешённого, который ты принял за норму.
+      </p>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+        <button class="block__action" data-action="share" type="button">
+          Поделиться
+        </button>
+      </div>
+    </article>
+    <section class="portion" data-index="0" data-kind="open" data-portion="step:4" data-total="1">
+      <p class="portion__lead">
+        Последний вопрос. Отвечай как есть — здесь важны твои слова, не формулировки.
+      </p>
+      <p aria-label="Вопрос 1 из 1 в этой порции" class="portion__progress" role="status">
+        <span aria-hidden="true" class="portion__dot" data-state="current"></span>
+      </p>
+      <div class="field" data-state="short">
+        <label class="field__label" for="L12">
+          Что в твоей жизни повторяется из раза в раз, хотя тебе это не нравится?
+        </label>
+        <textarea aria-describedby="L12-hint" class="field__input" id="L12" rows="6"></textarea>
+        <p class="field__hint" id="L12-hint">
+          Пары предложений мало — опиши, как оно обычно идёт
+        </p>
+        <div class="field__foot">
+          <p aria-live="polite" class="field__counter" hidden id="L12-counter" role="status"></p>
+          <button class="field__submit" disabled type="button">
+            Готово
+          </button>
+        </div>
+      </div>
+    </section>
+    <ul aria-label="Маршрут" class="route">
+      <li class="door" data-door="block_1" data-state="open">
+        <button class="door__face" type="button">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Как ты работаешь
+            </span>
+            <span class="door__note">
+              открыто
+            </span>
+          </span>
+        </button>
+      </li>
+      <li class="door" data-door="block_2" data-state="open">
+        <button class="door__face" type="button">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Как ты обрабатываешь и как тебя задевает
+            </span>
+            <span class="door__note">
+              открыто
+            </span>
+          </span>
+        </button>
+      </li>
+      <li class="door" data-door="block_3" data-state="open">
+        <button class="door__face" type="button">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Где ты сам себе мешаешь
+            </span>
+            <span class="door__note">
+              открыто
+            </span>
+          </span>
+        </button>
+      </li>
+      <li class="door" data-door="free_step_4" data-state="opens_with_answers">
+        <button class="door__face" type="button">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Последний вопрос. Отвечай как есть — здесь важны твои слова, не формулировки.
+            </span>
+            <span class="door__note">
+              открывается ответами
+            </span>
+          </span>
+        </button>
+      </li>
+      <li class="door" data-door="door_slice_decisions" data-state="locked_profiled">
+        <div class="door__face" data-static="true">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Как тебе принимать решения
+            </span>
+            <span class="door__note">
+              закрыто
+            </span>
+          </span>
+        </div>
+      </li>
+      <li class="door" data-door="door_slice_motivation" data-state="locked_profiled">
+        <div class="door__face" data-static="true">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Почему ты не двигаешься без давления снаружи
+            </span>
+            <span class="door__note">
+              закрыто
+            </span>
+          </span>
+        </div>
+      </li>
+      <li class="door" data-door="door_slice_stress" data-state="locked_profiled">
+        <div class="door__face" data-static="true">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Куда девается твоя нагрузка
+            </span>
+            <span class="door__note">
+              закрыто
+            </span>
+          </span>
+        </div>
+      </li>
+      <li class="door" data-door="door_slice_full_map" data-state="locked_profiled">
+        <div class="door__face" data-static="true">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Полная карта всех шестнадцати
+            </span>
+            <span class="door__note">
+              закрыто
+            </span>
+          </span>
+        </div>
+      </li>
+    </ul>
+  </div>
+  <aside class="disclaimer-list">
+    <p class="disclaimer" data-disclaimer="«id»">
+      Это не медицинская и не психологическая помощь. Разбор описывает, как ты устроен, по твоим же ответам, и не ставит диагнозов
+    </p>
+    <p class="disclaimer" data-disclaimer="«id»">
+      Сервис не заменяет работу с психологом, психотерапевтом или врачом. Если тебе тяжело прямо сейчас, разбор этого не закроет
+    </p>
+    <p class="disclaimer" data-disclaimer="DISCLAIMER_INFORMATIONAL">
+      Разбор — описание, а не заключение и не документ. С ним можно не согласиться: несогласие мы считаем данными и учитываем
+    </p>
+    <p class="disclaimer" data-disclaimer="DISCLAIMER_NO_PREDICTION">
+      Предсказаний здесь нет: ни событий, ни сроков. Описывается то, что уже видно по ответам
+    </p>
+    <p class="disclaimer" data-disclaimer="DISCLAIMER_BIRTHDATE">
+      Дата рождения нужна только для карточки периода. Ни один вывод о тебе на ней не строится
+    </p>
+  </aside>
+  <footer class="site-footer">
+    <p class="site-footer__heading">
+      Документы
+    </p>
+    <nav class="site-footer__nav">
+      <a class="site-footer__link" href="/legal/privacy">
+        Политика обработки персональных данных
+      </a>
+      <a class="site-footer__link" href="/legal/consent">
+        Согласие на обработку персональных данных
+      </a>
+      <a class="site-footer__link" href="/legal/offer">
+        Оферта на оказание информационных услуг
+      </a>
+      <a class="site-footer__link" href="/legal/disclaimers">
+        Дисклеймеры внутри продукта
+      </a>
+    </nav>
+  </footer>
+  <aside class="disclaimer-list">
+    <p class="disclaimer" data-disclaimer="«id»">
+      Это не медицинская и не психологическая помощь. Разбор описывает, как ты устроен, по твоим же ответам, и не ставит диагнозов
+    </p>
+    <p class="disclaimer" data-disclaimer="«id»">
+      Сервис не заменяет работу с психологом, психотерапевтом или врачом. Если тебе тяжело прямо сейчас, разбор этого не закроет
+    </p>
+    <p class="disclaimer" data-disclaimer="DISCLAIMER_INFORMATIONAL">
+      Разбор — описание, а не заключение и не документ. С ним можно не согласиться: несогласие мы считаем данными и учитываем
+    </p>
+    <p class="disclaimer" data-disclaimer="«id»">
+      Ответы сохраняются, чтобы страница осталась по ссылке. Что именно хранится и как это удалить — в политике обработки данных
+    </p>
+    <p class="disclaimer" data-disclaimer="«id»">
+      Сервис рассчитан на взрослых: пользоваться им можно с 18 лет. Разборов о детях здесь нет
+    </p>
+  </aside>
+</div>
+
+--- стили ---
+:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 4px;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar__dot {
+  background: transparent;
+  border: 1px solid #b4b5b1;
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.bar__dot[data-selected="true"] {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  border-width: 2px;
+  transform: scale(1.4);
+}
+
+.bar__dots {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bar__label {
+  color: #14161a;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.bar__marker {
+  background: #1d4ed8;
+  bottom: 0;
+  left: ;
+  margin: auto 0;
+  position: absolute;
+  top: 0;
+}
+
+.bar__poles {
+  color: #4f5563;
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  justify-content: space-between;
+  line-height: 1.4;
+}
+
+.bar__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  list-style: none;
+  min-height: 44px;
+}
+
+.bar__selected {
+  color: #0b0d10;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.bar__track {
+  background: #e8e8e5;
+  border: 1px solid #dcdcd8;
+  border-radius: 999px;
+  display: block;
+  height: 20px;
+  position: relative;
+}
+
+.bar[data-animate="off"] .bar__marker {
+  animation-name: none;
+}
+
+.bar[data-animate="on"] .bar__marker {
+  animation-duration: 480ms;
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-name: marker-arrive;
+  animation-timing-function: ease-out;
+}
+
+.bar[data-fill="approximate"] .bar__marker {
+  border-radius: 999px;
+  filter: blur(3px);
+  height: 14px;
+  opacity: 0.6;
+  width: 14px;
+}
+
+.bar[data-fill="approximate"] .bar__track {
+  border-style: solid;
+  border-width: 1px;
+}
+
+.bar[data-fill="empty"] .bar__label {
+  color: #4f5563;
+}
+
+.bar[data-fill="empty"] .bar__track {
+  background: transparent;
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.bar[data-fill="precise"] .bar__marker {
+  border-radius: 8px;
+  filter: none;
+  height: 20px;
+  opacity: 1;
+  width: 3px;
+}
+
+.bar[data-fill="precise"] .bar__track {
+  border-color: #b4b5b1;
+  border-style: solid;
+  border-width: 2px;
+}
+
+.block {
+  background: #ffffff;
+  border: 1px solid #dcdcd8;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(11, 13, 16, 0.04), 0 8px 24px rgba(11, 13, 16, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.block__action {
+  background: #ffffff;
+  border: 1px solid #dcdcd8;
+  border-radius: 8px;
+  color: #4f5563;
+  font-size: 14px;
+  font-weight: 400;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.block__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.block__heading {
+  color: #0b0d10;
+  font-size: 20px;
+  font-weight: 640;
+  line-height: 1.25;
+  max-width: 36ch;
+}
+
+.block__highlight {
+  background: #f1f1ef;
+  border-left: 3px solid #0b0d10;
+  border-radius: 0;
+  color: #0b0d10;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 36ch;
+  padding: 16px;
+}
+
+.block__paragraph {
+  color: #14161a;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.55;
+  max-width: 36ch;
+}
+
+.block[data-enter="off"],
+.wait[data-enter="off"] {
+  animation-name: none;
+}
+
+.block[data-enter="on"],
+.wait[data-enter="on"] {
+  animation-duration: 240ms;
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-name: block-enter;
+  animation-timing-function: ease-out;
+}
+
+.block[data-state="disagreed"] {
+  border-color: #b4b5b1;
+}
+
+.block[data-state="disagreed"] .block__action[data-action="disagree"] {
+  border-color: #b4b5b1;
+  color: #0b0d10;
+}
+
+.block[data-state="pending"] .block__paragraph {
+  color: #4f5563;
+}
+
+.block[data-state="purchased"] {
+  border-color: #b4b5b1;
+}
+
+.block[data-state="stale"] {
+  border-color: #b4b5b1;
+}
+
+.disclaimer {
+  color: #4f5563;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 36ch;
+}
+
+.disclaimer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 560px;
+  padding: 0 12px;
+}
+
+.door__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.door__face {
+  align-items: center;
+  background: transparent;
+  border: 1px dashed #b4b5b1;
+  border-radius: 14px;
+  color: #4f5563;
+  display: flex;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 16px;
+  text-align: left;
+  transition: border-color 240ms ease, background-color 240ms ease;
+  width: 100%;
+}
+
+.door__mark {
+  background: transparent;
+  border: 2px dashed #b4b5b1;
+  border-radius: 999px;
+  flex: none;
+  height: 20px;
+  width: 20px;
+}
+
+.door__note {
+  color: #4f5563;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.door__title {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.door[data-state="locked_generic"] .door__face {
+  color: #666a73;
+}
+
+.door[data-state="locked_profiled"] .door__face {
+  color: #14161a;
+}
+
+.door[data-state="locked_profiled"] .door__title {
+  font-weight: 500;
+}
+
+.door[data-state="offered"] .door__face {
+  background: #ffffff;
+  border-color: #1d4ed8;
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: 0 2px 4px rgba(11, 13, 16, 0.06), 0 12px 32px rgba(11, 13, 16, 0.08);
+  color: #14161a;
+}
+
+.door[data-state="offered"] .door__mark {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  border-style: solid;
+}
+
+.door[data-state="offered"] .door__title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.door[data-state="open"] .door__face {
+  background: #ffffff;
+  border-color: #dcdcd8;
+  border-style: solid;
+  color: #14161a;
+}
+
+.door[data-state="open"] .door__mark {
+  background: #0b0d10;
+  border-color: #0b0d10;
+  border-style: solid;
+}
+
+.door[data-state="opens_with_answers"] .door__face {
+  color: #14161a;
+}
+
+.door[data-state="opens_with_answers"] .door__mark {
+  background: radial-gradient(circle at center, #14161a 30%, transparent 32%);
+  border-color: #14161a;
+  border-style: dotted;
+}
+
+.field {
+  background: #ffffff;
+  border: 2px solid #dcdcd8;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.field__counter {
+  color: #4f5563;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.field__counter[hidden] {
+  display: none;
+}
+
+.field__foot {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 8px;
+  min-height: 44px;
+}
+
+.field__hint {
+  color: #4f5563;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.field__input {
+  background: #ffffff;
+  border: 2px solid #dcdcd8;
+  border-radius: 8px;
+  color: #14161a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  min-height: 152px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.field__input:disabled {
+  background: #f1f1ef;
+  color: #666a73;
+}
+
+.field__label {
+  color: #0b0d10;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.field__submit {
+  background: #1d4ed8;
+  border: 2px solid #1d4ed8;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 24px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.field__submit:disabled {
+  background: #f1f1ef;
+  border-color: #dcdcd8;
+  color: #666a73;
+  cursor: not-allowed;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.head__name {
+  color: #0b0d10;
+  font-size: 30px;
+  font-weight: 640;
+  line-height: 1.25;
+}
+
+.hook {
+  color: #0b0d10;
+  font-size: 24px;
+  font-weight: 640;
+  line-height: 1.25;
+  max-width: 28ch;
+  padding: 24px 0;
+}
+
+.map {
+  background: #ffffff;
+  border: 1px solid #dcdcd8;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 16px;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin: 0 auto;
+  max-width: 560px;
+  padding: 12px;
+}
+
+.page__notice {
+  background: #f1f1ef;
+  border: 1px solid #b4b5b1;
+  border-radius: 14px;
+  color: #14161a;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 36ch;
+  padding: 12px 16px;
+}
+
+.page__notice[data-tone="crisis"] {
+  border-color: #a3161c;
+  border-style: dashed;
+}
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-height: 100%;
+}
+
+.portion {
+  background: #ffffff;
+  border: 1px solid #dcdcd8;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(11, 13, 16, 0.04), 0 8px 24px rgba(11, 13, 16, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 16px;
+}
+
+.portion__dot {
+  background: transparent;
+  border: 1px solid #b4b5b1;
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.portion__dot[data-state="current"] {
+  border-color: #0b0d10;
+  border-width: 2px;
+  transform: scale(1.4);
+}
+
+.portion__dot[data-state="done"] {
+  background: #4f5563;
+  border-color: #4f5563;
+}
+
+.portion__lead {
+  color: #0b0d10;
+  font-size: 20px;
+  font-weight: 640;
+  line-height: 1.25;
+  max-width: 36ch;
+}
+
+.portion__progress {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-footer {
+  border-top: 1px solid #dcdcd8;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 24px 12px;
+}
+
+.site-footer__heading {
+  color: #4f5563;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.site-footer__link {
+  align-items: center;
+  color: #14161a;
+  display: inline-flex;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.site-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.visually-hidden {
+  clip-path: inset(50%);
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+body {
+  background: #fbfbfa;
+  color: #14161a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.55;
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+h1,
+h2,
+h3 {
+  color: #0b0d10;
+  font-size: 20px;
+  font-weight: 640;
+  line-height: 1.25;
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+p {
+  margin: 0;
+}
+
+--- токены ---
+--border-hair: 1px;
+--border-heavy: 3px;
+--border-strong: 2px;
+--color-accent: #1d4ed8;
+--color-accent-contrast: #ffffff;
+--color-accent-quiet: #eef2ff;
+--color-alert: #a3161c;
+--color-focus: #1d4ed8;
+--color-line: #dcdcd8;
+--color-line-strong: #b4b5b1;
+--color-surface-card: #ffffff;
+--color-surface-inset: #e8e8e5;
+--color-surface-muted: #f1f1ef;
+--color-surface-page: #fbfbfa;
+--color-text: #14161a;
+--color-text-faint: #666a73;
+--color-text-soft: #4f5563;
+--color-text-strong: #0b0d10;
+--duration-base: 240ms;
+--duration-fast: 120ms;
+--duration-instant: 0ms;
+--duration-marker: 480ms;
+--font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+--leading-normal: 1.55;
+--leading-snug: 1.4;
+--leading-tight: 1.25;
+--measure-block: 36ch;
+--measure-hook: 28ch;
+--radius-md: 14px;
+--radius-pill: 999px;
+--radius-sm: 8px;
+--shadow-card: 0 1px 2px rgba(11, 13, 16, 0.04), 0 8px 24px rgba(11, 13, 16, 0.05);
+--shadow-none: none;
+--shadow-raised: 0 2px 4px rgba(11, 13, 16, 0.06), 0 12px 32px rgba(11, 13, 16, 0.08);
+--size-bar-marker: 14px;
+--size-bar-track: 20px;
+--size-container: 560px;
+--size-dot: 10px;
+--size-field: 152px;
+--size-mark: 20px;
+--size-screen: 360px;
+--size-target: 44px;
+--size-wait-line: 12px;
+--space-1: 4px;
+--space-2: 8px;
+--space-3: 12px;
+--space-4: 16px;
+--space-5: 24px;
+--space-6: 32px;
+--space-7: 48px;
+--text-2xl: 30px;
+--text-lg: 20px;
+--text-md: 16px;
+--text-sm: 14px;
+--text-xl: 24px;
+--text-xs: 13px;
+--weight-medium: 500;
+--weight-regular: 400;
+--weight-strong: 640;
+--zone-center: 50%;
+--zone-far-high: 94%;
+--zone-far-low: 6%;
+--zone-high: 80%;
+--zone-low: 20%;
+--zone-mid-high: 65%;
+--zone-mid-low: 35%;

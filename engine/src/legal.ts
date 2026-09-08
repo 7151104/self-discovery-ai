@@ -118,11 +118,12 @@ export interface ConsentShort {
 
 const squeeze = (text: string): string => text.replace(/\s+/g, " ").trim();
 
-const labeled = (section: string, label: string): string => {
+const labeled = (section: string, label: string, continued: boolean): string => {
   const lines = section.split("\n");
   const start = lines.findIndex((line) => line.startsWith(`**${label}:**`));
   if (start < 0) throw new Error(`в коротком согласии нет поля «${label}»`);
   const first = lines[start]!.replace(`**${label}:**`, "").trim();
+  if (!continued) return first;
   const rest: string[] = first ? [first] : [];
   for (let index = start + 1; index < lines.length; index += 1) {
     const line = lines[index]!;
@@ -174,11 +175,11 @@ export function consentShort(source: string = readLegalFile("consent.md")): Cons
     lines.slice(afterTitle < 0 ? 0 : startAfter(lines, afterTitle), beforeMark < 0 ? undefined : beforeMark).join("\n"),
   );
   return {
-    title: labeled(section, "Заголовок"),
+    title: labeled(section, "Заголовок", false),
     body,
-    mark: parseMark(squeeze(labeled(section, "Отметка"))),
-    button: labeled(section, "Кнопка"),
-    refuse: parseMark(squeeze(labeled(section, "Отказ"))),
+    mark: parseMark(squeeze(labeled(section, "Отметка", true))),
+    button: labeled(section, "Кнопка", false),
+    refuse: parseMark(squeeze(labeled(section, "Отказ", true))),
   };
 }
 

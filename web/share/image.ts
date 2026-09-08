@@ -70,6 +70,7 @@ const color = (name: string): string => {
 
 /** Системный запасной набор — тот же, что на странице. */
 const SYSTEM_FAMILY = color("font-family");
+const DISPLAY_FAMILY = color("font-display");
 
 const rect = (
   box: { x: number; y: number; width: number; height: number },
@@ -77,8 +78,13 @@ const rect = (
   extra = "",
 ): string => `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="${fill}"${extra} />`;
 
-const text = (line: { text: string; x: number; y: number; size: number }, fill: string, weight: number): string =>
-  `<text x="${line.x}" y="${line.y}" font-size="${line.size}" font-weight="${weight}" fill="${fill}">${escapeHtml(line.text)}</text>`;
+const text = (
+  line: { text: string; x: number; y: number; size: number },
+  fill: string,
+  weight: number,
+  kind: "hook" | "ui" = "ui",
+): string =>
+  `<text class="${kind}" x="${line.x}" y="${line.y}" font-size="${line.size}" font-weight="${weight}" fill="${fill}">${escapeHtml(line.text)}</text>`;
 
 function fontFace(font: EmbeddedFont | null | undefined): string {
   if (!font) return "";
@@ -94,7 +100,7 @@ function fontFace(font: EmbeddedFont | null | undefined): string {
 function body(layout: ShareLayout): string {
   const parts: string[] = [];
 
-  for (const line of layout.hook) parts.push(text(line, color("color-text-strong"), 640));
+  for (const line of layout.hook) parts.push(text(line, color("color-text-strong"), 640, "hook"));
 
   for (const bar of layout.bars) {
     parts.push(text(bar.label, color("color-text-soft"), 500));
@@ -150,6 +156,7 @@ export function shareImage(data: ShareData, options: ShareOptions = {}): ShareIm
     "  <style>",
     `    ${fontFace(font)}`,
     `    text { font-family: ${family}; }`,
+    `    text.hook { font-family: ${font === null ? DISPLAY_FAMILY : family}; }`,
     "  </style>",
     `  ${rect({ x: 0, y: 0, width: spec.width, height: spec.height }, color("color-surface-page"))}`,
     `  ${body(layout)}`,

@@ -73,6 +73,11 @@ export function renderIntro(props: IntroProps): VNode {
         props.onSubmit?.({ name: payload.name, birthDate: payload.birthDate });
       },
     },
+    h(
+      "div",
+      { class: "intro__mark", "aria-hidden": "true" },
+      ...[1, 2, 3, 4, 5, 6, 7].map((n) => h("span", { class: "intro__mark-bar", "data-n": String(n) })),
+    ),
     h("h1", { class: "intro__title" }, props.labels.title),
     h("p", { class: "intro__about" }, props.labels.about),
     h(

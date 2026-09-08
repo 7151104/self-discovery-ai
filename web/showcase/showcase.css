@@ -16,9 +16,11 @@
 }
 
 .showcase__heading {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: var(--weight-strong);
   line-height: var(--leading-tight);
+  letter-spacing: -0.03em;
 }
 
 .showcase__lead {

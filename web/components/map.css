@@ -21,6 +21,7 @@
   border: var(--border-hair) solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
   list-style: none;
 }
 
@@ -53,6 +54,7 @@
   border: var(--border-hair) solid var(--color-line);
   border-radius: var(--radius-pill);
   background: var(--color-surface-inset);
+  box-shadow: var(--shadow-inset);
 }
 
 .bar__marker {
@@ -124,7 +126,7 @@
   height: var(--size-bar-marker);
   border-radius: var(--radius-pill);
   opacity: 0.6;
-  filter: blur(0.1875rem);
+  filter: blur(var(--space-1));
 }
 
 /* ── Точная полоса ─────────────────────────────────────────────────────────

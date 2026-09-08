@@ -9,14 +9,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DEFAULTS } from "./config.js";
-import { volumeOf } from "./content.js";
+import { reportTypeOfSlice, volumeOf } from "./content.js";
 import { answering } from "./fake-provider.js";
 import { DEMO_ANSWERS, demoTask, envelope } from "./fixtures.js";
 import { buildSlicePrompt, buildStep4Prompt } from "./prompt.js";
 import { createGenerationProvider, knownLlmProviders, UnknownLlmProvider } from "./registry.js";
 import { sliceAnswers, demoProfile } from "../../../engine/dist/slice-fixtures.js";
 import { generateLadderFinal } from "./step4.js";
-import { generatePaidSlice, sliceTaskOf } from "./slice.js";
+import { applySlice } from "../../../engine/dist/index.js";
+import { findingsForSlice, generatePaidSlice, sliceTaskOf } from "./slice.js";
 import { StubProvider, stubEnvelope } from "./stub-provider.js";
 import { LADDER_FINAL, validateText } from "./validator.js";
 import { parseModelOutput } from "./output.js";
@@ -85,19 +86,36 @@ test("заглушка детерминирована на одном задан
   assert.equal(first, second);
 });
 
-test("заглушка собирает платный срез, который проходит валидатор", async () => {
-  const slice = "slice_node_finish";
-  const before = demoProfile();
-  const answers = sliceAnswers(slice);
-  const task = sliceTaskOf(slice, before, answers, { before });
-  const outcome = await generatePaidSlice({ ...base, task, provider: new StubProvider() });
-  assert.ok(outcome.ok, outcome.ok ? "" : outcome.details.join("; "));
-  if (!outcome.ok) return;
-  const type = "срез_узел";
-  const volume = volumeOf(type);
-  const count = outcome.paragraphs.join(" ").split(/\s+/).filter(Boolean).length;
-  assert.ok(count >= volume.min, `слов ${count}, минимум ${volume.min}`);
-});
+/**
+ * Профиль, с которым срез вообще берёт свой порог. Разбор развилки стоит поздно
+ * в маршруте: он требует подтип координаты 14, который ставит `slice_decisions`.
+ */
+function profileBefore(slice: string): ReturnType<typeof demoProfile> {
+  const profile = demoProfile();
+  if (slice !== "slice_decision_moment") return profile;
+  const answers = sliceAnswers("slice_decisions");
+  return applySlice("slice_decisions", profile, answers, findingsForSlice("slice_decisions", answers));
+}
+
+/**
+ * Объём отчёта задаёт машинный тип среза (`docs/06-report-structure.md`), и у
+ * прикладных срезов он вдвое больше узловых. Заглушка обязана дотягивать до
+ * каждого диапазона, иначе локальный контур упадёт на первом же длинном срезе.
+ */
+for (const slice of ["slice_node_finish", "slice_work", "slice_relationships", "slice_decision_moment"]) {
+  test(`заглушка собирает срез ${slice} в объёме своего типа`, async () => {
+    const before = profileBefore(slice);
+    const answers = sliceAnswers(slice);
+    const task = sliceTaskOf(slice, before, answers, { before });
+    const outcome = await generatePaidSlice({ ...base, task, provider: new StubProvider() });
+    assert.ok(outcome.ok, outcome.ok ? "" : outcome.details.join("; "));
+    if (!outcome.ok) return;
+    const volume = volumeOf(reportTypeOfSlice(slice));
+    const count = outcome.paragraphs.join(" ").split(/\s+/).filter(Boolean).length;
+    assert.ok(count >= volume.min, `слов ${count}, минимум ${volume.min}`);
+    assert.ok(count <= volume.max, `слов ${count}, максимум ${volume.max}`);
+  });
+}
 
 test("выход заглушки разбирается, проходит валидатор и регистры", async () => {
   const task = demoTask({ ...DEMO_ANSWERS, L12: OTHER_OPEN });

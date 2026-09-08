@@ -619,39 +619,46 @@ test("провайдер по умолчанию доводит ступень 4
   assert.notEqual(block.generation?.status, "failed");
 });
 
-test("провайдер по умолчанию доводит оплаченный срез до ready", async (t) => {
-  const server = await startTestServer(LLM_FAST);
-  t.after(() => server.close());
+/**
+ * Срезы разных машинных типов: у узлового объём вдвое меньше, чем у прикладного,
+ * и на живом сервере оба должны доходить до готового блока. Разбор развилки
+ * сюда не входит: его порог требует подтип координаты 14, а тот приходит
+ * отдельным срезом — объём того типа проверяется тестом заглушки.
+ */
+for (const slice of ["slice_node_finish", "slice_work"]) {
+  test(`провайдер по умолчанию доводит оплаченный срез ${slice} до ready`, async (t) => {
+    const server = await startTestServer(LLM_FAST);
+    t.after(() => server.close());
 
-  const page = await profileAtDemoLadder(server.origin);
-  await drainServer(server);
-  const slice = "slice_node_finish";
+    const page = await profileAtDemoLadder(server.origin);
+    await drainServer(server);
 
-  const order = await call<{ order: { orderId: string; price: number; payment: { url: string } | null } }>(
-    server.origin,
-    "POST",
-    `/api/p/${page.profileId}/orders`,
-    { slice, requestId: `buy-stub-${slice}` },
-  );
-  await deliverWebhook(server.origin, {
-    kind: "payment.succeeded",
-    orderId: order.body.order.orderId,
-    reference: order.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "",
-    amount: order.body.order.price,
+    const order = await call<{ order: { orderId: string; price: number; payment: { url: string } | null } }>(
+      server.origin,
+      "POST",
+      `/api/p/${page.profileId}/orders`,
+      { slice, requestId: `buy-stub-${slice}` },
+    );
+    await deliverWebhook(server.origin, {
+      kind: "payment.succeeded",
+      orderId: order.body.order.orderId,
+      reference: order.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "",
+      amount: order.body.order.price,
+    });
+
+    await answerSliceWith(server.origin, page.profileId, slice, sliceAnswers(slice));
+    await drainServer(server);
+
+    const job = findLatestJob(server.db, page.profileId, `slice:${slice}`);
+    assert.equal(job?.status, "ready", job?.failureCode ?? "задания нет");
+    const block = (await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`)).body.blocks.find(
+      (item) => item.id === `slice:${slice}`,
+    );
+    assert.ok(block);
+    assert.equal(block.generation?.status, "ready");
+    assert.ok((block.paragraphs.length ?? 0) > 0);
   });
-
-  await answerSliceWith(server.origin, page.profileId, slice, sliceAnswers(slice));
-  await drainServer(server);
-
-  const job = findLatestJob(server.db, page.profileId, `slice:${slice}`);
-  assert.equal(job?.status, "ready", job?.failureCode ?? "задания нет");
-  const block = (await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`)).body.blocks.find(
-    (item) => item.id === `slice:${slice}`,
-  );
-  assert.ok(block);
-  assert.equal(block.generation?.status, "ready");
-  assert.ok((block.paragraphs.length ?? 0) > 0);
-});
+}
 
 test("generation.failed не кладёт фразу человека в журнал", async (t) => {
   const lines: string[] = [];

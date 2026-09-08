@@ -34,7 +34,7 @@ import type { Db } from "../db/driver.js";
 import { schemaVersion } from "../db/migrate.js";
 import { consentVersion as documentConsentVersion, countWords, openMinWords, rawContent } from "../engine.js";
 import { isValidId, newProfileId, newRecordId, newShareToken } from "../ids.js";
-import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl } from "../page.js";
+import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl, sliceQuestion } from "../page.js";
 import {
   enqueuePaidSlices,
   enqueueStep4,
@@ -128,8 +128,7 @@ function knownQuestion(id: string): { type: QuestionKind; options: { key: string
   const parsed = parseSliceQuestionId(id);
   if (!parsed) return null;
 
-  const slice = rawContent.slices.find((candidate) => candidate.id === parsed.slice);
-  const found = slice?.questions.find((candidate) => candidate.id === parsed.questionId);
+  const found = sliceQuestion(parsed.slice, parsed.questionId);
   return found ? { type: found.type, options: found.options } : null;
 }
 

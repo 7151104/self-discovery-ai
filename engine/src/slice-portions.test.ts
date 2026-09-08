@@ -13,7 +13,16 @@ import test from "node:test";
 import { rawContent } from "./generated/content.js";
 import { rawExtraContent } from "./generated/content-extra.js";
 import { buildSliceInterludeBlock } from "./blocks.js";
-import { applySlice, nextSlicePortion, sliceDelivered, slicePortions, sliceReport, SCORED_SLICES } from "./slices.js";
+import {
+  applySlice,
+  ENTRY_QUESTION_ID,
+  nextSlicePortion,
+  sliceDelivered,
+  slicePortions,
+  sliceQuestionMinWords,
+  sliceReport,
+  SCORED_SLICES,
+} from "./slices.js";
 import { demoProfile, sliceAnswers } from "./slice-fixtures.js";
 import type { SliceAnswers } from "./types.js";
 
@@ -141,4 +150,31 @@ test("у узлового среза отчёт возможен сразу по
 
   assert.equal(report.portion, null);
   assert.equal(report.ready, true, "порог узлового среза на подготовленных ответах берётся");
+});
+
+test("обязательный вход среза выдаётся первым вопросом первой порции", () => {
+  const slice = "slice_decision_moment";
+  const entry = rawContent.slices.find((candidate) => candidate.id === slice)?.entry;
+  assert.ok(entry, "у разбора развилки в файле нет обязательного входа");
+
+  const [first] = slicePortions(slice);
+  assert.equal(first?.questions[0]?.id, ENTRY_QUESTION_ID, "вход не выдаётся вопросом");
+  assert.equal(first?.questions[0]?.type, "открытый");
+  assert.equal(first?.questions[0]?.text, entry.text, "текст входа взят не из файла среза");
+  assert.equal(sliceQuestionMinWords(slice, ENTRY_QUESTION_ID), entry.minWords);
+
+  // Без ответа на вход порция не считается пройденной: иначе человек платит и
+  // застревает в уточняющих, потому что описать развилку было негде.
+  const withoutEntry = { ...sliceAnswers(slice) };
+  delete withoutEntry[ENTRY_QUESTION_ID];
+  assert.equal(nextSlicePortion(slice, withoutEntry)?.number, 1);
+  assert.equal(nextSlicePortion(slice, sliceAnswers(slice)), null);
+});
+
+test("у срезов без обязательного входа лишнего вопроса не появилось", () => {
+  for (const slice of SCORED_SLICES) {
+    if (slice === "slice_decision_moment") continue;
+    const ids = slicePortions(slice).flatMap((portion) => portion.questions.map((question) => question.id));
+    assert.equal(ids.includes(ENTRY_QUESTION_ID), false, `${slice}: появился вход, которого нет в файле`);
+  }
 });

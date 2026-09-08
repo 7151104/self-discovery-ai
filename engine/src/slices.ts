@@ -663,10 +663,35 @@ const sliceContent = (slice: string) => {
 
 /** Минимум слов обязательного входа среза — число записано в файле среза. */
 const entryMinWords = (slice: string): number => {
-  const minimum = sliceContent(slice).threshold?.entryMinWords;
+  const minimum = sliceContent(slice).entry?.minWords;
   if (!minimum) throw new Error(`${slice}: в файле среза не найден минимум слов обязательного входа`);
   return minimum;
 };
+
+/**
+ * Обязательный вход как вопрос порции. Без него описание развилки некуда
+ * написать: порог среза его требует, а таблица доборов его не содержит.
+ */
+export const ENTRY_QUESTION_ID = "entry";
+
+const entryQuestion = (slice: string): RawSliceQuestion | null => {
+  const entry = sliceContent(slice).entry;
+  if (!entry) return null;
+  return {
+    id: ENTRY_QUESTION_ID,
+    portion: 1,
+    type: "открытый",
+    text: entry.text,
+    coordinates: [],
+    options: [],
+    sameAs: null,
+    purpose: "Обязательный вход среза: без него порог не берётся",
+  };
+};
+
+/** Минимум слов вопроса добора: у входа свой порог, у остальных его нет. */
+export const sliceQuestionMinWords = (slice: string, questionId: string): number | null =>
+  questionId === ENTRY_QUESTION_ID ? (sliceContent(slice).entry?.minWords ?? null) : null;
 
 /** Срезы, у которых есть правила скоринга доборов. */
 export const SCORED_SLICES: string[] = SLICE_RULES.map((rules) => rules.slice);
@@ -693,7 +718,8 @@ export interface SlicePortion {
 
 /** Все порции добора в порядке выдачи. */
 export function slicePortions(slice: string): SlicePortion[] {
-  const questions = sliceContent(slice).questions;
+  const entry = entryQuestion(slice);
+  const questions = [...(entry ? [entry] : []), ...sliceContent(slice).questions];
   const numbers = [...new Set(questions.map((question) => question.portion))].sort((left, right) => left - right);
 
   return numbers.map((number, index) => ({

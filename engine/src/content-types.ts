@@ -73,8 +73,15 @@ export interface RawSliceSubtype {
 export interface RawSliceThreshold {
   checks: string[];
   followUps: string[];
-  /** Минимум слов в обязательном входе среза; null — входа в свободной форме нет. */
-  entryMinWords: number | null;
+}
+
+/**
+ * Обязательный вход среза: описание в свободной форме, без которого добор
+ * бессмыслен. Выдаётся первым вопросом первой порции под идентификатором `entry`.
+ */
+export interface RawSliceEntry {
+  text: string;
+  minWords: number;
 }
 
 /** Строка таблицы «Следующие двери»: условие текстом и один срез. Последняя — «иначе». */
@@ -98,6 +105,8 @@ export interface RawSlice {
   subtypes: RawSliceSubtype[];
   /** null — у среза нет файла, а значит и порога. */
   threshold: RawSliceThreshold | null;
+  /** null — обязательного входа у среза нет, добор начинается сразу с вопросов. */
+  entry: RawSliceEntry | null;
   nextDoors: RawNextDoor[];
 }
 

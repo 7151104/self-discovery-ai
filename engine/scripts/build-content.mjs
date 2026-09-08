@@ -551,11 +551,29 @@ function parseSliceThreshold(file, body) {
   if (!checks.length) throw new Error(`${file}: у порога генерации нет пунктов`);
   if (!followUps.length) throw new Error(`${file}: у порога генерации нет уточняющих вопросов`);
 
-  // Обязательный вход в свободной форме (пока только у slice_decision_moment).
-  const entry = body.find((l) => /^Минимум \d+ слов/.test(l.trim()));
-  const entryMinWords = entry ? Number(/\d+/.exec(entry)[0]) : null;
+  return { checks, followUps };
+}
 
-  return { checks, followUps, entryMinWords };
+/**
+ * Обязательный вход среза: раздел «Вход: …», внутри него формулировка в блоке
+ * кода и строка «Минимум N слов». Есть не у всех срезов — тогда null. Вход
+ * выдаётся как первый вопрос первой порции, поэтому его текст нужен машине.
+ */
+function parseSliceEntry(file, raw) {
+  // Читает исходный текст, а не `body`: формулировка входа лежит в блоке кода,
+  // а `lines()` такие блоки вырезает.
+  const all = raw.split("\n");
+  const start = all.findIndex((l) => /^## Вход[:\s]/.test(l));
+  if (start < 0) return null;
+  const end = all.findIndex((l, i) => i > start && l.startsWith("## "));
+  const section = all.slice(start, end < 0 ? undefined : end).join("\n");
+
+  const block = /^```\n([\s\S]*?)^```$/m.exec(section);
+  if (!block) throw new Error(`${file}: у обязательного входа нет формулировки в блоке кода`);
+  const minimum = /^Минимум (\d+) слов/m.exec(section);
+  if (!minimum) throw new Error(`${file}: у обязательного входа не указан минимум слов`);
+
+  return { text: block[1].trim(), minWords: Number(minimum[1]) };
 }
 
 /** Колонка «Координаты» в README: номера через запятую или «все 16». */
@@ -635,6 +653,7 @@ function parseSlices() {
         questions: [],
         subtypes: [],
         threshold: null,
+        entry: null,
         nextDoors: [],
       });
       continue;
@@ -642,7 +661,8 @@ function parseSlices() {
     if (!written.has(file))
       throw new Error(`content/slices/${file} не найден — если файла ещё нет, пометь его «Ещё не написан» в README`);
 
-    const body = lines(read(`content/slices/${file}`));
+    const rawSlice = read(`content/slices/${file}`);
+    const body = lines(rawSlice);
 
     const h1 = body.find((l) => l.startsWith("# "));
     const title = /—\s*«(.+)»/.exec(h1 ?? "");
@@ -676,6 +696,7 @@ function parseSlices() {
       questions,
       subtypes: parseSliceSubtypes(file, body),
       threshold: parseSliceThreshold(file, body),
+      entry: parseSliceEntry(file, rawSlice),
       nextDoors: parseSliceDoors(file, body),
     });
   }
@@ -694,6 +715,7 @@ function parseSlices() {
       questions: [],
       subtypes: [],
       threshold: null,
+      entry: null,
       nextDoors: [],
     });
   }

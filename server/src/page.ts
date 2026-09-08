@@ -36,6 +36,7 @@ import {
   payScreen,
   rawContent,
   SCORED_SLICES,
+  slicePortions,
 } from "./engine.js";
 import type {
   CrisisDecision,
@@ -132,8 +133,17 @@ export function portionOf(questionId: string): PortionKey | null {
 
 const sliceContent = (slice: string) => rawContent.slices.find((candidate) => candidate.id === slice) ?? null;
 
-const sliceQuestion = (slice: string, questionId: string) =>
-  sliceContent(slice)?.questions.find((candidate) => candidate.id === questionId) ?? null;
+/**
+ * Вопрос добора по идентификатору. Список берётся у движка, а не из
+ * `content.questions`: обязательный вход среза выдаётся вопросом первой порции
+ * и в таблице доборов его нет.
+ */
+export const sliceQuestion = (slice: string, questionId: string) =>
+  sliceContent(slice)?.file
+    ? (slicePortions(slice)
+        .flatMap((portion) => portion.questions)
+        .find((candidate) => candidate.id === questionId) ?? null)
+    : null;
 
 /**
  * Контракт говорит машинными кодами, движок — формулировками из
@@ -255,15 +265,14 @@ function projectSlicePortion(slice: string, answered: Set<string>): PortionDto |
   const content = sliceContent(slice);
   if (!content) return null;
 
-  const portions = [...new Set(content.questions.map((question) => question.portion))].sort((a, b) => a - b);
-
-  for (const portion of portions) {
-    const questions = content.questions.filter((question) => question.portion === portion);
+  // Состав порции считает движок: обязательный вход среза выдаётся вопросом
+  // первой порции, и второй такой же список здесь его бы потерял.
+  for (const { number, questions } of slicePortions(slice)) {
     const ids = questions.map((question) => sliceQuestionId(slice, question.id));
     if (ids.every((id) => answered.has(id))) continue;
 
     return {
-      key: slicePortionKey(slice, portion),
+      key: slicePortionKey(slice, number),
       lead: content.promise,
       questions: questions.map((question) => ({
         id: sliceQuestionId(slice, question.id),

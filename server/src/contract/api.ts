@@ -117,6 +117,10 @@ export interface OfferDto {
   promise: string;
   /** Число вопросов добора строкой: в контенте оно бывает диапазоном. */
   questionCount: string;
+  /** Состав среза из раздела «Экран оплаты»: не список выгод. */
+  contents: string[];
+  /** Отказ без давления: текст из файла этого среза. */
+  decline: string;
 }
 
 export interface QuestionDto {

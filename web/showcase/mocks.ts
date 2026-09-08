@@ -166,17 +166,19 @@ export const offer: OfferDto = {
   promise:
     "Я вижу, откуда замыкается этот круг — но не откуда он пошёл. Чтобы разобрать, где механизм включился впервые и что с ним делать, мне нужно ещё десять вопросов про твои остановки.",
   questionCount: "10",
-};
-
-export const offerLabels = {
-  buy: offerTexts.buy(offer.price),
-  contents: offerTexts.contents([
+  contents: [
     "форма твоей остановки",
     "адрес оценки, который стоит у тебя на выходе",
     "когда механизм включился впервые",
     "три действия из условий, при которых ты уже доводил",
-  ]),
-  decline: offerTexts.decline(),
+  ],
+  decline: "Не сейчас — страница остаётся полной, а эта дверь остаётся на карте без цены",
+};
+
+export const offerLabels = {
+  buy: offerTexts.buy(offer.price),
+  contents: offerTexts.contents(offer.contents),
+  decline: offer.decline,
   oneDoor: offerTexts.oneDoor(),
 };
 
@@ -189,16 +191,19 @@ export const nextOffer: OfferDto = {
   promise:
     "Тот же круг, но уже не в деле, а в близких: где ты отступаешь, чтобы не быть отвергнутым, и что с этим делать.",
   questionCount: "20",
+  contents: [
+    "что повторяется у тебя независимо от партнёра",
+    "что ты делаешь в отдалении и что в сближении",
+    "цена, которую платит рядом с тобой другой",
+    "три-пять действий, которые касаются тебя, а не партнёра",
+  ],
+  decline: "Не сейчас — страница остаётся полной, и эта дверь со временем не закрывается",
 };
 
 export const nextOfferLabels = {
   buy: offerTexts.buy(nextOffer.price),
-  contents: offerTexts.contents([
-    "как механизм включается рядом с человеком",
-    "где ты отступаешь, чтобы сохранить лицо",
-    "три действия под твои близкие, а не «говорите больше»",
-  ]),
-  decline: offerTexts.decline(),
+  contents: offerTexts.contents(nextOffer.contents),
+  decline: nextOffer.decline,
   oneDoor: offerTexts.oneDoor(),
 };
 

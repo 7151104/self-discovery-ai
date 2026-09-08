@@ -2,8 +2,8 @@
  * Готовые строки живой страницы: реестр микрокопии, без моков витрины.
  *
  * Компоненты текстов не знают. Здесь состояние сервера превращается в
- * параметры `renderPersonalPage`. Состав среза в контракте отдельного поля
- * не имеет — на экране остаётся подпись «Что внутри» до E7-09.
+ * параметры `renderPersonalPage`. Состав среза приходит полем `contents`
+ * предложения (E7-09): он живёт в файле среза, не в реестре.
  */
 
 import { SUBMIT_FROM_WORDS } from "../components/open-field.js";
@@ -46,8 +46,11 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
     },
     offer: {
       buy: offerTexts.buy(page.offer?.price ?? 0),
-      contents: offerTexts.contentsLabel(),
-      decline: offerTexts.decline(),
+      contents:
+        (page.offer?.contents.length ?? 0) > 0
+          ? offerTexts.contents(page.offer?.contents ?? [])
+          : offerTexts.contentsLabel(),
+      decline: page.offer?.decline || offerTexts.decline(),
       oneDoor: offerTexts.oneDoor(),
       legalLead: offerTexts.legal(),
       legalLinks: offerLegalLinks(),

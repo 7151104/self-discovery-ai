@@ -46,9 +46,10 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
     },
     offer: {
       buy: offerTexts.buy(offer.price),
-      contents: page.offer?.slice === mock.nextOffer.slice ? mock.nextOfferLabels.contents : mock.offerLabels.contents,
-      decline: mock.offerLabels.decline,
-      oneDoor: mock.offerLabels.oneDoor,
+      contents:
+        offer.contents.length > 0 ? offerTexts.contents(offer.contents) : offerTexts.contentsLabel(),
+      decline: offer.decline || offerTexts.decline(),
+      oneDoor: offerTexts.oneDoor(),
     },
     portion: {
       back: mock.portionLabels.back,

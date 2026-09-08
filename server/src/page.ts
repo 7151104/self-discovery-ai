@@ -33,6 +33,7 @@ import {
   checkThreshold,
   crisisNotice,
   detectCrisis,
+  payScreen,
   rawContent,
   SCORED_SLICES,
 } from "./engine.js";
@@ -182,16 +183,19 @@ const projectDoors = (page: PageView): DoorDto[] =>
     slice: door.slice,
   }));
 
-const projectOffer = (page: PageView): OfferDto | null =>
-  page.offer
-    ? {
-        slice: page.offer.slice,
-        title: page.offer.title,
-        price: page.offer.price,
-        promise: page.offer.promise,
-        questionCount: page.offer.questionCount,
-      }
-    : null;
+const projectOffer = (page: PageView): OfferDto | null => {
+  if (!page.offer) return null;
+  const screen = payScreen(page.offer.slice);
+  return {
+    slice: page.offer.slice,
+    title: page.offer.title,
+    price: page.offer.price,
+    promise: page.offer.promise,
+    questionCount: page.offer.questionCount,
+    contents: screen.contents,
+    decline: screen.decline,
+  };
+};
 
 /**
  * Контакты помощи: в движке поле `value`, в контракте — `line`.

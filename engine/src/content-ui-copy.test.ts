@@ -129,7 +129,7 @@ test("в прототипе нет зашитых русских строк", ()
 
 test("интерфейс не обращается к отсутствующему идентификатору", () => {
   const ids = new Set(uiCopyIds());
-  const sources = ["prototype/app.js", "prototype/index.html", "engine/src/map.ts", "engine/src/offers.ts", "engine/src/index.ts"];
+  const sources = ["prototype/app.js", "prototype/index.html", "engine/src/map.ts", "engine/src/offers.ts", "engine/src/index.ts", "server/src/http/page-shell.ts"];
   const used: string[] = [];
   for (const path of sources) {
     const source = repoFile(path);

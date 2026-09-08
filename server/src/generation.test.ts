@@ -437,11 +437,9 @@ test("кризисный открытый ответ не доходит до п
   const html = await fetch(`${server.origin}/p/${page.profileId}`);
   const text = await html.text();
   assert.equal(html.status, 200);
-  assert.ok(text.includes("data-crisis"), "страница не показывает поддержку");
-  assert.ok(!text.includes("data-offer"), "на экране есть предложение среза");
-  const state = JSON.parse(/<script type="application\/json" data-role="state">([^<]+)<\/script>/.exec(text)?.[1] ?? "{}") as PageStateDto;
-  assert.equal(state.offer, null);
-  assert.ok(state.crisis);
+  assert.match(text, /<div id="app"><\/div>/);
+  assert.match(text, /\/web\/src\/app\.js/);
+  assert.ok(!text.includes('data-role="state"'), "временная оболочка не должна подменять клиента");
 });
 
 test("похожие, но не кризисные формулировки доходят до провайдера", async (t) => {

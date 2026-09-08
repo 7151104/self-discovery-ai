@@ -1,0 +1,92 @@
+/*
+ * Открытое поле: шесть строк, подсказка под полем, счётчик и кнопка в подвале.
+ * Высота поля задана токеном, а не строками текста: при масштабе 200%
+ * поле растёт вместе с текстом и ничего не обрезает.
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+}
+
+.field__label {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.field__input {
+  min-height: var(--size-field);
+  padding: var(--space-3);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  resize: vertical;
+}
+
+.field__input:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-faint);
+}
+
+.field__hint {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.field__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  min-height: var(--size-target);
+}
+
+.field__counter {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.field__counter[hidden] {
+  display: none;
+}
+
+.field__submit {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-strong) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.field__submit:disabled {
+  border-color: var(--color-line);
+  background: var(--color-surface-muted);
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .field__submit:not(:disabled):hover {
+    background: var(--color-text-strong);
+    border-color: var(--color-text-strong);
+  }
+}

@@ -29,7 +29,7 @@ type PageStateDto = {
   state: string;
   hook: string | null;
   map: { fill: string }[];
-  blocks: { id: string; generation: { status: string } | null }[];
+  blocks: { id: string; heading: string; paragraphs: string[]; generation: { status: string } | null }[];
   doors: { state: string }[];
   offer: { slice: string; price: number } | null;
   nextPortion: { key: string; questions: { id: string; kind: string }[] } | null;
@@ -206,7 +206,15 @@ test("бесплатный путь: ступени 0–4, полосы, бло�
   assert.ok(blockOrder(app.tree(), kit).includes("step4"), "блок сюжета не появился");
   const story = ready.blocks.find((block) => block.id === "step4");
   assert.ok(story);
-  assert.notEqual(story.generation?.status, "pending");
+  // Не «не pending», а именно готов и с текстом: пустой блок на странице
+  // выглядит как пройденный путь, хотя человеку ничего не выдали.
+  assert.equal(story.generation?.status, "ready", story.generation?.status ?? "блока генерации нет");
+  assert.ok(story.paragraphs.length >= 3, `в сюжете абзацев ${story.paragraphs.length}`);
+  assert.ok(story.heading.length > 0, "у сюжета нет заголовка");
+  assert.ok(
+    kit.visibleText(app.tree()).includes(story.paragraphs[0]!.slice(0, 40)),
+    "текст сюжета не дошёл до страницы",
+  );
   assert.ok(ready.offer, "предложения после сюжета нет");
   assert.ok(ready.offer.price > 0, "на экране нет цены");
   assert.equal(kit.byClass(app.tree(), "offer").length, 1);

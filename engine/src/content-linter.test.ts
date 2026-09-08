@@ -11,15 +11,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { readFileSync } from "node:fs";
+
 import { rawExtraContent } from "./generated/content-extra.js";
 import {
   collectCorpus,
   formatLintReport,
   lintCorpus,
+  lintSliceVolumeDeclarations,
   lintSnippet,
   lookupVolume,
   rejectGroups,
   sampleFor,
+  sliceReportType,
 } from "./content-linter.js";
 import { wordCount } from "./words.js";
 
@@ -125,6 +129,46 @@ test("абзац длиннее потолка lookup-блока — отказ 
     "перебор слов не дал отказа",
   );
   assert.equal(wordCount(long), range.max + 1);
+});
+
+const repoText = (relative: string): string =>
+  readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8");
+
+test("объём в шапке каждого среза совпадает с таблицей docs/06", () => {
+  assert.equal(sliceReportType("slice_work"), "срез_работа");
+  assert.equal(sliceReportType("slice_relationships"), "срез_отношения");
+  assert.equal(sliceReportType("slice_decision_moment"), "разбор_решения");
+  assert.equal(sliceReportType("slice_node_finish"), "срез_узел");
+  assert.equal(sliceReportType("slice_full_map"), "полная_карта");
+  assert.equal(sliceReportType("slice_compatibility"), null);
+
+  const findings = lintSliceVolumeDeclarations();
+  assert.deepEqual(
+    findings,
+    [],
+    findings.map((item) => `${item.file}: ${item.reason}`).join("\n"),
+  );
+});
+
+test("подмена числа в шапке среза — отказ линтера, не предупреждение", () => {
+  const findings = lintSliceVolumeDeclarations((path) => {
+    const text = repoText(path);
+    if (path === "content/slices/work.md") return text.replace("1200–1500", "800–1200");
+    return text;
+  });
+  const hit = findings.find((item) => item.file === "content/slices/work.md" && item.kind === "отказ");
+  assert.ok(hit, "подмена объёма в slice_work не дала отказа");
+  assert.equal(hit!.kind, "отказ");
+  assert.equal(hit!.group, "объём");
+  assert.match(hit!.reason, /slice_work/);
+  assert.match(hit!.reason, /800–1200/);
+  assert.match(hit!.reason, /1200–1500/);
+  assert.match(hit!.reason, /docs\/06/);
+  assert.equal(
+    findings.some((item) => item.file === "content/slices/work.md" && item.kind === "предупреждение"),
+    false,
+    "расхождение объёма ушло в предупреждение",
+  );
 });
 
 test("перенос строки не отрывает отрицание от перечня в юридических текстах", () => {

@@ -76,6 +76,20 @@ test("в публичном ответе нет текстов блоков 3 и
     assert.ok(!text.includes(`"${block.id}"`), `в публичный вид попало место блока ${block.id}`);
   }
 
+  // Граница проходит не по словам, а по блокам. Фраза-крючок публична по
+  // замыслу (`docs/11-ui-page-spec.md`, «Виральность»: скриншотятся крючок и
+  // карта), и она же открывает блок 3. Разбор за ней не уходит: проверяем
+  // остаток абзаца после крючка.
+  const hook = created.hook ?? "";
+  assert.ok(hook.length > 0);
+  for (const block of hidden) {
+    for (const paragraph of block.paragraphs) {
+      const rest = paragraph.startsWith(hook) ? paragraph.slice(hook.length).trim() : paragraph;
+      if (rest.length < 30) continue;
+      assert.ok(!text.includes(rest), `за крючком в публичный вид ушёл разбор блока ${block.id}`);
+    }
+  }
+
   // Заодно: ни координат, ни адреса личной страницы, ни идентификатора профиля.
   const keys = collectKeys(view.body);
   for (const field of FORBIDDEN_FIELDS) assert.ok(!keys.has(field), `публичный вид отдал ${field}`);

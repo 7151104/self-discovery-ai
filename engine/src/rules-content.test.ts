@@ -462,6 +462,38 @@ test("таблица единого словаря подтипов совпад
   }
 });
 
+test("коды, которыми контент описывает профиль, существуют в едином словаре", () => {
+  const rows = tableAfter(sliceFile("slice_decision_moment"), "**Применение профиля (главное в срезе).**", "Профиль");
+  const registry = subtypeRegistry();
+
+  // Флаги координат: собираются из тех же наборов доборов, что и в тесте флагов.
+  const flagsOf = new Map<number, Set<string>>();
+  for (const slice of SCORED_SLICES) {
+    const profile = applySlice(slice, demoProfile(), sliceAnswers(slice));
+    for (const coordinate of Object.values(profile.coordinates)) {
+      const known = flagsOf.get(coordinate.id) ?? new Set<string>();
+      for (const flag of coordinate.flags) known.add(flag);
+      flagsOf.set(coordinate.id, known);
+    }
+  }
+
+  let checked = 0;
+  for (const [profileCell] of rows) {
+    const parsed = /^(\d+) = `([a-z_]+)`/.exec(profileCell ?? "");
+    if (!parsed) continue;
+    checked += 1;
+    const coordinate = Number(parsed[1]);
+    const code = parsed[2]!;
+
+    const known =
+      registry.some((entry) => entry.code === code && entry.coordinate === coordinate) ||
+      (flagsOf.get(coordinate)?.has(code) ?? false);
+    assert.ok(known, `координата ${coordinate}: ни подтипа, ни флага ${code} движок не ставит`);
+  }
+
+  assert.ok(checked >= 5, "в таблице профиля не нашлось строк с кодами — разбор сломался");
+});
+
 // ── Флаги ─────────────────────────────────────────────────────────────────────
 
 test("каждый флаг, который движок умеет ставить, назван в контенте", () => {

@@ -6,8 +6,10 @@
  */
 
 import { rawContent } from "./generated/content.js";
+import { rawExtraContent } from "./generated/content-extra.js";
 import { fallbackNodeText } from "./nodes.js";
-import type { Block, LadderAnswers, LlmTask, Profile } from "./types.js";
+import { slicePortions } from "./slices.js";
+import type { Block, InterludeBlock, LadderAnswers, LlmTask, Profile, SliceAnswers } from "./types.js";
 
 const answerAt = (answers: LadderAnswers, id: string): string | number | undefined =>
   (answers as Record<string, string | number | undefined>)[id];
@@ -112,3 +114,42 @@ export function buildStep4Task(answers: LadderAnswers, profile: Profile, shownBl
 }
 
 export const step4Heading = (): string => rawContent.step4.heading;
+
+/**
+ * Промежуточный блок прикладного среза: текст между первой и второй порцией
+ * добора (`content/slices/work.md`, `relationships.md`, раздел «Промежуточный
+ * блок после порции 1»).
+ *
+ * Lookup, как ступени 1–3: пара ответов первой порции → готовый текст. LLM здесь
+ * не участвует, потому что по Закону 1 ценность выдаётся раньше, чем запрошен
+ * следующий шаг, а ждать генерации между порциями человек не должен.
+ *
+ * `null` — на вопрос одной из осей ответа ещё нет: блок стоит на ответах, а не
+ * на догадках. Отсутствие пары при полных ответах — ошибка контента, и она
+ * падает, а не показывает пустое место: матрица покрыта целиком (E5-04).
+ */
+export function buildSliceInterludeBlock(slice: string, answers: SliceAnswers): InterludeBlock | null {
+  const interlude = rawExtraContent.interludes.find((candidate) => candidate.slice === slice);
+  if (!interlude) return null;
+
+  const keys = interlude.axes.map((axis) => {
+    const value = answers[axis.id];
+    return typeof value === "string" && axis.keys.includes(value) ? value : null;
+  });
+  const [first, second] = keys;
+  if (!first || !second) return null;
+
+  const pair = interlude.pairs.find((candidate) => candidate.first === first && candidate.second === second);
+  if (!pair) throw new Error(`content/slices/${interlude.file}: нет пары ${first}×${second} промежуточного блока`);
+
+  const questions = new Map(slicePortions(slice).flatMap((portion) => portion.questions.map((question) => [question.id, portion.number])));
+  const afterPortion = Math.max(...interlude.axes.map((axis) => questions.get(axis.id) ?? 1));
+
+  return {
+    slice,
+    afterPortion,
+    heading: interlude.heading,
+    paragraphs: [pair.text],
+    source: "lookup",
+  };
+}

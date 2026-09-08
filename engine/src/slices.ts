@@ -12,6 +12,7 @@
 
 import { rawContent } from "./generated/content.js";
 import { codeValues, pointerOfBand, scoreCoordinate, stanceOfStressCode, type Evidence } from "./scoring.js";
+import type { RawSliceQuestion } from "./content-types.js";
 import type {
   Confidence,
   CoordinateState,
@@ -669,6 +670,57 @@ export const SCORED_SLICES: string[] = SLICE_RULES.map((rules) => rules.slice);
 /** Подтипы и конфигурации, которые срез умеет ставить: сверяется с его файлом. */
 export const sliceOwnedCodes = (slice: string): Record<string, number | null> => rulesFor(slice).owns;
 
+// ── Порции доборов ────────────────────────────────────────────────────────────
+
+/**
+ * Порция вопросов-доборов. Число порций задаёт контент, а не код: у каждого
+ * вопроса в файле среза есть номер порции (`content/slices/README.md`, правило 6 —
+ * 590 ₽ выдаётся одной порцией, 1290 ₽ двумя по десять).
+ */
+export interface SlicePortion {
+  slice: string;
+  number: number;
+  /** Сколько всего порций у этого добора. */
+  count: number;
+  questions: RawSliceQuestion[];
+  /** После этой порции человек получает промежуточный блок, а не следующие вопросы. */
+  interlude: boolean;
+}
+
+/** Все порции добора в порядке выдачи. */
+export function slicePortions(slice: string): SlicePortion[] {
+  const questions = sliceContent(slice).questions;
+  const numbers = [...new Set(questions.map((question) => question.portion))].sort((left, right) => left - right);
+
+  return numbers.map((number, index) => ({
+    slice,
+    number,
+    count: numbers.length,
+    questions: questions.filter((question) => question.portion === number),
+    // Между последней порцией и отчётом промежуточного блока нет: дальше идёт разбор.
+    interlude: index < numbers.length - 1,
+  }));
+}
+
+/**
+ * Порция, которую человек проходит сейчас: первая, где остался неотвеченный
+ * вопрос. `null` — добор выдан до конца.
+ *
+ * Порядок именно такой, а не «пересчитать состав заново»: человек возвращается
+ * на ту же порцию, а не получает новый набор (`docs/11-ui-page-spec.md`,
+ * краевое состояние «уход на середине»).
+ */
+export function nextSlicePortion(slice: string, answers: SliceAnswers): SlicePortion | null {
+  for (const portion of slicePortions(slice)) {
+    if (portion.questions.some((question) => !answered(answers, question.id))) return portion;
+  }
+  return null;
+}
+
+/** Добор выдан до конца: на все вопросы всех порций есть ответы. */
+export const sliceDelivered = (slice: string, answers: SliceAnswers): boolean =>
+  nextSlicePortion(slice, answers) === null;
+
 // ── Применение добора к профилю ───────────────────────────────────────────────
 
 /**
@@ -839,6 +891,33 @@ export function checkThreshold(
   const missing = checks.filter((_check, index) => !rules.threshold[index]!(context));
 
   return { passed: missing.length === 0, missing, followUps: missing.length ? followUps : [], blocked: null };
+}
+
+/** Итог по срезу: можно ли собирать отчёт, что ещё спрашиваем и что показываем сейчас. */
+export interface SliceReport {
+  ready: boolean;
+  /** Порция, которую человек проходит сейчас; `null` — добор выдан до конца. */
+  portion: SlicePortion | null;
+  threshold: SliceThreshold;
+}
+
+/**
+ * Отчёт по срезу собирается только после последней порции.
+ *
+ * Порог проверяется и раньше — иначе человек, у которого не хватает ответов, узнал
+ * бы об этом лишь в конце, — но до конца добора отчёта не существует: за него
+ * заплачено, а ответы ещё не отданы (`content/slices/README.md`, правила 5 и 6).
+ */
+export function sliceReport(
+  slice: string,
+  profile: Profile,
+  answers: SliceAnswers,
+  findings: SliceTextFindings = {},
+  before: Profile = profile,
+): SliceReport {
+  const portion = nextSlicePortion(slice, answers);
+  const threshold = checkThreshold(slice, profile, answers, findings, before);
+  return { ready: portion === null && threshold.passed, portion, threshold };
 }
 
 // ── Следующая дверь ───────────────────────────────────────────────────────────

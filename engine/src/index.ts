@@ -33,11 +33,18 @@ export {
   applySlice,
   checkThreshold,
   nextSliceAfter,
+  nextSlicePortion,
   sameSubtype,
+  sliceDelivered,
   sliceOwnedCodes,
+  slicePortions,
+  sliceReport,
   subtypeRegistry,
   SCORED_SLICES,
+  type SlicePortion,
+  type SliceReport,
 } from "./slices.js";
+export { buildSliceInterludeBlock } from "./blocks.js";
 export {
   diffProfiles,
   diffSincePurchase,

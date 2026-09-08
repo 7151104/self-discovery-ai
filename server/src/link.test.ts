@@ -61,7 +61,7 @@ test("ссылка открывается в другом браузере: ни
   );
 });
 
-test("адрес /p/{profile_id} отдаёт ту же страницу без регистрации", async (t) => {
+test("адрес /p/{profile_id} отдаёт документ клиента, не временную оболочку", async (t) => {
   const server = await startTestServer();
   t.after(() => server.close());
 
@@ -71,9 +71,11 @@ test("адрес /p/{profile_id} отдаёт ту же страницу без 
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /text\/html/);
-  assert.match(html, /data-state="s1"/);
-  assert.ok(html.includes(page.card.name));
-  assert.ok(html.includes(page.blocks[0]?.heading ?? "нет блока"));
+  assert.match(html, /<div id="app"><\/div>/);
+  assert.match(html, /type="module"/);
+  assert.match(html, /\/web\/src\/app\.js/);
+  assert.ok(!html.includes('data-role="state"'), "вернулась временная оболочка E3-04");
+  assert.ok(!html.includes(page.card.name), "имя не должно быть в HTML до запуска клиента");
 });
 
 test("перебор соседних идентификаторов ничего не находит", async (t) => {

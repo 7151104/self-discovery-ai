@@ -97,7 +97,7 @@ test("в публичном ответе нет текстов блоков 3 и
     assert.ok(!keys.has(field), `публичный вид отдал ${field}`);
   }
 
-  // То же в HTML публичного вида: он собирается из того же типа.
+  // То же в HTML публичного вида: документ клиента, без вшитых блоков 3 и 4.
   const html = await fetch(`${server.origin}/s/${token}`);
   const markup = await html.text();
   assert.equal(html.status, 200);

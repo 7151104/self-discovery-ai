@@ -1,7 +1,8 @@
 /**
  * HTTP-транспорт на встроенном `node:http`: маршрут из контракта, ограничение
  * частоты до обработчика, разбор тела, проверка ответа на выходе, JSON наружу.
- * Фреймворк не подключается — обоснование в `docs/14-state.md`.
+ * Статика клиента — из `web/dist` по префиксу `/web/`. Фреймворк не подключается
+ * — обоснование в `docs/14-state.md`.
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -19,8 +20,9 @@ import {
 import { createErrorTracker } from "../observability/registry.js";
 import { captureError } from "../observability/report.js";
 import type { ErrorTracker } from "../observability/provider.js";
-import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
+import { renderClientDocument, renderMissingPage } from "./page-shell.js";
 import { matchApi, matchLegal, matchPage, matchPublicPage } from "./router.js";
+import { isStaticRequest, serveStatic } from "./static.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
 import * as handlers from "./handlers.js";
 import type { Context, HandlerResult } from "./handlers.js";
@@ -110,6 +112,11 @@ function sendHtml(response: ServerResponse, status: number, html: string): void 
   response.end(html);
 }
 
+function sendStatic(response: ServerResponse, result: { status: number; headers: Record<string, string>; body: Buffer | string }): void {
+  response.writeHead(result.status, result.headers);
+  response.end(result.body);
+}
+
 interface Runtime {
   context: Context;
   limiter: RateLimiter;
@@ -134,6 +141,13 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
     return overLimit("miss") ?? result;
   };
 
+  if (method === "GET" && isStaticRequest(url.pathname)) {
+    const file = await serveStatic(url.pathname, request.headers);
+    if (file === null) sendJson(response, handlers.fail(404, "not_found"));
+    else sendStatic(response, file);
+    return;
+  }
+
   const pageRoute = matchPage(url.pathname);
   if (pageRoute && method === "GET") {
     const limited = overLimit("state");
@@ -147,7 +161,7 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
       return;
     }
     assertNoCoordinates(state.body);
-    sendHtml(response, 200, renderPage(state.body));
+    sendHtml(response, 200, renderClientDocument());
     return;
   }
 
@@ -165,7 +179,12 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
     }
     assertNoCoordinates(state.body);
     assertNoPrivateBlocks(state.body);
-    sendHtml(response, 200, renderPublicPage(state.body));
+    sendHtml(response, 200, renderClientDocument());
+    return;
+  }
+
+  if (method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+    sendHtml(response, 200, renderClientDocument());
     return;
   }
 

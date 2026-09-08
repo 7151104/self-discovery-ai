@@ -6,7 +6,8 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
-import { matchApi } from "./router.js";
+import { renderPage, renderMissingPage } from "./page-shell.js";
+import { matchApi, matchPage } from "./router.js";
 import * as handlers from "./handlers.js";
 import type { Context, HandlerResult } from "./handlers.js";
 
@@ -46,9 +47,29 @@ function sendJson(response: ServerResponse, result: HandlerResult): void {
   response.end(payload);
 }
 
+function sendHtml(response: ServerResponse, status: number, html: string): void {
+  response.writeHead(status, {
+    "content-type": "text/html; charset=utf-8",
+    "cache-control": "no-store",
+    "x-robots-tag": "noindex, nofollow",
+  });
+  response.end(html);
+}
+
 async function dispatch(context: Context, request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = new URL(request.url ?? "/", "http://localhost");
   const method = request.method ?? "GET";
+
+  const pageRoute = matchPage(url.pathname);
+  if (pageRoute && method === "GET") {
+    const state = handlers.pageState(context, pageRoute);
+    if (state.status !== 200) {
+      sendHtml(response, state.status, renderMissingPage());
+      return;
+    }
+    sendHtml(response, 200, renderPage(state.body));
+    return;
+  }
 
   const route = matchApi(method, url.pathname);
   if (route === null) {

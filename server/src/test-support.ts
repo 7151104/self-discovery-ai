@@ -15,6 +15,8 @@ import { createHttpServer } from "./http/server.js";
 import { saveBlockContent } from "./store.js";
 import { fakeWebhook, FAKE_SIGNATURE_HEADER } from "./payments/fake.js";
 import type { WebhookKind } from "./payments/provider.js";
+import { createErrorTracker } from "./observability/registry.js";
+import type { ErrorTracker } from "./observability/provider.js";
 import type { AnswerInput, OrderDto, PageStateDto, PortionDto, PortionKey } from "./contract/index.js";
 
 export { FORBIDDEN_FIELDS } from "./contract/index.js";
@@ -23,6 +25,7 @@ export interface TestServer {
   origin: string;
   db: Db;
   config: ServerConfig;
+  errors: ErrorTracker;
   close(): Promise<void>;
 }
 
@@ -47,7 +50,10 @@ export const TEST_WEBHOOK_SECRET = "test-webhook-secret";
  * По умолчанию поднимается с шифрованием: тесты идут тем же путём, что рабочее
  * окружение, а не более коротким.
  */
-export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<TestServer> {
+export async function startTestServer(
+  env: NodeJS.ProcessEnv = {},
+  options: { wrapDb?: (db: Db) => Db } = {},
+): Promise<TestServer> {
   const config: ServerConfig = loadConfig({
     SDAI_ENCRYPTION_KEY: TEST_KEY,
     SDAI_PAYMENT_WEBHOOK_SECRET: TEST_WEBHOOK_SECRET,
@@ -57,8 +63,10 @@ export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<Test
   });
   const db = openDatabase({ path: ":memory:", keys: config.keys });
   up(db);
+  const runtimeDb = options.wrapDb ? options.wrapDb(db) : db;
+  const errors = createErrorTracker(config.errors);
 
-  const server = createHttpServer({ db, config });
+  const server = createHttpServer({ db: runtimeDb, config, errors });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 
@@ -66,6 +74,7 @@ export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<Test
     origin: `http://127.0.0.1:${port}`,
     db,
     config,
+    errors,
     close: () =>
       new Promise<void>((resolve) => {
         server.close(() => {

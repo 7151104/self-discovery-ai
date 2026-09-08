@@ -16,6 +16,7 @@ import type {
   DisagreementResponse,
   ErrorCode,
   ExportResponse,
+  ErrorIntakeResponse,
   GenerationResponse,
   HealthResponse,
   OrderDto,
@@ -36,6 +37,8 @@ import { isValidId, newProfileId, newRecordId, newShareToken } from "../ids.js";
 import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl } from "../page.js";
 import { canTransition } from "../payments/order-state.js";
 import type { PaymentProvider, WebhookEvent, WebhookHeaders } from "../payments/provider.js";
+import type { ErrorTracker } from "../observability/provider.js";
+import { captureError } from "../observability/report.js";
 import {
   deleteBlock,
   deleteProfile,
@@ -75,6 +78,8 @@ export interface Context {
   config: ServerConfig;
   /** Платёжный провайдер: поднимается из настроек один раз на запуск сервера. */
   payments: PaymentProvider;
+  /** Приёмник ошибок: серверные и клиентские уходят в один порт. */
+  errors: ErrorTracker;
   startedAt: number;
 }
 
@@ -746,4 +751,25 @@ export function publicPage(context: Context, params: Record<string, string>): Ha
   const full = context.db.transaction(() => page(context, profile));
   const body: PublicPageResponse = assemblePublic(full);
   return { status: 200, body };
+}
+
+/**
+ * Клиентская ошибка. Тело не доверяем: чистим так же, как серверную, и
+ * кладём в тот же приёмник. Профиля в запросе нет — его сюда и не принимают.
+ */
+export function reportError(context: Context, raw: unknown): HandlerResult {
+  const body = asObject(raw);
+  const errorName = body ? asString(body["errorName"]) : null;
+  const message = body ? asString(body["message"]) : null;
+  if (!errorName || message === null) return fail(400, "bad_request");
+
+  const error = new Error(message);
+  error.name = errorName;
+  captureError(context.errors, error, {
+    source: "client",
+    build: context.config.build,
+  });
+
+  const response: ErrorIntakeResponse = { accepted: true };
+  return { status: 202, body: response };
 }

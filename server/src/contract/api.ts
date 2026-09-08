@@ -270,6 +270,17 @@ export interface PurchaseRequest {
   requestId: string;
 }
 
+/**
+ * Клиентская ошибка. Сервер чистит поля тем же фильтром, что журнал, и
+ * отправляет в приёмник. Профиля, ответов и даты рождения здесь нет по типу.
+ */
+export interface ClientErrorRequest {
+  /** Класс ошибки (`TypeError`), не имя человека. */
+  errorName: string;
+  /** Сообщение. Человеческий текст сервер скроет до приёмника. */
+  message: string;
+}
+
 // ── Ответы ────────────────────────────────────────────────────────────────────
 
 /**
@@ -348,6 +359,8 @@ export type ExportResponse = Wire<ExportDto>;
 export type DeleteResponse = Wire<{ deleted: true }>;
 /** Ответ на уведомление провайдера. Провайдеру уходит только машинный исход. */
 export type WebhookResponse = Wire<{ received: true; result: "applied" | "duplicate" | "ignored" }>;
+/** Приём клиентской ошибки: сервер ничего не возвращает из отчёта. */
+export type ErrorIntakeResponse = Wire<{ accepted: true }>;
 
 /** Публичный вид проходит обе стены: без координат и без закрытых блоков. */
 export type PublicPageResponse = Viewable<Wire<PublicPageDto>>;
@@ -364,7 +377,8 @@ const contractIsCoordinateFree: [
   AssertClean<{ share: ShareDto | null; page: PageStateDto }>,
   AssertClean<ExportDto>,
   AssertClean<{ block: BlockDto }>,
-] = [true, true, true, true, true, true, true, true, true];
+  AssertClean<{ accepted: true }>,
+] = [true, true, true, true, true, true, true, true, true, true];
 void contractIsCoordinateFree;
 
 // То же для публичного вида: ни одно поле не способно принести блок 3, 4 или срез.
@@ -521,6 +535,17 @@ export interface ApiEndpoints {
     body: null;
     response: PublicPageResponse;
   };
+  /**
+   * Клиентская ошибка. Сервер чистит и прокидывает в тот же приёмник,
+   * что и серверные падения (E10-06).
+   */
+  reportError: {
+    method: "POST";
+    path: "/api/errors";
+    params: Record<never, never>;
+    body: ClientErrorRequest;
+    response: ErrorIntakeResponse;
+  };
 }
 
 export type OperationName = keyof ApiEndpoints;
@@ -551,6 +576,7 @@ export const API: {
   share: { method: "POST", path: "/api/p/:profileId/share" },
   revokeShare: { method: "DELETE", path: "/api/p/:profileId/share" },
   publicPage: { method: "GET", path: "/api/s/:token" },
+  reportError: { method: "POST", path: "/api/errors" },
 } as const;
 
 /** Адрес личной страницы. Один шаблон и для сервера, и для клиента. */

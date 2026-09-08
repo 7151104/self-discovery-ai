@@ -10,6 +10,9 @@ import type { Db } from "../db/driver.js";
 import { assertNoCoordinates, assertNoPrivateBlocks } from "./guard.js";
 import { log } from "../log.js";
 import { createProvider } from "../payments/registry.js";
+import { createErrorTracker } from "../observability/registry.js";
+import { captureError } from "../observability/report.js";
+import type { ErrorTracker } from "../observability/provider.js";
 import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
 import { matchApi, matchPage, matchPublicPage } from "./router.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
@@ -20,6 +23,8 @@ import type { OperationName } from "../contract/index.js";
 export interface CreateOptions {
   db: Db;
   config: ServerConfig;
+  /** Подмена приёмника. Без неё поднимается из настроек, как платежи. */
+  errors?: ErrorTracker;
 }
 
 /** Какой корзиной лимита считается операция. Остальные попадают в общую. */
@@ -29,6 +34,7 @@ const BUCKETS: Partial<Record<OperationName, Bucket>> = {
   editAnswer: "portion",
   pageState: "state",
   publicPage: "state",
+  reportError: "errors",
 };
 
 /**
@@ -235,15 +241,19 @@ function run(
       return handlers.revokeShare(context, params);
     case "publicPage":
       return handlers.publicPage(context, params);
+    case "reportError":
+      return handlers.reportError(context, body.value);
   }
 }
 
 export function createHttpServer(options: CreateOptions): Server {
+  const errors = options.errors ?? createErrorTracker(options.config.errors);
   const context: Context = {
     db: options.db,
     config: options.config,
     // Незнакомое имя провайдера — отказ при запуске, а не при первой оплате.
     payments: createProvider({ payments: options.config.payments, publicOrigin: options.config.publicOrigin }),
+    errors,
     startedAt: Date.now(),
   };
   const limiter = new RateLimiter(options.config.rateLimit.rules, options.config.rateLimit.enabled);
@@ -251,6 +261,12 @@ export function createHttpServer(options: CreateOptions): Server {
 
   return createServer((request, response) => {
     dispatch(runtime, request, response).catch((error: unknown) => {
+      const url = new URL(request.url ?? "/", "http://localhost");
+      captureError(context.errors, error, {
+        source: "server",
+        build: context.config.build,
+        route: url.pathname,
+      });
       // Имя ошибки, а не её сообщение: в сообщении бывает содержимое запроса.
       log("request.failed", { reason: error instanceof Error ? error.name : "unknown" });
       if (!response.headersSent) sendJson(response, handlers.fail(500, "internal_error"));

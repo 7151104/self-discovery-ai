@@ -76,6 +76,7 @@ test("реестр покрывает страницу, оплату, публи
     "publicPage",
     "purchase",
     "refund",
+    "reportError",
     "revokeShare",
     "share",
     "submitPortion",

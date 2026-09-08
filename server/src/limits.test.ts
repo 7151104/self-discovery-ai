@@ -19,6 +19,7 @@ test("скользящее окно пропускает ровно стольк
     portion: { limit: 2, windowMs: 1000 },
     state: { limit: 2, windowMs: 1000 },
     miss: { limit: 2, windowMs: 1000 },
+    errors: { limit: 2, windowMs: 1000 },
   };
   const limiter = new RateLimiter(rules, true);
 
@@ -118,12 +119,14 @@ test("лимиты настраиваются переменными окруж�
     SDAI_RATE_PORTION: "7",
     SDAI_RATE_STATE: "9",
     SDAI_RATE_MISS: "11",
+    SDAI_RATE_ERROR: "13",
   });
   assert.equal(configured.rateLimit.enabled, true);
   assert.equal(configured.rateLimit.rules.createProfile.limit, 5);
   assert.equal(configured.rateLimit.rules.portion.limit, 7);
   assert.equal(configured.rateLimit.rules.state.limit, 9);
   assert.equal(configured.rateLimit.rules.miss.limit, 11);
+  assert.equal(configured.rateLimit.rules.errors.limit, 13);
 
   assert.equal(loadConfig({ SDAI_RATE_LIMIT: "0" }).rateLimit.enabled, false);
   assert.throws(() => loadConfig({ SDAI_RATE_PORTION: "0" }), /config:expected-positive-integer:SDAI_RATE_PORTION/);

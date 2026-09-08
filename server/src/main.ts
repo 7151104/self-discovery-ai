@@ -11,6 +11,8 @@ import { openDatabase } from "./db/sqlite.js";
 import { checkMigrations, MigrationError, reportProblems, up } from "./db/migrate.js";
 import { createHttpServer } from "./http/server.js";
 import { log } from "./log.js";
+import { createErrorTracker } from "./observability/registry.js";
+import { attachProcessHooks } from "./observability/report.js";
 
 /**
  * Без обязательной переменной сервер не стартует и называет её. Значение
@@ -65,7 +67,10 @@ function migrateOrRefuse(database: Db, settings: ServerConfig): void {
 
 migrateOrRefuse(db, config);
 
-const server = createHttpServer({ db, config });
+const errors = createErrorTracker(config.errors);
+attachProcessHooks(errors, config.build);
+
+const server = createHttpServer({ db, config, errors });
 
 server.listen(config.port, config.host, () => {
   log("server.started", {

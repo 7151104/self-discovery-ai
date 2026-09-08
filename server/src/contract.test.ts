@@ -61,20 +61,25 @@ test("стена типов: чистые формы проходят, прот�
 
 // ── Реестр эндпоинтов ─────────────────────────────────────────────────────────
 
-test("реестр покрывает шесть эндпоинтов страницы, публичный вид, шеринг и здоровье", () => {
+test("реестр покрывает страницу, оплату, публичный вид, выгрузку и здоровье", () => {
   const names = Object.keys(API) as OperationName[];
   assert.deepEqual(names.sort(), [
+    "blockText",
     "createProfile",
+    "deleteProfile",
     "disagree",
     "editAnswer",
+    "exportProfile",
     "generationStatus",
     "health",
     "pageState",
     "publicPage",
     "purchase",
+    "refund",
     "revokeShare",
     "share",
     "submitPortion",
+    "webhook",
   ]);
 });
 

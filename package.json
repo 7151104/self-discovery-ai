@@ -12,6 +12,7 @@
     "dev:server": "npm run build && node --disable-warning=ExperimentalWarning server/dist/main.js",
     "migrate": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/migrate.js",
     "keygen": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/keygen.js",
+    "pay": "npm run build && node --disable-warning=ExperimentalWarning server/dist/payments/simulate.js",
     "reencrypt": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/reencrypt.js",
     "clean": "rm -rf engine/dist engine/src/generated server/dist"
   },

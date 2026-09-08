@@ -396,6 +396,172 @@ function parseStep3() {
 
 // ── Платные срезы ─────────────────────────────────────────────────────────────
 
+const SLICE_TYPES = ["выбор", "шкала", "открытый", "число"];
+
+/** Ячейка вариантов добора: `**A** сам нашёл · **B** позвали`, `как в S4` или «—». */
+function parseSliceOptions(cell, id) {
+  if (cell === "—") return { options: [], sameAs: null };
+  const reference = /^как в (S\d+)$/.exec(cell);
+  if (reference) return { options: [], sameAs: reference[1] };
+
+  const options = cell.split("·").map((part) => {
+    const m = /^\*\*([A-G])\*\*\s+(.+)$/.exec(part.trim());
+    if (!m) throw new Error(`${id}: не разобран вариант «${part.trim()}»`);
+    return { key: m[1], text: m[2].trim() };
+  });
+  const keys = options.map((option) => option.key);
+  if (new Set(keys).size !== keys.length) throw new Error(`${id}: варианты повторяются`);
+  return { options, sameAs: null };
+}
+
+/**
+ * Вопросы-доборы среза: таблицы из шести колонок под разделами «Вопросы-доборы»
+ * или «Порция N». Формат описан в content/slices/README.md; разбор обязан падать,
+ * а не угадывать, поэтому каждая ячейка проверяется.
+ */
+function parseSliceQuestions(file, body) {
+  const out = [];
+  let portion = 1;
+  let inside = false;
+
+  for (const line of body) {
+    const heading = /^## (.+)$/.exec(line);
+    if (heading) {
+      const section = heading[1].trim();
+      const numbered = /^Порция (\d)/.exec(section);
+      inside = Boolean(numbered) || section.startsWith("Вопросы-доборы");
+      if (numbered) portion = Number(numbered[1]);
+      continue;
+    }
+    if (!inside || !line.trim().startsWith("|")) continue;
+
+    const cells = tableRows([line])[0];
+    if (!cells || cells.length !== 6) continue;
+    const [id, text, type, coordinates, options, purpose] = cells;
+    if (!/^S\d+$/.test(id)) continue;
+
+    if (!text || /\*\*|\||·/.test(text)) throw new Error(`${file} ${id}: в тексте вопроса осталась разметка`);
+    if (!SLICE_TYPES.includes(type)) throw new Error(`${file} ${id}: неизвестный тип «${type}»`);
+    if (!purpose) throw new Error(`${file} ${id}: не заполнено «Зачем в отчёте»`);
+
+    const ids =
+      coordinates === "—"
+        ? []
+        : coordinates.split(",").map((n) => Number(n.trim()));
+    if (ids.some((n) => !Number.isInteger(n) || n < 1 || n > 16))
+      throw new Error(`${file} ${id}: не разобраны координаты «${coordinates}»`);
+
+    const parsed = parseSliceOptions(options, `${file} ${id}`);
+    if (type !== "выбор" && (parsed.options.length || parsed.sameAs))
+      throw new Error(`${file} ${id}: варианты есть только у типа «выбор»`);
+    if (type === "выбор" && !parsed.sameAs && parsed.options.length < 2)
+      throw new Error(`${file} ${id}: у вопроса типа «выбор» меньше двух вариантов`);
+
+    out.push({
+      id,
+      portion,
+      type,
+      text,
+      coordinates: ids,
+      options: parsed.options,
+      sameAs: parsed.sameAs,
+      purpose,
+    });
+  }
+
+  out.forEach((question, i) => {
+    if (question.id !== `S${i + 1}`) throw new Error(`${file}: вместо S${i + 1} записан ${question.id}`);
+  });
+
+  // «как в S4» — те же варианты, что у названного вопроса.
+  for (const question of out) {
+    if (!question.sameAs) continue;
+    const source = out.find((candidate) => candidate.id === question.sameAs);
+    if (!source || !source.options.length)
+      throw new Error(`${file} ${question.id}: у ${question.sameAs} нет вариантов, ссылаться не на что`);
+    question.options = source.options;
+  }
+
+  return out;
+}
+
+/**
+ * Подтипы координат из раздела «Скоринг доборов»: код и формулировка внутрь
+ * профиля. Условия срабатывания живут в `engine/src/slices.ts` — прозой они
+ * записаны свободно; здесь берутся только словарь кодов и тексты.
+ */
+function parseSliceSubtypes(file, body) {
+  const start = body.findIndex((l) => l.startsWith("## Скоринг доборов"));
+  if (start < 0) throw new Error(`${file}: нет раздела «Скоринг доборов»`);
+  const end = body.findIndex((l, i) => i > start && l.startsWith("## "));
+  const section = body.slice(start, end < 0 ? undefined : end);
+
+  const out = [];
+  section.forEach((line, i) => {
+    if (!line.trim().startsWith("|")) return;
+    const header = tableRows([line])[0];
+    if (!header) return;
+    const column = header.findIndex((cell) => ["Подтип", "Тип", "Конфигурация"].includes(cell));
+    if (column < 0) return;
+
+    for (const cells of tableAt(section, i).slice(1)) {
+      const cell = cells[column];
+      if (!cell) continue;
+      const m = /^`([a-z_]+)`(?:\s*—\s*(.+))?$/.exec(cell);
+      if (!m) throw new Error(`${file}: не разобран подтип «${cell}»`);
+      const text = m[2] ?? cells[column + 1] ?? "";
+      if (!text) throw new Error(`${file}: у подтипа ${m[1]} нет формулировки`);
+      if (out.some((subtype) => subtype.code === m[1])) throw new Error(`${file}: подтип ${m[1]} записан дважды`);
+      out.push({ code: m[1], text });
+    }
+  });
+
+  if (!out.length) throw new Error(`${file}: в разделе «Скоринг доборов» не найдено ни одного подтипа`);
+  return out;
+}
+
+/** Порог генерации: пункты чек-листа и уточняющие вопросы — тексты из контента. */
+function parseSliceThreshold(file, body) {
+  const start = body.findIndex((l) => l.startsWith("## Порог генерации"));
+  if (start < 0) throw new Error(`${file}: нет раздела «Порог генерации»`);
+  const end = body.findIndex((l, i) => i > start && l.startsWith("## "));
+  const section = body.slice(start, end < 0 ? undefined : end);
+
+  const checks = [];
+  const followUps = [];
+  for (const line of section) {
+    const check = /^- \[ \]\s*(.+)$/.exec(line.trim());
+    if (check) checks.push(check[1].trim());
+    const followUp = /^\d+\.\s*«(.+)»\.?$/.exec(line.trim());
+    if (followUp) followUps.push(followUp[1].trim());
+  }
+
+  if (!checks.length) throw new Error(`${file}: у порога генерации нет пунктов`);
+  if (!followUps.length) throw new Error(`${file}: у порога генерации нет уточняющих вопросов`);
+  return { checks, followUps };
+}
+
+/** Таблица «Следующие двери»: условие текстом и один идентификатор среза. */
+function parseSliceDoors(file, body) {
+  const start = body.findIndex((l) => l.startsWith("## Следующие двери"));
+  if (start < 0) throw new Error(`${file}: нет раздела «Следующие двери после этого среза»`);
+  const table = body.findIndex((l, i) => i > start && l.trim().startsWith("|"));
+  if (table < 0) throw new Error(`${file}: в разделе «Следующие двери» нет таблицы`);
+
+  const out = [];
+  for (const cells of tableAt(body, table).slice(1)) {
+    if (!cells[0] || !cells[1]) continue;
+    const slice = /`(slice_[a-z_]+)`/.exec(cells[1]);
+    if (!slice) throw new Error(`${file}: в строке «${cells[0]}» не найден идентификатор среза`);
+    out.push({ condition: cells[0], slice: slice[1] });
+  }
+
+  if (!out.length) throw new Error(`${file}: таблица «Следующие двери» пуста`);
+  if (out[out.length - 1].condition !== "иначе")
+    throw new Error(`${file}: последняя строка «Следующие двери» обязана быть «иначе» — предложение всегда одно`);
+  return out;
+}
+
 function parseSlices() {
   const index = lines(read("content/slices/README.md"));
   const start = index.findIndex((l) => l.startsWith("| Файл "));
@@ -422,6 +588,13 @@ function parseSlices() {
     }
     if (!promise.length) throw new Error(`${file}: обещание оффера не найдено`);
 
+    const questions = parseSliceQuestions(file, body);
+    // Колонка «Вопросов» в README — контрольное число: «10», «20», «описание + 8».
+    const expected = /(\d+)\s*$/.exec(cells[3]);
+    if (!expected) throw new Error(`content/slices/README.md: не разобрано число вопросов «${cells[3]}»`);
+    if (questions.length !== Number(expected[1]))
+      throw new Error(`${file}: вопросов ${questions.length}, в README указано ${expected[1]}`);
+
     slices.push({
       id: unwrap(cells[1]),
       file,
@@ -430,6 +603,10 @@ function parseSlices() {
       questionCount: cells[3],
       coordinates: cells[4].split(",").map((n) => Number(n.trim())).filter((n) => !Number.isNaN(n)),
       promise: promise.join(" ").replace(/\s+/g, " ").trim(),
+      questions,
+      subtypes: parseSliceSubtypes(file, body),
+      threshold: parseSliceThreshold(file, body),
+      nextDoors: parseSliceDoors(file, body),
     });
   }
 
@@ -443,6 +620,10 @@ function parseSlices() {
       questionCount: cells[3],
       coordinates: [],
       promise: "",
+      questions: [],
+      subtypes: [],
+      threshold: null,
+      nextDoors: [],
     });
   }
 
@@ -497,7 +678,10 @@ const listed = content.slices.filter((s) => s.file).length;
 if (sliceFiles.length !== listed)
   throw new Error(`content/slices: файлов ${sliceFiles.length}, в таблице ${listed}`);
 
+const sliceQuestions = content.slices.reduce((sum, slice) => sum + slice.questions.length, 0);
+
 console.log(
   `content.ts собран: ${content.coordinates.length} координат, ${content.questions.length} вопросов лестницы, ` +
-    `${content.bank.length} вопросов банка, ${content.step3.nodes.length} узлов, ${content.slices.length} срезов`,
+    `${content.bank.length} вопросов банка, ${sliceQuestions} вопросов-доборов, ` +
+    `${content.step3.nodes.length} узлов, ${content.slices.length} срезов`,
 );

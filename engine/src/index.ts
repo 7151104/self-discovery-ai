@@ -28,6 +28,15 @@ export { applyNodes, NODE_RULES, fallbackNodeText } from "./nodes.js";
 export { buildMap, BAR_DEFINITIONS } from "./map.js";
 export { uiCopy, uiCopyGroup, uiCopyIds, barCopy } from "./ui-copy.js";
 export { scanText, scanTexts, describeHit } from "./forbidden.js";
+export {
+  crisisBlocks,
+  crisisContacts,
+  crisisNotice,
+  crisisPlaceTexts,
+  crisisPublishable,
+  detectCrisis,
+  CRISIS_PLACES,
+} from "./crisis.js";
 export { selectOffer, selectOfferAfterSlice, buildDoors } from "./offers.js";
 export {
   applySlice,

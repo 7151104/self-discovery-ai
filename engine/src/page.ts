@@ -11,6 +11,7 @@
 import { rawContent } from "./generated/content.js";
 import { uiCopy } from "./ui-copy.js";
 import { buildStep1Block, buildStep2Block, buildStep3Block, buildStep4Task, step4Heading } from "./blocks.js";
+import { crisisNotice, detectCrisis } from "./crisis.js";
 import { buildMap } from "./map.js";
 import { applyNodes } from "./nodes.js";
 import { buildDoors, selectOffer } from "./offers.js";
@@ -114,13 +115,32 @@ export function buildPage(input: Step0Input, answers: LadderAnswers, options: Pa
     if (block) blocks.push(block);
   }
 
+  /*
+   * Кризисный контур (content/crisis.md, docs/08-legal-safety.md). Решение
+   * считается по открытому ответу и от него зависит всё остальное: ни блока
+   * ступени 4, ни платного предложения на такой странице не появляется.
+   * Блоки ступеней 1–3 остаются: человек их уже прочёл, а страница по правилу
+   * `CRISIS_PAGE_STAYS` остаётся на месте вместе с ответами.
+   */
+  const crisis = detectCrisis(answers.L12 ?? "");
+
   const llmTask = step >= 4 ? buildStep4Task(answers, profile, blocks) : null;
   if (llmTask) {
     blocks.push({ step: 4, heading: step4Heading(), paragraphs: [], highlight: null, source: "llm" });
   }
 
-  const offer = step >= 4 && llmTask ? selectOffer(profile) : null;
+  const offer = crisis.blocked || !llmTask || step < 4 ? null : selectOffer(profile);
   const hook = step >= 3 ? (profile.nodes[0]?.text.split(". ")[0] ?? null) : (blocks[0]?.highlight ?? null);
+
+  /*
+   * Закрытые платные двери с кризисной страницы тоже уходят. Карта маршрута
+   * видна сразу — это продуктовое правило, но здесь оно уступает: закрытая
+   * дверь продаёт, а по `CRISIS_NO_OFFER` ничего платного на этой странице
+   * не предлагается вовсе. Открытые блоки и бесплатный следующий шаг остаются.
+   */
+  const doors = buildDoors(profile, blocks, offer, step).filter(
+    (door) => !crisis.blocked || door.state !== "paid",
+  );
 
   return {
     view: {
@@ -129,9 +149,10 @@ export function buildPage(input: Step0Input, answers: LadderAnswers, options: Pa
       hook: hook ? `${hook.replace(/\.$/, "")}.` : null,
       map: buildMap(profile, answers),
       blocks,
-      doors: buildDoors(profile, blocks, offer, step),
+      doors,
       offer,
       nextPortion: step < 4 ? portionForStep((step + 1) as 1 | 2 | 3 | 4) : null,
+      crisis: crisis.support ? crisisNotice("ladder", crisis) : null,
     },
     internal: { profile, llmTask },
   };

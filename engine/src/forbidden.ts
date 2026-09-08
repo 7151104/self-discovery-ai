@@ -12,6 +12,7 @@
  */
 
 import { rawExtraContent } from "./generated/content-extra.js";
+import { findForm, fold, patternFor, sentenceAround } from "./forms.js";
 import type { ForbiddenDegree, ForbiddenScope } from "./content-extra-types.js";
 
 export type { ForbiddenDegree, ForbiddenScope } from "./content-extra-types.js";
@@ -32,47 +33,13 @@ const NEGATION_EXCEPTION = "отрицание";
 
 const NEGATIONS = ["не", "ни", "нет", "без", "ничего"];
 
-const WORD = "\\p{L}\\p{N}_";
-
-const fold = (text: string): string => text.toLowerCase().replace(/ё/g, "е");
-
-/** Форма реестра → регулярное выражение. Звёздочка снимает границу справа. */
-function patternOf(form: string): RegExp {
-  const open = form.endsWith("*");
-  const body = fold(open ? form.slice(0, -1) : form)
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    .replace(/\s+/g, "\\s+");
-  const right = open ? "" : `(?![${WORD}])`;
-  return new RegExp(`(?<![${WORD}])${body}${right}`, "gu");
-}
-
-const cache = new Map<string, RegExp>();
-
-const patternFor = (form: string): RegExp => {
-  const cached = cache.get(form);
-  if (cached) return cached;
-  const pattern = patternOf(form);
-  cache.set(form, pattern);
-  return pattern;
-};
-
-/** Предложение вокруг найденного места: исключения действуют в его границах. */
-function sentenceAround(text: string, index: number): { sentence: string; offset: number } {
-  const before = text.slice(0, index);
-  const start = Math.max(...[".", "!", "?", ";", "\n", "|"].map((mark) => before.lastIndexOf(mark))) + 1;
-  const rest = text.slice(index);
-  const endMatch = /[.!?;\n|]/.exec(rest);
-  const end = index + (endMatch ? endMatch.index : rest.length);
-  return { sentence: text.slice(start, end), offset: index - start };
-}
-
 /**
  * Отрицание ищется во всём предложении, а не только слева от совпадения:
  * «предсказаний здесь нет» отрицает после, «не является диагнозом» — до.
  */
 function underNegation(sentence: string): boolean {
   const folded = fold(sentence);
-  return NEGATIONS.some((word) => new RegExp(`(?<![${WORD}])${word}(?![${WORD}])`, "u").test(folded));
+  return NEGATIONS.some((word) => findForm(folded, word).length > 0);
 }
 
 function excused(text: string, index: number, exceptions: string[]): boolean {

@@ -7,6 +7,7 @@
 
 import { rawContent } from "./generated/content.js";
 import { rawExtraContent } from "./generated/content-extra.js";
+import { crisisBlocks } from "./crisis.js";
 import { fallbackNodeText } from "./nodes.js";
 import { slicePortions } from "./slices.js";
 import type { Block, InterludeBlock, LadderAnswers, LlmTask, Profile, SliceAnswers } from "./types.js";
@@ -97,10 +98,15 @@ export function buildStep3Block(profile: Profile): Block | null {
 /**
  * Ступень 4 текст не собирает: движок готовит вход для LLM по
  * content/step4-open-synthesis.md. Пустой или слишком короткий ответ задания не даёт.
+ *
+ * Кризисный ответ задания не даёт тоже, и это проверяется здесь, а не у
+ * вызывающего: пока задания нет, отправить открытый текст в модель нечем
+ * (`content/crisis.md`, `docs/08-legal-safety.md`).
  */
 export function buildStep4Task(answers: LadderAnswers, profile: Profile, shownBlocks: Block[]): LlmTask | null {
   const openAnswer = (answers.L12 ?? "").trim();
   if (openAnswer.split(/\s+/).filter(Boolean).length < 15) return null;
+  if (crisisBlocks(openAnswer)) return null;
 
   return {
     prompt: rawContent.step4.prompt,

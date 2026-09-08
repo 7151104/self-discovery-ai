@@ -9,7 +9,7 @@ npm install
 npm test              # тесты движка, сервера, слоя генерации и клиента
 npm run lint:content  # запрещённые формулировки во всех текстах продукта
 npm run serve         # прототип и витрина компонентов на localhost:5173
-npm run dev:server    # личная страница на сервере, localhost:8787
+npm run dev:server    # API и живой клиент: /p/{id} и /s/{token} на localhost:8787
 ```
 
 ## Для нового агента — начни здесь

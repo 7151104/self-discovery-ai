@@ -2,6 +2,9 @@
 // Порядок блоков и поведение — docs/11-ui-page-spec.md.
 
 import { buildPage, uiCopy } from "/engine/dist/index.js";
+// Состав среза приходит из его файла, а не из микрокопии: у каждой двери он свой
+// (content/slices/*.md, раздел «Экран оплаты»).
+import { payContents } from "/engine/dist/pay-screens.js";
 
 const STORE_KEY = "self-discovery-prototype";
 
@@ -312,7 +315,8 @@ function renderOffer(offer, name) {
 
   card.append(
     button,
-    el("div", "offer__meta", uiCopy("UI_PAY_QUESTION_COUNT", { вопросов: offer.questionCount })),
+    el("div", "offer__label", uiCopy("UI_PAY_CONTENTS_LABEL")),
+    el("div", "offer__meta", payContents(offer.slice)),
     decline,
   );
   return card;

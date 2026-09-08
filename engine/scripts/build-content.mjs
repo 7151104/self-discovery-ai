@@ -1312,6 +1312,53 @@ function parseFullMap(bank, slices) {
   };
 }
 
+/**
+ * Экраны оплаты (E5-09): раздел «Экран оплаты» в каждом файле среза.
+ *
+ * Обещание на экране — то же, что в оффере, поэтому здесь оно не переписывается: в разделе
+ * живёт только состав и отказ. Цены в разделе нет намеренно — на экране она одна и приходит
+ * из шапки файла, второй записи ей быть негде (`docs/11-ui-page-spec.md`).
+ */
+function parsePayScreens(slices, fullMap) {
+  const HEADING = "## Экран оплаты";
+  const known = [
+    ...slices.filter((slice) => slice.file).map((slice) => ({ id: slice.id, file: slice.file, promise: slice.promise, price: slice.price })),
+    { id: fullMap.slice, file: fullMap.file, promise: fullMap.promise, price: fullMap.price },
+  ];
+
+  const out = [];
+  for (const slice of known) {
+    const path = `content/slices/${slice.file}`;
+    const src = lines(read(path));
+    const start = src.findIndex((line) => line.startsWith(HEADING));
+    if (start < 0) throw new Error(`${path}: нет раздела «Экран оплаты» — срез нельзя показать на оплате`);
+    const end = src.findIndex((line, i) => i > start && line.startsWith("## "));
+    const section = src.slice(start, end < 0 ? undefined : end);
+
+    const field = (label) => {
+      const line = section.find((candidate) => candidate.startsWith(`**${label}:**`));
+      if (!line) throw new Error(`${path}: в разделе «Экран оплаты» нет строки «${label}»`);
+      return line.replace(`**${label}:**`, "").trim();
+    };
+
+    const contents = field("Что внутри")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (contents.length < 3) throw new Error(`${path}: в составе меньше трёх частей — это уже не состав`);
+    const decline = field("Отказ");
+
+    for (const text of [...contents, decline]) {
+      if (/₽|\bруб/.test(text)) throw new Error(`${path}: цена записана в тексте экрана, а на экране она одна`);
+    }
+
+    out.push({ slice: slice.id, file: slice.file, price: slice.price, promise: slice.promise, contents, decline });
+  }
+
+  if (!out.length) throw new Error("content/slices: ни одного экрана оплаты");
+  return out;
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
@@ -1321,6 +1368,7 @@ const extra = {
   uiCopy: parseUiCopy(),
   fullMap: parseFullMap(content.bank, content.slices),
 };
+extra.payScreens = parsePayScreens(content.slices, extra.fullMap);
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
@@ -1341,5 +1389,6 @@ console.log(
     `кризис: ${extra.crisis.triggers.length} категорий триггеров, ${extra.crisis.texts.length} текстов, ` +
     `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах, ` +
     `полная карта: ${extra.fullMap.portions.reduce((sum, portion) => sum + portion.questions.length, 0)} вопросов ` +
-    `в ${extra.fullMap.portions.length} порциях, ${extra.fullMap.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар в блоках`,
+    `в ${extra.fullMap.portions.length} порциях, ${extra.fullMap.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар в блоках, ` +
+    `${extra.payScreens.length} экранов оплаты`,
 );

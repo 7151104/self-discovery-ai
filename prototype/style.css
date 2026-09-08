@@ -408,6 +408,13 @@ textarea:focus {
   line-height: 1.5;
 }
 
+.offer__label {
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin-bottom: -10px;
+}
+
 .offer__meta {
   font-size: 13.5px;
   color: var(--ink-faint);

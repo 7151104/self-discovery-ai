@@ -191,6 +191,21 @@ export interface RawFullMap {
   nextDoors: { condition: string; slice: string | null; note: string }[];
 }
 
+/**
+ * Экран оплаты одного среза (раздел «Экран оплаты» в файле среза).
+ *
+ * `promise` — то же обещание, что в оффере: второй записи у него нет. `contents` — состав,
+ * а не список выгод. Цена на экране одна и живёт полем `price`, в текстах её нет.
+ */
+export interface RawPayScreen {
+  slice: string;
+  file: string;
+  price: number;
+  promise: string;
+  contents: string[];
+  decline: string;
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
@@ -199,4 +214,5 @@ export interface RawExtraContent {
   crisis: RawCrisis;
   uiCopy: RawUiCopy[];
   fullMap: RawFullMap;
+  payScreens: RawPayScreen[];
 }

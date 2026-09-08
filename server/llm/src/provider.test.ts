@@ -123,6 +123,28 @@ test("зависший вызов прекращается таймаутом, �
   assert.equal(provider.callCount, 2);
 });
 
+test("внешняя отмена не запускает повтор: задание доиграется после старта", async () => {
+  const provider = new FakeProvider({ turns: [{ kind: "зависание" }] });
+  const clock = recorder();
+  const controller = new AbortController();
+  const pending = runGeneration({
+    provider,
+    request: REQUEST,
+    retry: retry({ attempts: 3, timeoutMs: 5_000 }),
+    cost: cost(),
+    spentKopecks: 0,
+    sleep: clock.sleep,
+    signal: controller.signal,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  controller.abort();
+  const outcome = await pending;
+
+  assert.equal(outcome.ok, false);
+  assert.equal(provider.callCount, 1, "остановку нельзя чинить повтором");
+  assert.deepEqual(clock.pauses, []);
+});
+
 test("предел стоимости профиля останавливает вызов до провайдера", async () => {
   const pricing = { inputKopecksPerMillion: 1_000_000, outputKopecksPerMillion: 1_000_000 };
   const provider = answering("не должно быть вызвано", { pricing });
@@ -164,10 +186,53 @@ test("уже потраченное на профиль учитывается: 
     retry: retry(),
     cost: cost(forecast * 2),
     spentKopecks: forecast + 1,
-    });
+  });
 
   assert.equal(outcome.ok, false);
   if (!outcome.ok) assert.equal(outcome.failure, "предел стоимости");
+});
+
+test("потолок срабатывает по фактически потраченному даже при нулевой оценке следующего вызова", async () => {
+  const provider = answering("не должно быть вызвано");
+  const blocked = await runGeneration({
+    provider,
+    request: REQUEST,
+    retry: retry(),
+    cost: cost(10),
+    spentKopecks: 10,
+  });
+
+  assert.equal(blocked.ok, false);
+  if (!blocked.ok) assert.equal(blocked.failure, "предел стоимости");
+  assert.equal(provider.callCount, 0);
+});
+
+test("поддельный провайдер принимает ходы «временный отказ» и «постоянный отказ» напрямую", async () => {
+  const temporary = new FakeProvider({
+    turns: [{ kind: "временный отказ", code: "429" }, { kind: "ответ", text: "после паузы" }],
+  });
+  const clock = recorder();
+  const retried = await runGeneration({
+    provider: temporary,
+    request: REQUEST,
+    retry: retry({ attempts: 2 }),
+    cost: cost(),
+    spentKopecks: 0,
+    sleep: clock.sleep,
+  });
+  assert.ok(retried.ok);
+  assert.equal(temporary.callCount, 2);
+
+  const permanent = new FakeProvider({ turns: [{ kind: "постоянный отказ", code: "auth" }] });
+  const failed = await runGeneration({
+    provider: permanent,
+    request: REQUEST,
+    retry: retry(),
+    cost: cost(),
+    spentKopecks: 0,
+  });
+  assert.equal(failed.ok, false);
+  assert.equal(permanent.callCount, 1);
 });
 
 test("стоимость считается по токенам и округляется вверх", () => {

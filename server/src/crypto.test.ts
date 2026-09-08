@@ -112,8 +112,10 @@ test("в файле базы нет ни имени, ни открытого о�
       ...db.all<{ v: string }>("SELECT heading_payload AS v FROM blocks"),
       ...db.all<{ v: string }>("SELECT body_payload AS v FROM blocks"),
       ...db.all<{ v: string }>("SELECT snapshot AS v FROM profile_versions"),
+      ...db.all<{ v: string | null }>("SELECT result_payload AS v FROM generation_jobs"),
+      ...db.all<{ v: string | null }>("SELECT result_payload AS v FROM generation_cache"),
     ]
-      .map((row) => row.v)
+      .map((row) => row.v ?? "")
       .join(" ");
 
     for (const secret of ["Аня", "1990-05-01", "девяноста", "предпоказа"]) {

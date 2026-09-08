@@ -11,7 +11,15 @@ import type { Db } from "./db/driver.js";
 import { readMigrations, up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
 import { rawContent } from "./engine.js";
+import {
+  abortInflightGenerations,
+  createLlmRuntime,
+  drainGenerations,
+  waitForGenerationWorker,
+  type LlmRuntime,
+} from "./generation.js";
 import { createHttpServer } from "./http/server.js";
+import type { GenerationProvider } from "../llm/dist/index.js";
 import { saveBlockContent } from "./store.js";
 import { fakeWebhook, FAKE_SIGNATURE_HEADER } from "./payments/fake.js";
 import type { WebhookKind } from "./payments/provider.js";
@@ -23,7 +31,16 @@ export interface TestServer {
   origin: string;
   db: Db;
   config: ServerConfig;
+  llm: LlmRuntime;
   close(): Promise<void>;
+}
+
+export interface TestServerOptions {
+  /** По умолчанию очередь не крутится: существующие тесты ступени 4 ждут pending. */
+  autostart?: boolean;
+  provider?: GenerationProvider;
+  databasePath?: string;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 /** Номер последней миграции: тесты не переписываются при добавлении новой. */
@@ -46,8 +63,14 @@ export const TEST_WEBHOOK_SECRET = "test-webhook-secret";
  * Сервер на случайном порту с чистой базой в памяти.
  * По умолчанию поднимается с шифрованием: тесты идут тем же путём, что рабочее
  * окружение, а не более коротким.
+ *
+ * Автозапуск очереди выключен: иначе каждый профиль ступени 4 запускал бы
+ * провайдера, и старые тесты перестали бы видеть `pending`.
  */
-export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<TestServer> {
+export async function startTestServer(
+  env: NodeJS.ProcessEnv = {},
+  options: TestServerOptions = {},
+): Promise<TestServer> {
   const config: ServerConfig = loadConfig({
     SDAI_ENCRYPTION_KEY: TEST_KEY,
     SDAI_PAYMENT_WEBHOOK_SECRET: TEST_WEBHOOK_SECRET,
@@ -55,10 +78,17 @@ export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<Test
     SDAI_BUILD_COMMIT: "test-commit",
     ...env,
   });
-  const db = openDatabase({ path: ":memory:", keys: config.keys });
+  const db = openDatabase({ path: options.databasePath ?? ":memory:", keys: config.keys });
   up(db);
 
-  const server = createHttpServer({ db, config });
+  const llm = createLlmRuntime({
+    env,
+    autostart: options.autostart ?? false,
+    sleep: options.sleep ?? (async () => {}),
+    ...(options.provider ? { provider: options.provider } : {}),
+  });
+
+  const server = createHttpServer({ db, config, llm });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 
@@ -66,15 +96,24 @@ export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<Test
     origin: `http://127.0.0.1:${port}`,
     db,
     config,
+    llm,
     close: () =>
       new Promise<void>((resolve) => {
+        abortInflightGenerations(llm);
+        const worker = waitForGenerationWorker(llm);
         server.close(() => {
-          db.close();
-          resolve();
+          void worker.finally(() => {
+            db.close();
+            resolve();
+          });
         });
       }),
   };
 }
+
+/** Доиграть очередь тестового сервера без включения автозапуска навсегда. */
+export const drainServer = (server: TestServer): Promise<void> =>
+  drainGenerations({ db: server.db, llm: server.llm });
 
 export interface Reply<T> {
   status: number;

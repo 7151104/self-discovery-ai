@@ -43,6 +43,7 @@ export interface Step4Options {
   /** Граница конверта. Задаётся только в тестах. */
   nonce?: string;
   sleep?: (ms: number) => Promise<void>;
+  signal?: AbortSignal;
 }
 
 export type Step4Outcome =
@@ -91,6 +92,7 @@ export async function generateLadderFinal(options: Step4Options): Promise<Step4O
     cost: options.cost,
     spentKopecks: options.spentKopecks,
     ...(options.sleep ? { sleep: options.sleep } : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
   });
 
   if (!run.ok) {

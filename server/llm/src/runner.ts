@@ -43,10 +43,15 @@ export interface RunOptions {
   request: GenerationRequest;
   retry: RetryPolicy;
   cost: CostPolicy;
-  /** Сколько уже потрачено на этот профиль. Число приносит вызывающий. */
+  /**
+   * Сколько уже потрачено на этот профиль по журналу вызовов: сумма фактических
+   * стоимостей, а не оценка. Слой ничего не помнит сам (E4-10).
+   */
   spentKopecks: number;
   /** Пауза между попытками. Подменяется в тестах, чтобы они не ждали. */
   sleep?: (ms: number) => Promise<void>;
+  /** Внешняя отмена: остановка сервера не должна оставлять зависший вызов. */
+  signal?: AbortSignal;
 }
 
 const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -56,6 +61,7 @@ async function attemptOnce(
   provider: GenerationProvider,
   request: GenerationRequest,
   timeoutMs: number,
+  external?: AbortSignal,
 ): Promise<GenerationResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -64,14 +70,22 @@ async function attemptOnce(
     timedOut = true;
   };
   controller.signal.addEventListener("abort", onAbort, { once: true });
+  const forward = (): void => controller.abort();
+  external?.addEventListener("abort", forward, { once: true });
+  if (external?.aborted) {
+    clearTimeout(timer);
+    throw new GenerationError("временный отказ", "прекращено");
+  }
 
   try {
     return await provider.generate(request, controller.signal);
   } catch (error) {
+    if (external?.aborted) throw new GenerationError("временный отказ", "прекращено");
     if (timedOut) throw new GenerationError("временный отказ", "таймаут");
     throw error;
   } finally {
     clearTimeout(timer);
+    external?.removeEventListener("abort", forward);
   }
 }
 
@@ -86,6 +100,12 @@ export async function runGeneration(options: RunOptions): Promise<RunOutcome> {
   const { provider, request, retry, cost, spentKopecks } = options;
   const sleep = options.sleep ?? realSleep;
 
+  // Потолок считается по фактически потраченному (E4-10): если журнал уже
+  // исчерпал предел, оценку следующего вызова смотреть незачем.
+  if (spentKopecks >= cost.profileLimitKopecks) {
+    return { ok: false, failure: "предел стоимости", code: "профиль", attempts: 0, costKopecks: 0 };
+  }
+
   const forecast = estimateCost(request, provider.pricing);
   if (spentKopecks + forecast > cost.profileLimitKopecks) {
     return { ok: false, failure: "предел стоимости", code: "профиль", attempts: 0, costKopecks: 0 };
@@ -99,12 +119,15 @@ export async function runGeneration(options: RunOptions): Promise<RunOutcome> {
   for (let attempt = 1; attempt <= retry.attempts; attempt += 1) {
     used = attempt;
     try {
-      const result = await attemptOnce(provider, request, retry.timeoutMs);
+      const result = await attemptOnce(provider, request, retry.timeoutMs, options.signal);
       return { ok: true, result, attempts: attempt, costKopecks: costOf(result.usage, provider.pricing) };
     } catch (error) {
       const failure = error instanceof GenerationError ? error : new GenerationError("постоянный отказ", "исключение");
       lastCode = failure.code;
       lastFailure = failure.code === "таймаут" ? "таймаут" : "отказ провайдера";
+      // Остановка сервера — не отказ провайдера: повторять бессмысленно, задание
+      // останется живым и доиграется после старта.
+      if (options.signal?.aborted) break;
       if (!failure.retryable || attempt === retry.attempts) break;
       await sleep(pause);
       pause *= retry.backoffFactor;

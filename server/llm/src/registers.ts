@@ -45,13 +45,19 @@ const hasMarker = (phrase: string, markers: string[]): boolean => {
   return markers.some((marker) => folded.includes(normalize(marker)));
 };
 
-/** Есть ли в фразе цепочка из `least` слов подряд, взятая из открытого ответа. */
+/**
+ * Есть ли в фразе цепочка из `least` слов подряд, взятая из открытого ответа.
+ * Сравниваются слова, а не строки: между «сам, никого» и «сам никого» разницы
+ * для цитаты нет, а для сравнения строк она есть.
+ */
 function borrowsFrom(phrase: string, source: string, least: number): boolean {
   const left = words(normalize(phrase));
-  const right = normalize(source);
+  const right = words(normalize(source));
   for (let start = 0; start + least <= left.length; start += 1) {
-    const run = left.slice(start, start + least).join(" ");
-    if (right.includes(run)) return true;
+    const run = left.slice(start, start + least);
+    for (let at = 0; at + least <= right.length; at += 1) {
+      if (run.every((word, offset) => word === right[at + offset])) return true;
+    }
   }
   return false;
 }

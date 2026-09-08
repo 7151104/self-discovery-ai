@@ -5,7 +5,7 @@
  * эндпоинт мимо контракта нельзя — маршрут просто неоткуда взять.
  */
 
-import { API, PAGE_PATH, PUBLIC_PAGE_PATH, type OperationName } from "../contract/index.js";
+import { API, LEGAL_PATHS, PAGE_PATH, PUBLIC_PAGE_PATH, type LegalDocId, type OperationName } from "../contract/index.js";
 
 export interface RouteMatch {
   name: OperationName;
@@ -59,4 +59,15 @@ export function matchPublicPage(pathname: string): { token: string } | null {
   const params = matchTemplate(PUBLIC_PAGE_PATH, pathname);
   const token = params?.["token"];
   return token === undefined ? null : { token };
+}
+
+const trimSlash = (pathname: string): string => (pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname);
+
+/** Постоянный адрес юридического документа `/legal/{имя}`. */
+export function matchLegal(pathname: string): { id: LegalDocId } | null {
+  const path = trimSlash(pathname);
+  for (const id of Object.keys(LEGAL_PATHS) as LegalDocId[]) {
+    if (LEGAL_PATHS[id] === path) return { id };
+  }
+  return null;
 }

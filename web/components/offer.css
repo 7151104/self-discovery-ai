@@ -63,6 +63,22 @@
   color: var(--color-text-soft);
 }
 
+.offer__legal {
+  max-width: var(--measure-block);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.offer__legal-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-target);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
 @media (hover: hover) {
   .offer__buy:hover {
     background: var(--color-text-strong);

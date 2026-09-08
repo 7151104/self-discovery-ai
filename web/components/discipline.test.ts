@@ -21,6 +21,10 @@ import { renderHead, renderHook } from "./page-head.js";
 import { renderPortion } from "./portion.js";
 import { renderScale } from "./scale.js";
 import { renderWait } from "./wait.js";
+import { renderConsent } from "./consent.js";
+import { renderDisclaimerList } from "./disclaimer.js";
+import { renderFooter } from "./footer.js";
+import { renderLegalDoc } from "./legal-doc.js";
 import { renderIntro } from "./intro.js";
 import { renderMissing } from "./missing.js";
 import { renderToString, type VNode } from "../src/dom.js";
@@ -94,14 +98,28 @@ const cases: { name: string; node: VNode }[] = [
     name: "точка оплаты",
     node: renderPaymentStep({
       offer: { slice: "s", title: "T", price: 590, promise: "P", questionCount: "10" },
-      labels: { buy: "B", contents: "C", decline: "D", oneDoor: "O" },
+      labels: {
+        buy: "B",
+        contents: "C",
+        decline: "D",
+        oneDoor: "O",
+        legalLead: "L",
+        legalLinks: [{ label: "O", href: "/legal/offer" }],
+      },
     }),
   },
   {
     name: "предложение",
     node: renderOffer({
       offer: { slice: "s", title: "T", price: 590, promise: "P", questionCount: "10" },
-      labels: { buy: "B", contents: "C", decline: "D", oneDoor: "O" },
+      labels: {
+        buy: "B",
+        contents: "C",
+        decline: "D",
+        oneDoor: "O",
+        legalLead: "L",
+        legalLinks: [{ label: "P", href: "/legal/privacy" }],
+      },
     }),
   },
   { name: "шапка", node: renderHead({ name: "N", season: null, theme: "T", metaphor: "M", cta: "C" }) },
@@ -171,6 +189,25 @@ const cases: { name: string; node: VNode }[] = [
     }),
   },
   { name: "нет профиля", node: renderMissing({ title: "T", text: "X", action: "A" }) },
+  {
+    name: "согласие",
+    node: renderConsent({
+      title: "T",
+      body: "B",
+      mark: [{ text: "M " }, { text: "L", href: "/legal/privacy" }],
+      refuse: [{ text: "R " }, { text: "H", href: "/" }],
+      checked: false,
+    }),
+  },
+  {
+    name: "подвал",
+    node: renderFooter({ heading: "D", links: [{ label: "P", href: "/legal/privacy" }] }),
+  },
+  {
+    name: "дисклеймер",
+    node: renderDisclaimerList({ items: [{ id: "d", text: "T {{X}}" }], unfilledLabel: "u" }) as VNode,
+  },
+  { name: "документ", node: renderLegalDoc({ title: "T" }) },
 ];
 
 for (const item of cases) {

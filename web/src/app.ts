@@ -5,12 +5,24 @@
  * `renderPersonalPage` — та же функция, что у витрины.
  */
 
+import { renderConsent } from "../components/consent.js";
+import { renderDisclaimerList } from "../components/disclaimer.js";
+import { renderFooter } from "../components/footer.js";
 import { renderIntro } from "../components/intro.js";
 import { renderMissing } from "../components/missing.js";
 import { h, mount, type VNode } from "./dom.js";
 import type { AnswerInput, PageStateDto, QuestionDto } from "./contract.js";
 import { createProfile, loadPage, submitPortion, type Transport } from "./api.js";
 import { collectingPause, scrollToNewBlock, windowHost, type MotionHost } from "./motion.js";
+import {
+  consentCopy,
+  consentVersionOf,
+  disclaimerPlaces,
+  disclaimersFor,
+  footerHeading,
+  footerLinks,
+  unfilledLabel,
+} from "./legal-copy.js";
 import { errorTexts, introTexts, missingTexts } from "./page-copy.js";
 import { pageLabels } from "./page-labels.js";
 import { renderPersonalPage } from "./page.js";
@@ -50,6 +62,7 @@ export interface PageApp {
   back: () => void;
   draft: (value: string) => void;
   intro: (name: string, birthDate: string | null) => Promise<void>;
+  consent: (checked: boolean) => void;
   goOwn: () => void;
 }
 
@@ -78,6 +91,8 @@ export function renderSession(
     onAnswer?: (event: Event) => void;
     onBack?: () => void;
     onSubmit?: () => void;
+    consent?: VNode;
+    submitDisabled?: boolean;
   },
 ): VNode {
   if (session.screen === "missing") {
@@ -91,6 +106,8 @@ export function renderSession(
       labels: introLabels(),
       values: { name: session.introName, birthDate: session.introDate },
       nameError: session.nameError,
+      consent: handlers.consent,
+      submitDisabled: handlers.submitDisabled,
       onSubmit: (value) => handlers.onIntro?.(value.name, value.birthDate),
     });
   }
@@ -121,11 +138,41 @@ const readInputValue = (event: Event): string | null => {
 export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
   let session = emptySession();
   let pause: ReturnType<typeof collectingPause> | null = null;
+  let consented = false;
 
   const paint = () => onChange?.();
   const set = (next: Session) => {
     session = next;
     paint();
+  };
+
+  const chrome = (view: VNode): VNode => {
+    const product = disclaimersFor(disclaimerPlaces({ screen: session.screen, page: session.page }));
+    const footer = disclaimersFor(["подвал"]);
+    const label = unfilledLabel();
+    return h(
+      "div",
+      { class: "page-shell" },
+      view,
+      renderDisclaimerList({ items: product, unfilledLabel: label }),
+      renderFooter({ heading: footerHeading(), links: footerLinks() }),
+      renderDisclaimerList({ items: footer, unfilledLabel: label }),
+    );
+  };
+
+  const consentSlot = (): VNode => {
+    const short = consentCopy();
+    return renderConsent({
+      title: short.title,
+      body: short.body,
+      mark: short.mark,
+      refuse: short.refuse,
+      checked: consented,
+      onChange: (value) => {
+        consented = value;
+        paint();
+      },
+    });
   };
 
   const motion = (): MotionHost =>
@@ -177,31 +224,35 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
 
   const app: PageApp = {
     tree: () =>
-      renderSession(session, {
-        onIntro: (name, birthDate) => {
-          void app.intro(name, birthDate);
-        },
-        onOwn: () => app.goOwn(),
-        onAnswer: (event) => {
-          const question = currentQuestion(session);
-          if (question === null) return;
-          const value = readInputValue(event);
-          if (question.kind === "открытый" || question.kind === "число") {
-            if (value !== null) app.draft(value);
-            return;
-          }
-          if (value === null) return;
-          const input = choiceAnswer(question, value);
-          if (input) void app.accept(input);
-        },
-        onBack: () => app.back(),
-        onSubmit: () => {
-          const question = currentQuestion(session);
-          if (question === null) return;
-          if (question.kind === "открытый") void app.accept(openAnswer(question, session.draft));
-          if (question.kind === "число") void app.accept(numberAnswer(question, session.draft));
-        },
-      }),
+      chrome(
+        renderSession(session, {
+          onIntro: (name, birthDate) => {
+            void app.intro(name, birthDate);
+          },
+          onOwn: () => app.goOwn(),
+          onAnswer: (event) => {
+            const question = currentQuestion(session);
+            if (question === null) return;
+            const value = readInputValue(event);
+            if (question.kind === "открытый" || question.kind === "число") {
+              if (value !== null) app.draft(value);
+              return;
+            }
+            if (value === null) return;
+            const input = choiceAnswer(question, value);
+            if (input) void app.accept(input);
+          },
+          onBack: () => app.back(),
+          onSubmit: () => {
+            const question = currentQuestion(session);
+            if (question === null) return;
+            if (question.kind === "открытый") void app.accept(openAnswer(question, session.draft));
+            if (question.kind === "число") void app.accept(numberAnswer(question, session.draft));
+          },
+          consent: session.screen === "intro" ? consentSlot() : undefined,
+          submitDisabled: session.screen === "intro" ? !consented : undefined,
+        }),
+      ),
     session: () => session,
     start: async () => {
       const route = parseRoute(host.location.pathname);
@@ -235,7 +286,8 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
         set(setNameError(session, introTexts.nameRequired()));
         return;
       }
-      const result = await createProfile({ name: trimmed, birthDate }, host);
+      if (!consented) return;
+      const result = await createProfile({ name: trimmed, birthDate, consentVersion: consentVersionOf() }, host);
       if (!result.ok) {
         set(setNameError(session, errorTexts.save()));
         return;
@@ -244,7 +296,12 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       set(showPage(session, result.page, "load"));
       host.title?.(result.page.card.name);
     },
+    consent: (checked) => {
+      consented = checked;
+      paint();
+    },
     goOwn: () => {
+      consented = false;
       host.history?.pushState(null, "", "/");
       set(showIntro(session));
     },

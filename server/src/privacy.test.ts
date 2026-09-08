@@ -11,6 +11,7 @@ import {
   collectKeys,
   portionKey,
   profileAtStep,
+  profileBody,
   purchaseSlice,
   startTestServer,
 } from "./test-support.js";
@@ -102,6 +103,7 @@ test("удаление профиля уносит ответы, блоки, з�
     "share_tokens",
     "order_events",
     "disagreements",
+    "consents",
     "generation_jobs",
     "generation_calls",
     "generation_cache",
@@ -167,8 +169,7 @@ test("дата рождения не влияет ни на один вывод 
 
   for (const birthDate of birthDates) {
     const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", {
-      name: "Аня",
-      birthDate,
+      ...profileBody("Аня", birthDate),
     });
     let page = created.body;
     for (const step of [1, 2, 3, 4] as const) {

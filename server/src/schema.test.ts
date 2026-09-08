@@ -41,6 +41,7 @@ test("чистая база поднимается одной командой",
     assert.deepEqual(tables(db).sort(), [
       "answers",
       "blocks",
+      "consents",
       "disagreements",
       "events",
       "generation_cache",
@@ -99,6 +100,7 @@ test("схема покрывает профиль, ответы, версии, 
       events: ["profile_id", "type", "payload"],
       portion_submissions: ["profile_id", "request_id", "portion", "answer_count", "profile_version"],
       share_tokens: ["token", "profile_id", "created_at", "revoked_at"],
+      consents: ["profile_id", "version", "consented_at"],
     };
     for (const [table, wanted] of Object.entries(expected)) {
       const actual = columns(db, table);
@@ -157,7 +159,7 @@ test("миграции откатываются по одной, в обратн
     // Шаг назад снимает только последнюю миграцию.
     assert.deepEqual(down(db), [latest()]);
     assert.ok(tables(db).includes("profiles"));
-    // Последняя миграция пересобирает таблицу ответов, а не заводит свою.
+    // Последняя миграция — таблица согласий; ответы остаются.
     assert.ok(tables(db).includes("answers"));
 
     assert.deepEqual(up(db), [latest()]);

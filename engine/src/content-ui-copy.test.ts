@@ -29,7 +29,7 @@ test("реестр разобран: идентификаторы, группы 
     assert.ok(entry.where.length > 0, `${entry.id}: не сказано, где показывается`);
   }
   const groups = new Set(registry.map((entry) => entry.group));
-  for (const group of ["INTRO", "HEAD", "MAP", "BLOCK", "PORTION", "OPEN", "WAIT", "PAY", "ROUTE", "ERROR", "EDGE"]) {
+  for (const group of ["INTRO", "LEGAL", "HEAD", "MAP", "BLOCK", "PORTION", "OPEN", "WAIT", "PAY", "ROUTE", "ERROR", "EDGE"]) {
     assert.ok(groups.has(group), `нет группы ${group}`);
   }
 });

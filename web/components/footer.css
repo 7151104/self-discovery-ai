@@ -1,0 +1,46 @@
+/*
+ * Подвал со ссылками на документы. Цель каждой ссылки — не меньше --size-target.
+ * .page-shell — оболочка живой страницы: экран, дисклеймеры, подвал.
+ */
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 100%;
+}
+
+.site-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding: var(--space-5) var(--space-3);
+  border-top: var(--border-hair) solid var(--color-line);
+}
+
+.site-footer__heading {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.site-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.site-footer__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}

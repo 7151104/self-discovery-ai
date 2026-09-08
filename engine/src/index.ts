@@ -109,6 +109,26 @@ export {
 export { buildPage, buildStep0Card, completedStep, portionForStep, type PageOptions } from "./page.js";
 export { rawContent } from "./generated/content.js";
 export { rawExtraContent } from "./generated/content-extra.js";
+export {
+  consentShort,
+  consentVersion,
+  disclaimers,
+  disclaimersAt,
+  legalDocument,
+  legalDocumentByPath,
+  legalTitle,
+  markdownSection,
+  normalizeLegalSource,
+  readLegalFile,
+  renderLegalDocument,
+  LEGAL_DOCUMENTS,
+  type ConsentMarkPart,
+  type ConsentShort,
+  type LegalDocId,
+  type LegalDocument,
+  type RenderedLegalPage,
+} from "./legal.js";
+export { renderLegalMarkdown, SUBSTITUTION } from "./legal-markdown.js";
 export { wordCount, words, unwrapLines } from "./words.js";
 export {
   collectCorpus,

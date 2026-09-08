@@ -106,6 +106,48 @@ export function findProfile(db: Db, profileId: string): ProfileRecord | null {
   return row ? toProfile(db, row) : null;
 }
 
+// ── Согласие ──────────────────────────────────────────────────────────────────
+
+export interface ConsentRecord {
+  profileId: string;
+  version: string;
+  consentedAt: string;
+}
+
+interface ConsentRow {
+  profile_id: string;
+  version: string;
+  consented_at: string;
+}
+
+const toConsent = (row: ConsentRow): ConsentRecord => ({
+  profileId: row.profile_id,
+  version: row.version,
+  consentedAt: row.consented_at,
+});
+
+/** Записывает отметку согласия. Повтор обновляет версию и время. */
+export function insertConsent(db: Db, profileId: string, version: string): ConsentRecord {
+  const timestamp = now();
+  db.run(
+    `INSERT INTO consents (profile_id, version, consented_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT (profile_id) DO UPDATE SET
+       version = excluded.version,
+       consented_at = excluded.consented_at`,
+    [profileId, version, timestamp],
+  );
+  return { profileId, version, consentedAt: timestamp };
+}
+
+export function findConsent(db: Db, profileId: string): ConsentRecord | null {
+  const row = db.get<ConsentRow>(
+    "SELECT profile_id, version, consented_at FROM consents WHERE profile_id = ?",
+    [profileId],
+  );
+  return row ? toConsent(row) : null;
+}
+
 // ── Ответы ────────────────────────────────────────────────────────────────────
 
 export interface AnswerRecord {

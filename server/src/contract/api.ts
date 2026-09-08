@@ -236,6 +236,13 @@ export interface CreateProfileRequest {
   name: string;
   /** ISO-дата или null. Без даты — без карточки периода. */
   birthDate: string | null;
+  /**
+   * Отпечаток полного текста согласия. Без совпадения с текущим документом
+   * отметка не записывается, а ответы сервер не сохраняет (E9-01).
+   * Поле необязательное: профиль без отметки создать можно, сохранить
+   * ответы в нём — нет.
+   */
+  consentVersion?: string;
 }
 
 /** Один ответ. Форма зависит от типа вопроса, поэтому это размеченное объединение. */
@@ -348,6 +355,8 @@ export type ErrorCode =
   | "invalid_signature"
   /** Возврат по этому заказу автоматически не проводится. */
   | "refund_unavailable"
+  /** Нет отметки согласия — ответы не сохраняются. */
+  | "consent_required"
   | "internal_error";
 
 export interface ErrorDto {
@@ -605,6 +614,19 @@ export const PAGE_PATH = "/p/:profileId";
 
 /** Адрес публичного вида. Токен не совпадает с идентификатором профиля. */
 export const PUBLIC_PAGE_PATH = "/s/:token";
+
+/**
+ * Постоянные адреса юридических документов. Markdown — в `content/legal/`,
+ * страница его читает. Клиент копирует те же строки и сверяет тестом.
+ */
+export const LEGAL_PATHS = {
+  privacy: "/legal/privacy",
+  consent: "/legal/consent",
+  offer: "/legal/offer",
+  disclaimers: "/legal/disclaimers",
+} as const;
+
+export type LegalDocId = keyof typeof LEGAL_PATHS;
 
 /** Подстановка параметров в шаблон пути: `/api/p/:profileId` → `/api/p/abc`. */
 export function buildPath<Name extends OperationName>(

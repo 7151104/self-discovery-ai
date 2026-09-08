@@ -4,7 +4,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { answersForStep, call, portionKey, startTestServer } from "./test-support.js";
+import { answersForStep, call, portionKey, profileBody, startTestServer } from "./test-support.js";
 import { RateLimiter, type RateRules } from "./http/rate-limit.js";
 import { DEFAULTS, loadConfig } from "./config.js";
 import { newProfileId } from "./ids.js";
@@ -66,7 +66,7 @@ test("превышение лимита порции не записывает �
   const server = await startTestServer({ SDAI_RATE_PORTION: "1" });
   t.after(() => server.close());
 
-  const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", { name: "Аня", birthDate: null });
+  const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", profileBody("Аня", null));
   const profileId = created.body.profileId;
 
   const first = await call<PageStateDto>(server.origin, "POST", `/api/p/${profileId}/portions`, {

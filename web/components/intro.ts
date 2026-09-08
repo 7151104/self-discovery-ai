@@ -28,6 +28,10 @@ export interface IntroProps {
   values?: Partial<IntroValues>;
   nameError?: string | null;
   disabled?: boolean;
+  /** Кнопка неактивна, пока отметка согласия не стоит. Поля при этом живут. */
+  submitDisabled?: boolean;
+  /** Отметка согласия внутри формы, без модального окна. */
+  consent?: VNode;
   onSubmit?: (value: { name: string; birthDate: string | null }) => void;
 }
 
@@ -95,6 +99,7 @@ export function renderIntro(props: IntroProps): VNode {
       }),
       h("p", { class: "intro__hint" }, props.labels.dateHint),
     ),
-    h("button", { class: "intro__submit", type: "submit", disabled }, props.labels.submit),
+    props.consent ?? null,
+    h("button", { class: "intro__submit", type: "submit", disabled: disabled || props.submitDisabled === true }, props.labels.submit),
   );
 }

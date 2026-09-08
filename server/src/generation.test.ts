@@ -29,7 +29,7 @@ import {
   saveCache,
   saveJobResult,
 } from "./store.js";
-import { call, drainServer, startTestServer, TEST_KEY } from "./test-support.js";
+import { call, drainServer, profileBody, startTestServer, TEST_KEY } from "./test-support.js";
 
 const LLM_FAST = {
   SDAI_LLM_ATTEMPTS: "1",
@@ -56,10 +56,7 @@ function demoAnswersForStep(step: 1 | 2 | 3 | 4): AnswerInput[] {
 
 /** Профиль демо-человека: эталонный конверт `envelope()` проходит валидатор. */
 async function profileAtDemoLadder(origin: string): Promise<PageStateDto> {
-  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", {
-    name: "Артём",
-    birthDate: "1994-03-12",
-  });
+  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", profileBody("Артём", "1994-03-12"));
   let page = created.body;
   for (const step of [1, 2, 3, 4] as const) {
     const reply = await call<PageStateDto>(origin, "POST", `/api/p/${page.profileId}/portions`, {

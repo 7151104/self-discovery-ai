@@ -20,11 +20,12 @@ import { createErrorTracker } from "../observability/registry.js";
 import { captureError } from "../observability/report.js";
 import type { ErrorTracker } from "../observability/provider.js";
 import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
-import { matchApi, matchPage, matchPublicPage } from "./router.js";
+import { matchApi, matchLegal, matchPage, matchPublicPage } from "./router.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
 import * as handlers from "./handlers.js";
 import type { Context, HandlerResult } from "./handlers.js";
 import type { OperationName } from "../contract/index.js";
+import { renderLegalHtml, renderLegalMissing } from "../legal-page.js";
 
 export interface CreateOptions {
   db: Db;
@@ -165,6 +166,20 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
     assertNoCoordinates(state.body);
     assertNoPrivateBlocks(state.body);
     sendHtml(response, 200, renderPublicPage(state.body));
+    return;
+  }
+
+  if (url.pathname === "/legal" || url.pathname.startsWith("/legal/")) {
+    const legalRoute = matchLegal(url.pathname);
+    if (method !== "GET") {
+      sendHtml(response, 405, renderLegalMissing());
+      return;
+    }
+    if (legalRoute === null) {
+      sendHtml(response, 404, renderLegalMissing());
+      return;
+    }
+    sendHtml(response, 200, renderLegalHtml(legalRoute.id));
     return;
   }
 

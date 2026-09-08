@@ -1,0 +1,27 @@
+/*
+ * Дисклеймеры продукта: рядом с разбором, не только в подвале.
+ * Тон спокойный: это не предупреждение об опасности.
+ */
+
+.disclaimer-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: var(--size-container);
+  margin: 0 auto;
+  padding: 0 var(--space-3);
+}
+
+.disclaimer {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.legal-unfilled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-soft);
+  border-bottom: var(--border-hair) dashed var(--color-line-strong);
+  padding-inline: var(--space-1);
+}

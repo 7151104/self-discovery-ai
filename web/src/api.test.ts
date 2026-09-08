@@ -7,7 +7,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createProfile, loadPage } from "./api.js";
+import { createProfile, disagree, enableShare, loadPage, loadPublic, revokeShare } from "./api.js";
 import { visibleText } from "./dom.js";
 import { filledBars } from "./page.js";
 import { missingTexts } from "./page-copy.js";
@@ -72,3 +72,46 @@ test("карта на реальных данных растёт 3 → 5 → 7",
   assert.equal(filledBars(s2), 5);
   assert.equal(filledBars(s3), 7);
 });
+
+test("клиент отправляет несогласие и получает страницу с тем же текстом блока", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const transport = { fetch, origin: server.origin };
+  const page = await profileAtStep(server.origin, 3);
+  const before = page.blocks.find((item) => item.id === "step1");
+  assert.ok(before);
+  const result = await disagree(page.profileId, "step1", "not_about_me", transport);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  const after = result.page.blocks.find((item) => item.id === "step1");
+  assert.ok(after?.disagreed);
+  assert.deepEqual(after.paragraphs, before.paragraphs);
+});
+
+test("клиент включает и отзывает публичную ссылку", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const transport = { fetch, origin: server.origin };
+  const page = await profileAtStep(server.origin, 3);
+  const enabled = await enableShare(page.profileId, transport);
+  assert.equal(enabled.ok, true);
+  if (!enabled.ok) return;
+  assert.ok(enabled.share?.url.startsWith("/s/"));
+  const token = enabled.share?.url.split("/s/")[1] ?? "";
+  const view = await loadPublic(token, transport);
+  assert.equal(view.ok, true);
+  if (!view.ok) return;
+  assert.equal(
+    view.page.blocks.some((item) => item.id === "step3" || item.id === "step4"),
+    false,
+  );
+  assert.equal("profileId" in view.page, false);
+
+  const revoked = await revokeShare(page.profileId, transport);
+  assert.equal(revoked.ok, true);
+  const missing = await loadPublic(token, transport);
+  assert.equal(missing.ok, false);
+  if (missing.ok) return;
+  assert.equal(missing.missing, true);
+});
+

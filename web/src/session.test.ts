@@ -8,11 +8,15 @@ import { pageStates } from "../showcase/page-states.js";
 import {
   acceptAnswer,
   choiceAnswer,
+  declineOffer,
   emptySession,
   firstUnanswered,
   goBack,
+  markPaymentFailed,
   portionComplete,
   portionRequest,
+  replacePage,
+  setDisagreeing,
   showPage,
 } from "./session.js";
 
@@ -61,4 +65,30 @@ test("последний ответ порции включает паузу «�
   const payload = portionRequest(session, "req-1");
   assert.equal(payload?.portion, "step:1");
   assert.equal(payload?.answers.length, portion.questions.length);
+});
+
+test("возврат на порцию с сохранёнными ответами ставит returned", () => {
+  const portion = pageStates.s1.nextPortion;
+  assert.ok(portion);
+  const first = portion.questions[0];
+  assert.ok(first);
+  const page = { ...pageStates.s1, nextPortion: { ...portion, answered: [first.id] } };
+  const session = showPage(emptySession(), page, "load");
+  assert.equal(session.returned, true);
+  assert.equal(session.questionIndex, 1);
+});
+
+test("несогласие не сбрасывает курсор порции", () => {
+  const session = { ...s0(), questionIndex: 2 };
+  const next = replacePage(setDisagreeing(session, "step1"), pageStates.s1);
+  assert.equal(next.questionIndex, 2);
+  assert.equal(next.disagreeing, null);
+  assert.equal(next.page, pageStates.s1);
+});
+
+test("отказ от оплаты запоминается на визит", () => {
+  const session = showPage(emptySession(), pageStates.s4, "load");
+  const declined = declineOffer(session);
+  assert.equal(declined.offerDeclined, true);
+  assert.equal(markPaymentFailed(session).paymentFailed, true);
 });

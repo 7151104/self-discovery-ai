@@ -100,3 +100,27 @@ test("блок без сшивки собирается: пары могли н�
   const node = renderBlock(blockFromDto({ ...mock.block, highlight: null }, { actions: mock.blockActions }));
   assert.equal(findAll(node, "p").filter((item) => item.attrs["class"] === "block__highlight").length, 0);
 });
+
+test("выбор варианта несогласия открывается в самом блоке, не модалкой", () => {
+  const node = renderBlock({
+    id: "step1",
+    heading: "з",
+    paragraphs: ["п"],
+    picker: {
+      title: "что",
+      options: [
+        { id: "not_about_me", label: "a" },
+        { id: "partly", label: "b" },
+        { id: "too_general", label: "c" },
+      ],
+      note: "n",
+    },
+  });
+  const picker = findAll(node, "div").find((item) => item.attrs["data-picker"] === "disagree");
+  assert.ok(picker);
+  const kinds = findAll(node, "button").filter((item) => item.attrs["data-action"] === "disagree-kind");
+  assert.deepEqual(
+    kinds.map((item) => item.attrs["data-kind"]),
+    ["not_about_me", "partly", "too_general"],
+  );
+});

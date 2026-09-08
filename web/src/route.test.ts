@@ -7,16 +7,33 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { API_CREATE_PROFILE, API_PAGE_STATE, API_SUBMIT_PORTION, fillPath, PAGE_PATH, parseRoute } from "./route.js";
+import {
+  API_CREATE_PROFILE,
+  API_DISAGREE,
+  API_PAGE_STATE,
+  API_PUBLIC_PAGE,
+  API_PURCHASE,
+  API_SHARE,
+  API_SUBMIT_PORTION,
+  fillPath,
+  PAGE_PATH,
+  parseRoute,
+  PUBLIC_PAGE_PATH,
+} from "./route.js";
 import { repoRoot } from "./paths.js";
 
 const contract = (await import(pathToFileURL(join(repoRoot, "server/dist/contract/index.js")).href)) as typeof import("../../server/dist/contract/index.js");
 
 test("шаблоны адресов совпадают с контрактом", () => {
   assert.equal(PAGE_PATH, contract.PAGE_PATH);
+  assert.equal(PUBLIC_PAGE_PATH, contract.PUBLIC_PAGE_PATH);
   assert.equal(API_PAGE_STATE, contract.API.pageState.path);
   assert.equal(API_CREATE_PROFILE, contract.API.createProfile.path);
   assert.equal(API_SUBMIT_PORTION, contract.API.submitPortion.path);
+  assert.equal(API_DISAGREE, contract.API.disagree.path);
+  assert.equal(API_SHARE, contract.API.share.path);
+  assert.equal(API_PUBLIC_PAGE, contract.API.publicPage.path);
+  assert.equal(API_PURCHASE, contract.API.purchase.path);
 });
 
 test("подстановка параметров совпадает с buildPath контракта", () => {
@@ -37,8 +54,13 @@ test("корень и адрес клиента — карточка входа"
   }
 });
 
+test("ссылка /s/{token} открывает публичный вид", () => {
+  assert.deepEqual(parseRoute("/s/abcdefghijabcdefghijab"), { kind: "public", token: "abcdefghijabcdefghijab" });
+  assert.deepEqual(parseRoute("/s/a%20b"), { kind: "public", token: "a b" });
+});
+
 test("неизвестный адрес — понятная страница без профиля", () => {
   assert.deepEqual(parseRoute("/нет-такого"), { kind: "missing" });
   assert.deepEqual(parseRoute("/p/"), { kind: "missing" });
-  assert.deepEqual(parseRoute("/s/token"), { kind: "missing" });
+  assert.deepEqual(parseRoute("/s/"), { kind: "missing" });
 });

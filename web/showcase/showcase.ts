@@ -157,6 +157,8 @@ function liveField(): VNode {
   };
 
   host.attrs["data-live"] = "field";
+  // Витрина читается и без браузера: тесты собирают то же дерево строкой.
+  if (typeof document === "undefined") return host;
   queueMicrotask(() => {
     const element = document.querySelector('[data-live="field"]');
     if (element !== null) redraw(element);
@@ -252,7 +254,7 @@ const doorSection = (): VNode =>
     phone(
       "Маршрут после ступени 3: подписи под профиль, одна дверь предложена",
       renderRoute({
-        doors: mock.doors,
+        doors: mock.doorsWithOffer,
         context: { offerSlice: mock.offer.slice, profiled: true },
         formatPrice: mock.formatPrice,
         notes: mock.doorNotes,

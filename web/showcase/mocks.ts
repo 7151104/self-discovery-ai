@@ -154,6 +154,14 @@ export const doors: DoorDto[] = [
   { id: "door-map", title: "Полная карта", state: "paid", price: null, slice: "slice_full_map" },
 ];
 
+/**
+ * Тот же маршрут после ступени 4: одна дверь предложена и только у неё
+ * пришла цена. У остальных платных дверей цены нет — так же, как в контракте.
+ */
+export const doorsWithOffer: DoorDto[] = doors.map((door) =>
+  door.slice === "slice_node_finish" ? { ...door, price: 590 } : door,
+);
+
 export const doorNotes: Record<string, string> = {
   "door-decisions": "Откроется после четырёх вопросов",
   "door-work": "Открыт",

@@ -234,6 +234,38 @@ export interface RawEmails {
   footer: RawEmailFooter[];
 }
 
+/** Слой шеринговой картинки: что на ней стоит и откуда это берётся. */
+export interface RawShareLayer {
+  name: string;
+  content: string;
+  source: string;
+}
+
+/**
+ * Подпись на картинке. `placeholders` — имена реквизитов основателя в двойных скобках;
+ * пока хотя бы один не заполнен, картинка не собирается (открытый вопрос 4).
+ */
+export interface RawShareCaption {
+  id: string;
+  text: string;
+  where: string;
+  placeholders: string[];
+}
+
+/** Формат картинки: превью ссылки и вертикальная картинка для публикации. */
+export interface RawShareFormat {
+  name: string;
+  width: number;
+  height: number;
+  purpose: string;
+}
+
+export interface RawShare {
+  layers: RawShareLayer[];
+  captions: RawShareCaption[];
+  formats: RawShareFormat[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
@@ -244,4 +276,5 @@ export interface RawExtraContent {
   fullMap: RawFullMap;
   payScreens: RawPayScreen[];
   emails: RawEmails;
+  share: RawShare;
 }

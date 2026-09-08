@@ -1313,6 +1313,52 @@ function parseFullMap(bank, slices) {
 }
 
 /**
+ * Шеринговая картинка (E5-10): `content/share.md`.
+ *
+ * Подписи картинки лежат отдельно от реестра микрокопии: в них нужны имя продукта и домен,
+ * а это реквизиты основателя. Пока подстановка не заполнена, картинка не собирается —
+ * поэтому разбор требует, чтобы имя подстановки было описано в `content/legal/README.md`.
+ */
+function parseShare() {
+  const file = "content/share.md";
+  const src = lines(read(file));
+  const listed = new Set(
+    [...read("content/legal/README.md").matchAll(/`\{\{([А-ЯЁA-Z_]+)\}\}`/g)].map((match) => match[1]),
+  );
+
+  const captions = [];
+  for (const cells of tableUnder(src, "## Подписи картинки", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^SHARE_IMAGE_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у ${id} нет текста`);
+    if (!cells[2]) throw new Error(`${file}: у ${id} не сказано, где он стоит`);
+    const placeholders = [...cells[1].matchAll(/\{\{([^}]*)\}\}/g)].map((match) => match[1]);
+    for (const name of placeholders) {
+      if (!listed.has(name)) throw new Error(`${file}: подстановка {{${name}}} не описана в content/legal/README.md`);
+    }
+    captions.push({ id, text: cells[1], where: cells[2], placeholders });
+  }
+  if (!captions.length) throw new Error(`${file}: реестр подписей картинки пуст`);
+
+  const formats = [];
+  for (const cells of tableUnder(src, "## Форматы", file)) {
+    const size = /^(\d{3,4})×(\d{3,4})$/.exec(cells[1] ?? "");
+    if (!size) continue;
+    formats.push({ name: cells[0], width: Number(size[1]), height: Number(size[2]), purpose: cells[2] ?? "" });
+  }
+  if (formats.length !== 2) throw new Error(`${file}: форматов должно быть два, найдено ${formats.length}`);
+
+  const layers = [];
+  for (const cells of tableUnder(src, "## Что стоит на картинке", file)) {
+    if (!cells[0] || cells[0] === "Слой" || !cells[1]) continue;
+    layers.push({ name: cells[0], content: cells[1], source: cells[2] ?? "" });
+  }
+  if (!layers.length) throw new Error(`${file}: не описано, что стоит на картинке`);
+
+  return { layers, captions, formats };
+}
+
+/**
  * Письма (E5-07): `content/emails.md`.
  *
  * Почта — не основной носитель, и решение о её сборе не принято (открытый вопрос 6). Поэтому
@@ -1440,10 +1486,11 @@ const extra = {
 };
 extra.payScreens = parsePayScreens(content.slices, extra.fullMap);
 extra.emails = parseEmails();
+extra.share = parseShare();
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md, content/emails.md, content/share.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -1462,5 +1509,6 @@ console.log(
     `полная карта: ${extra.fullMap.portions.reduce((sum, portion) => sum + portion.questions.length, 0)} вопросов ` +
     `в ${extra.fullMap.portions.length} порциях, ${extra.fullMap.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар в блоках, ` +
     `${extra.payScreens.length} экранов оплаты, ` +
-    `письма: ${extra.emails.emails.length} писем и ${extra.emails.footer.length} общих частей подвала`,
+    `письма: ${extra.emails.emails.length} писем и ${extra.emails.footer.length} общих частей подвала, ` +
+    `шеринг: ${extra.share.captions.length} подписей картинки в ${extra.share.formats.length} форматах`,
 );

@@ -679,9 +679,13 @@ writeFileSync(
 );
 
 const sliceFiles = readdirSync(join(root, "content/slices")).filter((f) => f.endsWith(".md") && f !== "README.md");
-const listed = content.slices.filter((s) => s.file).length;
-if (sliceFiles.length !== listed)
-  throw new Error(`content/slices: файлов ${sliceFiles.length}, в таблице ${listed}`);
+// Файл добора обязан быть назван в README — в таблице состава или в таблице добора из
+// банка. Считать файлы против одной таблицы нельзя: у slice_full_map своих формулировок
+// нет, и в таблицу состава он не попадает (content/slices/README.md).
+const sliceIndex = read("content/slices/README.md");
+for (const file of sliceFiles) {
+  if (!sliceIndex.includes(`\`${file}\``)) throw new Error(`content/slices/${file}: файл не назван в README`);
+}
 
 const sliceQuestions = content.slices.reduce((sum, slice) => sum + slice.questions.length, 0);
 
@@ -1072,6 +1076,242 @@ function parseUiCopy() {
   return entries;
 }
 
+/** Полосы промежуточных блоков полной карты: грубая тройка поверх пяти полос скоринга. */
+const FULL_MAP_BANDS = ["низко", "середина", "высоко"];
+
+/**
+ * Добор полной карты (E5-13): `content/slices/full-map.md`.
+ *
+ * Формулировок вопросов в файле нет — только идентификаторы банка в порядке порций.
+ * Текст, тип и варианты каждого вопроса берутся здесь из уже разобранного банка, поэтому
+ * у вопроса остаётся один источник правды и калибровка банка (E5-11) не разъезжается с
+ * файлом среза.
+ *
+ * Ось промежуточного блока — либо полоса пары шкальных вопросов (`Q1+Q2 — полоса`), либо
+ * вариант категориального вопроса (`Q29 — вариант`); ключи варианта приходят из банка.
+ */
+function parseFullMap(bank, slices) {
+  const file = "content/slices/full-map.md";
+  const src = lines(read(file));
+  const byId = new Map(bank.map((question) => [question.id, question]));
+
+  const slice = slices.find((candidate) => candidate.id === "slice_full_map");
+  if (!slice) throw new Error(`${file}: срез slice_full_map не описан в content/slices/README.md`);
+
+  const h1 = src.find((line) => line.startsWith("# "));
+  const title = /—\s*«(.+)»/.exec(h1 ?? "");
+  if (!title) throw new Error(`${file}: в заголовке нет названия среза в «кавычках»`);
+
+  const promiseStart = src.findIndex((line) => line.startsWith("## Что обещаем"));
+  if (promiseStart < 0) throw new Error(`${file}: нет раздела «Что обещаем в оффере»`);
+  const promise = [];
+  for (let i = promiseStart + 1; i < src.length; i += 1) {
+    if (src[i].startsWith("## ") || src[i].startsWith("---")) break;
+    if (src[i].startsWith(">")) promise.push(src[i].replace(/^>\s?/, "").trim());
+  }
+  if (!promise.length) throw new Error(`${file}: обещание оффера не найдено`);
+
+  // Порции: заголовок «## Порция N — M вопросов» и таблица идентификаторов под ним.
+  const portions = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## Порция (\d) — (\d+) вопрос/.exec(src[i]);
+    if (!heading) continue;
+    const number = Number(heading[1]);
+    if (number !== portions.length + 1) throw new Error(`${file}: порции идут не по порядку (${number})`);
+
+    const questions = [];
+    for (const cells of tableAt(src, src.findIndex((line, j) => j > i && line.trim().startsWith("|")))) {
+      const id = unwrap(cells[0] ?? "");
+      if (id === "№" || !id) continue;
+      const question = byId.get(id);
+      if (!question) throw new Error(`${file}: вопроса ${id} нет в content/questions-full-bank.md`);
+      if (!cells[1]) throw new Error(`${file}: у ${id} не сказано, зачем он в этой порции`);
+      questions.push({ ...question, portion: number, why: cells[1] });
+    }
+    if (questions.length !== Number(heading[2]))
+      throw new Error(`${file}: в порции ${number} ${questions.length} вопросов, в заголовке ${heading[2]}`);
+    portions.push({ number, questions });
+  }
+  if (portions.length !== 3) throw new Error(`${file}: ожидались три порции, найдено ${portions.length}`);
+
+  const order = portions.flatMap((portion) => portion.questions.map((question) => question.id));
+  const seen = new Set();
+  for (const id of order) {
+    if (seen.has(id)) throw new Error(`${file}: вопрос ${id} записан дважды`);
+    seen.add(id);
+  }
+
+  // Ни один вопрос лестницы в добор не попадает: это Закон 2, проверяется по mapping.
+  const ladderIds = new Set(ladder.questions.map((question) => question.source));
+  for (const id of order) {
+    if (ladderIds.has(id)) throw new Error(`${file}: ${id} уже задан на лестнице, второй раз он не задаётся`);
+  }
+  const missing = bank.filter((question) => !ladderIds.has(question.id) && !seen.has(question.id));
+  if (missing.length)
+    throw new Error(`${file}: остаток банка неполный, не хватает ${missing.map((q) => q.id).join(", ")}`);
+
+  // Промежуточные блоки: две оси и полная матрица их ключей.
+  const interludes = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## Промежуточный блок (\d)/.exec(src[i]);
+    if (!heading) continue;
+    const number = Number(heading[1]);
+    const end = src.findIndex((line, j) => j > i && line.startsWith("## "));
+    const section = src.slice(i, end < 0 ? undefined : end);
+    const where = `${file}, блок ${number}`;
+
+    const headingLine = section.find((line) => line.startsWith("**Заголовок блока:**"));
+    if (!headingLine) throw new Error(`${where}: нет заголовка блока`);
+
+    const axes = ["A", "B"].map((letter) => {
+      const line = section.find((candidate) => candidate.startsWith(`**Ось ${letter}:**`));
+      if (!line) throw new Error(`${where}: не объявлена ось ${letter}`);
+      const parts = line.replace(`**Ось ${letter}:**`, "").split("·").map((part) => part.trim());
+      const head = /^(Q\d+(?:\+Q\d+)*)\s*—\s*(полоса|вариант)$/.exec(parts[0] ?? "");
+      if (!head) throw new Error(`${where}: не разобрана ось ${letter} — «${parts[0]}»`);
+      const ids = head[1].split("+");
+      for (const id of ids) {
+        if (!seen.has(id)) throw new Error(`${where}: ось ${letter} стоит на ${id}, которого нет в порциях`);
+        const portion = portions.find((item) => item.questions.some((question) => question.id === id));
+        if (portion.number > number)
+          throw new Error(`${where}: ось ${letter} стоит на ${id} из порции ${portion.number} — она ещё не задана`);
+      }
+
+      let keys;
+      if (head[2] === "полоса") {
+        keys = FULL_MAP_BANDS;
+      } else {
+        if (ids.length !== 1) throw new Error(`${where}: ось по варианту строится на одном вопросе`);
+        keys = (byId.get(ids[0]).options ?? []).map((option) => option.key);
+        if (keys.length < 2) throw new Error(`${where}: у ${ids[0]} нет вариантов, оси по ним не быть`);
+      }
+
+      const poles = {};
+      for (const part of parts.slice(1)) {
+        const pole = /^([а-яё]+):\s*(.+)$/.exec(part);
+        if (!pole) throw new Error(`${where}: не разобрана подпись полюса «${part}» оси ${letter}`);
+        if (!keys.includes(pole[1])) throw new Error(`${where}: подпись полюса ${pole[1]} вне ключей оси ${letter}`);
+        poles[pole[1]] = pole[2];
+      }
+
+      return { ids, kind: head[2], keys, poles };
+    });
+
+    const pairs = [];
+    const pairKeys = new Set();
+    for (const cells of tableUnder(section, "## Промежуточный блок", where)) {
+      if (cells.length !== 3 || cells[0] === "Ось A") continue;
+      if (!axes[0].keys.includes(cells[0]) || !axes[1].keys.includes(cells[1])) continue;
+      const key = `${cells[0]}×${cells[1]}`;
+      if (pairKeys.has(key)) throw new Error(`${where}: пара ${key} записана дважды`);
+      if (!cells[2]) throw new Error(`${where}: у пары ${key} нет текста`);
+      pairKeys.add(key);
+      pairs.push({ first: cells[0], second: cells[1], text: cells[2] });
+    }
+    const expected = axes[0].keys.length * axes[1].keys.length;
+    if (pairs.length !== expected)
+      throw new Error(`${where}: пар ${pairs.length}, а ключи осей дают ${expected} — матрица неполная`);
+
+    interludes.push({
+      number,
+      heading: unwrap(headingLine.replace("**Заголовок блока:**", "").trim()),
+      axes,
+      pairs,
+    });
+  }
+  if (interludes.length !== 2) throw new Error(`${file}: ожидались два промежуточных блока`);
+  if (interludes.length !== portions.length - 1)
+    throw new Error(`${file}: блоков должно быть на один меньше, чем порций`);
+
+  const listSection = (heading) => {
+    const start = src.findIndex((line) => line.startsWith(heading));
+    if (start < 0) throw new Error(`${file}: нет раздела «${heading}»`);
+    const end = src.findIndex((line, i) => i > start && line.startsWith("## "));
+    return src.slice(start + 1, end < 0 ? undefined : end);
+  };
+
+  const bullets = (heading) => {
+    const out = [];
+    for (const line of listSection(heading)) {
+      const bullet = /^- (?!\[ \])(.+)$/.exec(line.trim());
+      if (bullet) out.push(bullet[1].trim());
+      else if (out.length && /^\s+\S/.test(line)) out[out.length - 1] += ` ${line.trim()}`;
+    }
+    if (!out.length) throw new Error(`${file}: раздел «${heading}» пуст`);
+    return out;
+  };
+
+  const numbered = (heading) => {
+    const out = [];
+    for (const line of listSection(heading)) {
+      const item = /^(\d+)\.\s+(.+)$/.exec(line.trim());
+      if (item) out.push(item[2].trim());
+      else if (out.length && /^\s+\S/.test(line)) out[out.length - 1] += ` ${line.trim()}`;
+    }
+    if (!out.length) throw new Error(`${file}: в разделе «${heading}» нет нумерованного списка`);
+    return out;
+  };
+
+  const thresholdSection = listSection("## Порог генерации");
+  const checks = thresholdSection
+    .map((line) => /^- \[ \]\s*(.+)$/.exec(line.trim()))
+    .filter(Boolean)
+    .map((match) => match[1].trim());
+  const followUps = thresholdSection
+    .map((line) => /^\d+\.\s*«(.+)»\.?$/.exec(line.trim()))
+    .filter(Boolean)
+    .map((match) => match[1].trim());
+  if (checks.length < 4) throw new Error(`${file}: у порога генерации меньше четырёх пунктов`);
+  if (followUps.length < 3) throw new Error(`${file}: у порога меньше трёх уточняющих вопросов`);
+
+  const subtypes = [];
+  for (const cells of tableUnder(src, "## Скоринг добора", file)) {
+    const code = /^`([a-z_]+)`$/.exec(cells[0] ?? "");
+    if (!code) continue;
+    if (!cells[1]) throw new Error(`${file}: у подтипа ${code[1]} нет формулировки внутрь профиля`);
+    subtypes.push({ code: code[1], text: cells[1] });
+  }
+  if (!subtypes.length) throw new Error(`${file}: в разделе «Скоринг добора» не найдено ни одного подтипа`);
+
+  const nextDoors = [];
+  for (const cells of tableUnder(src, "## Следующие двери", file)) {
+    if (!cells[0] || cells[0] === "Условие в профиле" || !cells[1]) continue;
+    const target = /`(slice_[a-z_]+)`/.exec(cells[1]);
+    nextDoors.push({ condition: cells[0], slice: target ? target[1] : null, note: cells[1] });
+  }
+  if (!nextDoors.length) throw new Error(`${file}: таблица «Следующие двери» пуста`);
+  if (nextDoors[nextDoors.length - 1].condition !== "иначе")
+    throw new Error(`${file}: последняя строка «Следующие двери» обязана быть «иначе»`);
+
+  return {
+    slice: slice.id,
+    file: "full-map.md",
+    title: title[1],
+    price: slice.price,
+    promise: promise.join(" ").replace(/\s+/g, " ").trim(),
+    portions: portions.map((portion) => ({
+      number: portion.number,
+      questions: portion.questions.map((question) => ({
+        id: question.id,
+        type: question.type,
+        text: question.text,
+        coordinates: question.coordinates,
+        direction: question.direction,
+        role: question.role,
+        options: question.options,
+        why: question.why,
+      })),
+    })),
+    interludes,
+    subtypes,
+    threshold: { checks, followUps },
+    report: numbered("## Что обязательно попадает в отчёт"),
+    accuracy: bullets("## Границы точности этого среза"),
+    restrictions: bullets("## Запреты этого среза"),
+    nextDoors,
+  };
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
@@ -1079,6 +1319,7 @@ const extra = {
   forbidden: parseForbidden(),
   crisis: parseCrisis(),
   uiCopy: parseUiCopy(),
+  fullMap: parseFullMap(content.bank, content.slices),
 };
 
 writeFileSync(
@@ -1098,5 +1339,7 @@ console.log(
     `реестр запретов: ${extra.forbidden.groups.length} групп, ` +
     `${extra.forbidden.groups.reduce((sum, group) => sum + group.entries.flatMap((entry) => entry.forms).length, 0)} форм, ` +
     `кризис: ${extra.crisis.triggers.length} категорий триггеров, ${extra.crisis.texts.length} текстов, ` +
-    `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах`,
+    `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах, ` +
+    `полная карта: ${extra.fullMap.portions.reduce((sum, portion) => sum + portion.questions.length, 0)} вопросов ` +
+    `в ${extra.fullMap.portions.length} порциях, ${extra.fullMap.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар в блоках`,
 );

@@ -43,6 +43,62 @@ export interface RawBankQuestion {
   block: string;
 }
 
+/** Тип вопроса-добора: у срезов к трём типам лестницы добавляется «число». */
+export type SliceQuestionType = QuestionType | "число";
+
+/** Вопрос-добор среза (content/slices/*.md, раздел «Вопросы-доборы» или «Порция N»). */
+export interface RawSliceQuestion {
+  /** S1…Sn внутри среза. */
+  id: string;
+  /** Порция выдачи: 1 у узловых срезов, 1 и 2 у прикладных. */
+  portion: number;
+  type: SliceQuestionType;
+  text: string;
+  /** Какие из 16 координат питает; пусто — вопрос работает в паре с другим. */
+  coordinates: number[];
+  options: { key: string; text: string }[];
+  /** Вопрос повторяет варианты другого («как в S4»); варианты уже подставлены. */
+  sameAs: string | null;
+  /** Колонка «Зачем в отчёте»: назначение ответа. */
+  purpose: string;
+}
+
+/** Подтип координаты из раздела «Скоринг доборов»: код и формулировка внутрь профиля. */
+export interface RawSliceSubtype {
+  code: string;
+  text: string;
+}
+
+/** Порог генерации среза: пункты чек-листа и уточняющие вопросы — тексты из контента. */
+export interface RawSliceThreshold {
+  checks: string[];
+  followUps: string[];
+  /** Минимум слов в обязательном входе среза; null — входа в свободной форме нет. */
+  entryMinWords: number | null;
+}
+
+/** Строка таблицы «Следующие двери»: условие текстом и один срез. Последняя — «иначе». */
+export interface RawNextDoor {
+  condition: string;
+  slice: string;
+}
+
+export interface RawSlice {
+  id: string;
+  /** null — у среза нет своего файла доборов (полная карта, совместимость). */
+  file: string | null;
+  title: string;
+  price: number;
+  questionCount: string;
+  coordinates: number[];
+  promise: string;
+  questions: RawSliceQuestion[];
+  subtypes: RawSliceSubtype[];
+  /** null — у среза нет файла, а значит и порога. */
+  threshold: RawSliceThreshold | null;
+  nextDoors: RawNextDoor[];
+}
+
 export interface RawBranch {
   label: string;
   text: string;
@@ -103,14 +159,5 @@ export interface RawContent {
     prompt: string;
     offerTemplate: string;
   };
-  slices: {
-    id: string;
-    /** null — у среза нет своего файла доборов (полная карта, совместимость). */
-    file: string | null;
-    title: string;
-    price: number;
-    questionCount: string;
-    coordinates: number[];
-    promise: string;
-  }[];
+  slices: RawSlice[];
 }

@@ -8,7 +8,11 @@
     "build:content": "node engine/scripts/build-content.mjs",
     "build": "npm run build:content && tsc -p tsconfig.json && tsc -p server/llm/tsconfig.json && tsc -p server/tsconfig.json && npm run build:web",
     "build:web": "node web/scripts/build-copy.mjs && tsc -p web/tsconfig.json && node web/scripts/build-styles.mjs",
-    "test": "npm run build && node --disable-warning=ExperimentalWarning --test engine/dist/*.test.js server/dist/*.test.js server/llm/dist/*.test.js web/dist/*/*.test.js",
+    "build:tests": "tsc -p tests/tsconfig.json",
+    "test": "npm run build && npm run build:tests && node --disable-warning=ExperimentalWarning --test engine/dist/*.test.js server/dist/*.test.js server/llm/dist/*.test.js web/dist/*/*.test.js tests/dist/visual/*.test.js tests/dist/a11y/*.test.js",
+    "snapshots": "npm run build && npm run build:tests && node --disable-warning=ExperimentalWarning --test tests/dist/visual/*.test.js",
+    "snapshots:update": "npm run build && npm run build:tests && node tests/dist/visual/update.js",
+    "test:a11y": "npm run build && npm run build:tests && node --disable-warning=ExperimentalWarning --test tests/dist/a11y/*.test.js",
     "serve": "npm run build && node tools/serve.mjs",
     "lint:styles": "npm run build && node web/dist/src/lint-styles.js",
     "lint:content": "npm run build && node tools/lint-content.mjs",
@@ -23,7 +27,7 @@
     "keygen": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/keygen.js",
     "pay": "npm run build && node --disable-warning=ExperimentalWarning server/dist/payments/simulate.js",
     "reencrypt": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/reencrypt.js",
-    "clean": "rm -rf engine/dist engine/src/generated server/dist server/llm/dist web/dist web/src/generated"
+    "clean": "rm -rf engine/dist engine/src/generated server/dist server/llm/dist web/dist web/src/generated tests/dist"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",

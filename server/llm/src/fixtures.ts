@@ -8,6 +8,7 @@
 
 import { buildPage, type LadderAnswers, type LlmTask } from "./engine.js";
 import type { Statement, StatementKind } from "./output.js";
+import { wordCount } from "./text.js";
 
 export const DEMO_PERSON = { name: "Артём", birthDate: "1994-03-12" };
 
@@ -146,6 +147,27 @@ export const GOOD_STORYLINE = {
   code: "solo_then_stop_before_show",
   confidence: "medium" as const,
 };
+
+export function textOfVolume(min: number, max: number): string {
+  const extra: string[] = [];
+  let n = 1;
+  let text = GOOD_TEXT;
+  while (wordCount(text) < min) {
+    extra.push(
+      `В эпизоде ${n} ты довёл дело до последнего шага и остановился, не отдав сделанное чужой оценке.`,
+    );
+    n += 1;
+    text = [GOOD_TEXT, extra.join(" ")].join("\n\n");
+  }
+  const count = wordCount(text);
+  if (count > max) throw new Error(`fixtures: не уложился в объём ${min}–${max}, получилось ${count}`);
+  return text;
+}
+
+/** Конверт среза: текст без сюжета. Валидатор смотрит на текст, не на разметку. */
+export function sliceEnvelope(text: string): string {
+  return JSON.stringify({ текст: text });
+}
 
 /** Машинный конверт в том виде, в котором его отдаёт модель. */
 export function envelope(

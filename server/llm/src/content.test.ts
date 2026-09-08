@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ladderCapOf, negationWords, readRepoFile, registerMarkers, reportTypes, volumeOf } from "./content.js";
+import { assemblerPrompt, ladderCapOf, negationWords, overlaySlices, readRepoFile, registerMarkers, reportTypeOfSlice, reportTypes, sliceOverlay, volumeOf } from "./content.js";
 
 test("объём разобран по каждому машинному типу отчёта из документа", () => {
   const document = readRepoFile("docs/06-report-structure.md");
@@ -28,6 +28,8 @@ test("объём разобран по каждому машинному тип�
 
   assert.deepEqual(volumeOf("финал_лестницы"), { min: 250, max: 350 });
   assert.deepEqual(volumeOf("бесплатный_полный"), { min: 900, max: 1200 });
+  assert.deepEqual(volumeOf("срез_узел"), { min: 800, max: 1200 });
+  assert.deepEqual(volumeOf("полная_карта"), { min: 1500, max: 2500 });
   assert.throws(() => volumeOf("отчёт_которого_нет"), /не описан/);
 });
 
@@ -44,6 +46,20 @@ test("маркеры регистров и слова отрицания взя�
   const negations = negationWords();
   assert.deepEqual(negations, ["не", "ни", "нет", "без", "ничего"]);
   for (const word of negations) assert.ok(registry.includes(`\`${word}\``));
+});
+
+test("в надстройке каждого среза есть блок, ассемблер читается из файла", () => {
+  const assembler = assemblerPrompt();
+  assert.ok(assembler.includes("РОЛЬ"));
+  assert.ok(assembler.includes("РЕГИСТРЫ"));
+  for (const slice of overlaySlices()) {
+    const overlay = sliceOverlay(slice);
+    assert.ok(overlay.length > 80, `${slice}: надстройка слишком короткая`);
+  }
+  assert.equal(reportTypeOfSlice("slice_node_finish"), "срез_узел");
+  assert.equal(reportTypeOfSlice("slice_work"), "срез_работа");
+  assert.equal(reportTypeOfSlice("slice_full_map"), "полная_карта");
+  assert.throws(() => reportTypeOfSlice("slice_compatibility"), /нет машинного типа/);
 });
 
 test("потолок confidence координаты 15 — из правил скоринга", () => {

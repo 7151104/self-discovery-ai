@@ -1,9 +1,9 @@
 /**
  * Слой LLM: что он отдаёт наружу.
  *
- * Слой чистый и вызываемый: функции на вход-выход, без хранения и без HTTP.
- * Очередь заданий, статус генерации, кэш и журнал стоимости — работа сервера
- * (E4-03, E4-10, E4-11); слой отдаёт ему проверенный результат и числа.
+ * Слой чистый и вызываемый: функции на вход-выход, без HTTP и без своей базы.
+ * Очередь, журнал стоимости и кэш хранит сервер (E4-03, E4-10, E4-11); слой
+ * отдаёт ему проверенный результат, хеш входа и числа.
  *
  * Границы, которые слой держит и которые нельзя обойти вызовом:
  *   провайдер виден только через порт `GenerationProvider`;
@@ -83,5 +83,7 @@ export {
 } from "./validator.js";
 
 export { generateLadderFinal, type Step4Options, type Step4Outcome, type Step4Reason } from "./step4.js";
+
+export { contentVersion, hashGenerationInput, stableGenerationInput } from "./input-hash.js";
 
 export { ladderCapOf, registerMarkers, reportTypes, volumeOf, type ReportType, type WordRange } from "./content.js";

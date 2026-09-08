@@ -16,10 +16,17 @@ import { GenerationError, type GenerationProvider, type GenerationRequest, type 
 export type FakeTurn =
   /** Ответить этим текстом. */
   | { kind: "ответ"; text: string; usage?: { inputTokens: number; outputTokens: number } }
-  /** Упасть отказом. */
-  | { kind: "отказ"; failure: "временный отказ" | "постоянный отказ"; code?: string }
+  /** Временный отказ: сеть, 5xx, превышение частоты — его повторяют. */
+  | { kind: "временный отказ"; code?: string }
+  /** Постоянный отказ: ключ, права, отказ модели — повтор ничего не изменит. */
+  | { kind: "постоянный отказ"; code?: string }
   /** Зависнуть: завершится только прекращением по `signal`. */
-  | { kind: "зависание" };
+  | { kind: "зависание" }
+  /**
+   * Старая запись отказа. Оставлена, чтобы уже написанные тесты слоя не
+   * переписывать: новые ходы называют вид отказа прямо.
+   */
+  | { kind: "отказ"; failure: "временный отказ" | "постоянный отказ"; code?: string };
 
 export interface FakeProviderOptions {
   /** Ходы по очереди. Когда закончились — берётся последний. */
@@ -42,7 +49,7 @@ export class FakeProvider implements GenerationProvider {
   /** Все вызовы в порядке поступления: тест смотрит, что ушло в модель. */
   readonly calls: GenerationRequest[] = [];
 
-  private readonly turns: FakeTurn[];
+  private turns: FakeTurn[];
   private index = 0;
 
   constructor(options: FakeProviderOptions) {
@@ -50,6 +57,16 @@ export class FakeProvider implements GenerationProvider {
     this.turns = [...options.turns];
     this.pricing = options.pricing ?? FREE;
     this.model = options.model ?? "fake-1";
+  }
+
+  /**
+   * Подменить очередь ходов, не создавая новый объект. Нужно тестам
+   * восстановления: задание то же, провайдер «ожил».
+   */
+  setTurns(turns: FakeTurn[]): void {
+    if (!turns.length) throw new Error("FakeProvider: не задано ни одного хода");
+    this.turns = [...turns];
+    this.index = 0;
   }
 
   /** Сколько раз провайдера вызвали. */
@@ -62,6 +79,8 @@ export class FakeProvider implements GenerationProvider {
     const turn = this.turns[Math.min(this.index, this.turns.length - 1)]!;
     this.index += 1;
 
+    if (turn.kind === "временный отказ") throw new GenerationError("временный отказ", turn.code ?? "подделка");
+    if (turn.kind === "постоянный отказ") throw new GenerationError("постоянный отказ", turn.code ?? "подделка");
     if (turn.kind === "отказ") throw new GenerationError(turn.failure, turn.code ?? "подделка");
 
     if (turn.kind === "зависание") {

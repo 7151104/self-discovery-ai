@@ -11,6 +11,9 @@ import type { BlockSlot, DisagreementKind, OrderStatus, PortionKey, QuestionKind
 import type { Db } from "./db/driver.js";
 import { seal, unseal, unsealOptional, PLAINTEXT } from "./db/stored-text.js";
 import { newRecordId } from "./ids.js";
+import { scrub } from "./log.js";
+import { canTransition, InvalidTransition, isActive, type TransitionReason } from "./payments/order-state.js";
+import type { PaymentMode } from "./payments/provider.js";
 
 const now = (): string => new Date().toISOString();
 
@@ -36,10 +39,10 @@ interface ProfileRow {
   updated_at: string;
 }
 
-const toProfile = (row: ProfileRow): ProfileRecord => ({
+const toProfile = (db: Db, row: ProfileRow): ProfileRecord => ({
   profileId: row.profile_id,
-  name: unseal({ payload: row.name_payload, enc: row.name_enc }),
-  birthDate: unsealOptional(row.birth_date_payload, row.birth_date_enc),
+  name: unseal(db.keys, { payload: row.name_payload, enc: row.name_enc }),
+  birthDate: unsealOptional(db.keys, row.birth_date_payload, row.birth_date_enc),
   version: row.version,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -50,8 +53,8 @@ export function insertProfile(
   input: { profileId: string; name: string; birthDate: string | null },
 ): ProfileRecord {
   const timestamp = now();
-  const name = seal(input.name);
-  const birth = input.birthDate === null ? null : seal(input.birthDate);
+  const name = seal(db.keys, input.name);
+  const birth = input.birthDate === null ? null : seal(db.keys, input.birthDate);
 
   db.run(
     `INSERT INTO profiles
@@ -70,13 +73,30 @@ export function insertProfile(
   };
 }
 
+/**
+ * Удаляет профиль со всем, что к нему привязано (E9-03).
+ *
+ * Ответы, снимки, блоки, заказы, журнал заказов, несогласия и токены уходят
+ * каскадом — связи объявлены в схеме, второго списка таблиц в коде нет и он не
+ * может разойтись со схемой. События воронки остаются, но теряют профиль:
+ * связь объявлена как ON DELETE SET NULL, то есть в базе остаётся «кто-то дошёл
+ * до ступени 3», без указания кто.
+ */
+export function deleteProfile(db: Db, profileId: string): boolean {
+  return db.transaction(() => {
+    if (!findProfile(db, profileId)) return false;
+    db.run("DELETE FROM profiles WHERE profile_id = ?", [profileId]);
+    return true;
+  });
+}
+
 export function findProfile(db: Db, profileId: string): ProfileRecord | null {
   const row = db.get<ProfileRow>(
     `SELECT profile_id, name_payload, name_enc, birth_date_payload, birth_date_enc, version, created_at, updated_at
        FROM profiles WHERE profile_id = ?`,
     [profileId],
   );
-  return row ? toProfile(row) : null;
+  return row ? toProfile(db, row) : null;
 }
 
 // ── Ответы ────────────────────────────────────────────────────────────────────
@@ -99,8 +119,8 @@ interface AnswerRow {
   revision: number;
 }
 
-const toAnswer = (row: AnswerRow): AnswerRecord => {
-  const text = unseal({ payload: row.payload, enc: row.payload_enc });
+const toAnswer = (db: Db, row: AnswerRow): AnswerRecord => {
+  const text = unseal(db.keys, { payload: row.payload, enc: row.payload_enc });
   return {
     questionId: row.question_id,
     kind: row.question_kind,
@@ -117,7 +137,7 @@ export function listAnswers(db: Db, profileId: string): AnswerRecord[] {
          FROM answers WHERE profile_id = ? ORDER BY question_id`,
       [profileId],
     )
-    .map(toAnswer);
+    .map((row) => toAnswer(db, row));
 }
 
 export interface AnswerInputRecord {
@@ -131,7 +151,7 @@ export interface AnswerInputRecord {
 export function saveAnswers(db: Db, profileId: string, answers: AnswerInputRecord[]): void {
   const timestamp = now();
   for (const answer of answers) {
-    const stored = seal(String(answer.value));
+    const stored = seal(db.keys, String(answer.value));
     db.run(
       `INSERT INTO answers
          (profile_id, question_id, question_kind, portion, payload, payload_enc, revision, created_at, updated_at)
@@ -267,7 +287,7 @@ export function recordProfileVersion(
   db.run("UPDATE profiles SET version = version + 1, updated_at = ? WHERE profile_id = ?", [timestamp, profileId]);
   const row = db.get<{ version: number }>("SELECT version FROM profiles WHERE profile_id = ?", [profileId]);
   const version = row?.version ?? 0;
-  const stored = seal(JSON.stringify(snapshot));
+  const stored = seal(db.keys, JSON.stringify(snapshot));
 
   db.run(
     `INSERT INTO profile_versions (version_id, profile_id, version, reason, snapshot, snapshot_enc, created_at)
@@ -318,8 +338,8 @@ interface BlockBody {
   highlight: string | null;
 }
 
-const toBlock = (row: BlockRow): BlockRecord => {
-  const raw = unseal({ payload: row.body_payload, enc: row.body_enc });
+const toBlock = (db: Db, row: BlockRow): BlockRecord => {
+  const raw = unseal(db.keys, { payload: row.body_payload, enc: row.body_enc });
   const body: BlockBody = raw ? (JSON.parse(raw) as BlockBody) : { paragraphs: [], highlight: null };
   return {
     blockId: row.block_id,
@@ -329,7 +349,7 @@ const toBlock = (row: BlockRow): BlockRecord => {
     origin: row.origin,
     purchased: row.purchased === 1,
     stale: row.stale === 1,
-    heading: unseal({ payload: row.heading_payload, enc: row.heading_enc }),
+    heading: unseal(db.keys, { payload: row.heading_payload, enc: row.heading_enc }),
     paragraphs: body.paragraphs,
     highlight: body.highlight,
   };
@@ -341,7 +361,7 @@ const BLOCK_COLUMNS = `block_id, slot, profile_version, status, origin, purchase
 export function listBlocks(db: Db, profileId: string): BlockRecord[] {
   return db
     .all<BlockRow>(`SELECT ${BLOCK_COLUMNS} FROM blocks WHERE profile_id = ? ORDER BY slot`, [profileId])
-    .map(toBlock);
+    .map((row) => toBlock(db, row));
 }
 
 export function findBlockById(db: Db, profileId: string, blockId: string): BlockRecord | null {
@@ -349,7 +369,7 @@ export function findBlockById(db: Db, profileId: string, blockId: string): Block
     profileId,
     blockId,
   ]);
-  return row ? toBlock(row) : null;
+  return row ? toBlock(db, row) : null;
 }
 
 export interface BlockInput {
@@ -369,12 +389,12 @@ export function ensureBlock(db: Db, profileId: string, input: BlockInput): Block
     profileId,
     input.slot,
   ]);
-  if (existing) return toBlock(existing);
+  if (existing) return toBlock(db, existing);
 
   const timestamp = now();
   const blockId = newRecordId();
-  const heading = seal(input.heading);
-  const body = seal(JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
+  const heading = seal(db.keys, input.heading);
+  const body = seal(db.keys, JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
 
   db.run(
     `INSERT INTO blocks
@@ -439,8 +459,8 @@ export function saveBlockContent(
     highlight: null,
   });
 
-  const heading = seal(input.heading);
-  const body = seal(JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
+  const heading = seal(db.keys, input.heading);
+  const body = seal(db.keys, JSON.stringify({ paragraphs: input.paragraphs, highlight: input.highlight } satisfies BlockBody));
 
   db.run(
     `UPDATE blocks SET status = 'ready', stale = 0, purchased = ?, profile_version = ?,
@@ -464,7 +484,12 @@ export function saveBlockContent(
     input.slot,
   ]);
   if (!saved) throw new Error(`block-not-saved:${input.slot}`);
-  return toBlock(saved);
+  return toBlock(db, saved);
+}
+
+/** Убирает блок вместе с текстом. Используется при возврате: доступ отозван — текста нет. */
+export function deleteBlock(db: Db, profileId: string, slot: BlockSlot): void {
+  db.run("DELETE FROM blocks WHERE profile_id = ? AND slot = ?", [profileId, slot]);
 }
 
 /**
@@ -482,69 +507,214 @@ export function markBlocksStale(db: Db, profileId: string): void {
 
 export interface OrderRecord {
   orderId: string;
+  profileId: string;
   slice: string;
   price: number;
   currency: string;
   status: OrderStatus;
+  provider: string | null;
+  providerRef: string | null;
+  /** Режим провайдера, создавшего заказ. Тестовый заказ виден в базе навсегда. */
+  mode: PaymentMode | null;
+  createdAt: string;
 }
 
 interface OrderRow {
   order_id: string;
+  profile_id: string;
   slice: string;
   amount: number;
   currency: string;
   status: OrderStatus;
+  provider: string | null;
+  provider_ref: string | null;
+  provider_mode: PaymentMode | null;
+  created_at: string;
 }
+
+const ORDER_COLUMNS = `order_id, profile_id, slice, amount, currency, status,
+  provider, provider_ref, provider_mode, created_at`;
 
 const toOrder = (row: OrderRow): OrderRecord => ({
   orderId: row.order_id,
+  profileId: row.profile_id,
   slice: row.slice,
   price: row.amount,
   currency: row.currency,
   status: row.status,
+  provider: row.provider,
+  providerRef: row.provider_ref,
+  mode: row.provider_mode,
+  createdAt: row.created_at,
 });
 
 export function listOrders(db: Db, profileId: string): OrderRecord[] {
   return db
-    .all<OrderRow>(
-      "SELECT order_id, slice, amount, currency, status FROM orders WHERE profile_id = ? ORDER BY created_at",
-      [profileId],
-    )
+    .all<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE profile_id = ? ORDER BY created_at`, [profileId])
     .map(toOrder);
 }
 
-export function findOrderByRequest(db: Db, profileId: string, requestId: string): OrderRecord | null {
-  const row = db.get<OrderRow>(
-    "SELECT order_id, slice, amount, currency, status FROM orders WHERE profile_id = ? AND request_id = ?",
-    [profileId, requestId],
-  );
+export function findOrder(db: Db, profileId: string, orderId: string): OrderRecord | null {
+  const row = db.get<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE profile_id = ? AND order_id = ?`, [
+    profileId,
+    orderId,
+  ]);
   return row ? toOrder(row) : null;
 }
+
+/** Заказ по идентификатору без профиля: так его находит уведомление провайдера. */
+export function findOrderById(db: Db, orderId: string): OrderRecord | null {
+  const row = db.get<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE order_id = ?`, [orderId]);
+  return row ? toOrder(row) : null;
+}
+
+export function findOrderByRequest(db: Db, profileId: string, requestId: string): OrderRecord | null {
+  const row = db.get<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE profile_id = ? AND request_id = ?`, [
+    profileId,
+    requestId,
+  ]);
+  return row ? toOrder(row) : null;
+}
+
+/** Живой заказ на срез: 'created' или 'paid'. Он же — занятое место в уникальном индексе. */
+export function findActiveOrderForSlice(db: Db, profileId: string, slice: string): OrderRecord | null {
+  const row = db.get<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE profile_id = ? AND active_slice = ?`, [
+    profileId,
+    slice,
+  ]);
+  return row ? toOrder(row) : null;
+}
+
+/** Срезы, доступ к которым оплачен и не отозван. */
+export const paidSlices = (db: Db, profileId: string): string[] =>
+  listOrders(db, profileId)
+    .filter((order) => order.status === "paid")
+    .map((order) => order.slice);
 
 export function insertOrder(
   db: Db,
   profileId: string,
-  input: { slice: string; price: number; requestId: string },
+  input: {
+    slice: string;
+    price: number;
+    requestId: string;
+    provider: string;
+    providerRef: string;
+    mode: PaymentMode;
+  },
 ): OrderRecord {
   const timestamp = now();
   const orderId = newRecordId();
   db.run(
-    `INSERT INTO orders (order_id, profile_id, slice, amount, currency, status, request_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'RUB', 'created', ?, ?, ?)`,
-    [orderId, profileId, input.slice, input.price, input.requestId, timestamp, timestamp],
+    `INSERT INTO orders
+       (order_id, profile_id, slice, amount, currency, status, provider, provider_ref, provider_mode,
+        active_slice, request_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'RUB', 'created', ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      orderId,
+      profileId,
+      input.slice,
+      input.price,
+      input.provider,
+      input.providerRef,
+      input.mode,
+      input.slice,
+      input.requestId,
+      timestamp,
+      timestamp,
+    ],
   );
-  return { orderId, slice: input.slice, price: input.price, currency: "RUB", status: "created" };
+
+  return {
+    orderId,
+    profileId,
+    slice: input.slice,
+    price: input.price,
+    currency: "RUB",
+    status: "created",
+    provider: input.provider,
+    providerRef: input.providerRef,
+    mode: input.mode,
+    createdAt: timestamp,
+  };
 }
 
-/** Смена состояния заказа. Полный набор переходов с проверками — задача E8-02. */
-export function updateOrderStatus(db: Db, profileId: string, orderId: string, status: OrderStatus): void {
-  db.run("UPDATE orders SET status = ?, updated_at = ? WHERE profile_id = ? AND order_id = ?", [
-    status,
-    now(),
-    profileId,
-    orderId,
-  ]);
+/**
+ * Смена состояния заказа с проверкой перехода (E8-02). Недопустимый переход —
+ * исключение, а не тихая запись. Каждый переход попадает в журнал заказа.
+ *
+ * Место среза в уникальном индексе освобождается ровно тогда, когда заказ
+ * перестаёт быть живым: после отказа или возврата срез снова можно купить.
+ */
+export function transitionOrder(
+  db: Db,
+  order: OrderRecord,
+  to: OrderStatus,
+  reason: TransitionReason,
+): OrderRecord {
+  if (!canTransition(order.status, to)) throw new InvalidTransition(order.status, to);
+
+  const timestamp = now();
+  db.run(
+    `UPDATE orders SET status = ?, updated_at = ?, active_slice = ?,
+       paid_at = CASE WHEN ? = 'paid' THEN ? ELSE paid_at END,
+       refunded_at = CASE WHEN ? = 'refunded' THEN ? ELSE refunded_at END
+     WHERE order_id = ?`,
+    [to, timestamp, isActive(to) ? order.slice : null, to, timestamp, to, timestamp, order.orderId],
+  );
+
+  db.run(
+    `INSERT INTO order_events (order_event_id, order_id, profile_id, from_status, to_status, reason, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [newRecordId(), order.orderId, order.profileId, order.status, to, reason, timestamp],
+  );
+
+  return { ...order, status: to };
 }
+
+export interface OrderEventRecord {
+  from: OrderStatus;
+  to: OrderStatus;
+  reason: string;
+  createdAt: string;
+}
+
+export function listOrderEvents(db: Db, orderId: string): OrderEventRecord[] {
+  return db
+    .all<{ from_status: OrderStatus; to_status: OrderStatus; reason: string; created_at: string }>(
+      "SELECT from_status, to_status, reason, created_at FROM order_events WHERE order_id = ? ORDER BY created_at",
+      [orderId],
+    )
+    .map((row) => ({ from: row.from_status, to: row.to_status, reason: row.reason, createdAt: row.created_at }));
+}
+
+// ── Уведомления провайдера ────────────────────────────────────────────────────
+
+/**
+ * Отмечает уведомление доставленным. Первичный ключ (provider, event_id) не даёт
+ * записать его дважды: повторная доставка падает на вставке, и вызывающий
+ * разбирает это как повтор — доступ второй раз не выдаётся.
+ */
+export function insertDelivery(
+  db: Db,
+  input: { provider: string; eventId: string; kind: string; orderId: string | null; result: string },
+): void {
+  db.run(
+    `INSERT INTO webhook_deliveries (provider, event_id, kind, order_id, result, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [input.provider, input.eventId, input.kind, input.orderId, input.result, now()],
+  );
+}
+
+export function findDelivery(db: Db, provider: string, eventId: string): { result: string } | null {
+  return db.get<{ result: string }>(
+    "SELECT result FROM webhook_deliveries WHERE provider = ? AND event_id = ?",
+    [provider, eventId],
+  );
+}
+
+export const countDeliveries = (db: Db): number =>
+  db.get<{ total: number }>("SELECT COUNT(*) AS total FROM webhook_deliveries")?.total ?? 0;
 
 // ── Несогласия ────────────────────────────────────────────────────────────────
 
@@ -580,19 +750,20 @@ export function insertDisagreement(
 // ── События ───────────────────────────────────────────────────────────────────
 
 /**
- * Событие воронки. В `payload` кладутся только машинные коды и идентификаторы:
- * ни имён, ни дат рождения, ни открытых ответов (`docs/12-target-state.md`, слой 7).
+ * Событие воронки. Таблица `events` — тот же журнал, только в базе, поэтому
+ * `payload` проходит ту же чистку, что и строки вывода (E9-04): наружу
+ * попадают машинные коды и идентификаторы, человеческий текст скрывается.
  */
 export function recordEvent(
   db: Db,
   type: string,
-  input: { profileId?: string | null; payload?: Record<string, string | number> } = {},
+  input: { profileId?: string | null; payload?: Record<string, unknown> } = {},
 ): void {
   db.run("INSERT INTO events (event_id, profile_id, type, payload, created_at) VALUES (?, ?, ?, ?, ?)", [
     newRecordId(),
     input.profileId ?? null,
     type,
-    JSON.stringify(input.payload ?? {}),
+    JSON.stringify(scrub(input.payload ?? {})),
     now(),
   ]);
 }

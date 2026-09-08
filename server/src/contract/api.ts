@@ -33,8 +33,12 @@ export type BlockSlot = "step1" | "step2" | "step3" | "step4" | `slice:${string}
  */
 export type PublicSlot = Exclude<BlockSlot, PrivateSlot>;
 
-/** Тип вопроса. Совпадает с типами из `content/questions-ladder.md`. */
-export type QuestionKind = "выбор" | "шкала" | "открытый";
+/**
+ * Тип вопроса. Совпадает с типами из `content/questions-ladder.md` и
+ * `content/slices/*.md`. Четвёртый — `число` — встречается только в доборах:
+ * вопрос спрашивает сразу две величины («сколько начал и сколько довёл»).
+ */
+export type QuestionKind = "выбор" | "шкала" | "открытый" | "число";
 
 /** Порция вопросов: ступень бесплатной лестницы или добор платного среза. */
 export type PortionKey = `step:${1 | 2 | 3 | 4}` | `slice:${string}`;
@@ -193,8 +197,36 @@ export interface OrderDto {
   price: number;
   currency: string;
   status: OrderStatus;
-  /** Куда вести на оплату. Появится в E8; до него null. */
-  payment: { provider: string; url: string } | null;
+  /**
+   * Куда вести на оплату и кто её проводит. `mode` — `test` у поддельного
+   * провайдера: клиент обязан показать, что деньги не настоящие.
+   */
+  payment: { provider: string; mode: "test" | "live"; url: string } | null;
+}
+
+/**
+ * Выгрузка данных человека (E9-03): то, что он дал, и то, что ему показали.
+ * Внутреннего профиля здесь нет — координаты не отдаются даже владельцу
+ * страницы, иначе выгрузка становится обходом всей стены типов.
+ */
+export interface ExportDto {
+  profileId: string;
+  /** Когда собрана выгрузка. */
+  exportedAt: string;
+  person: { name: string; birthDate: string | null };
+  answers: ExportAnswerDto[];
+  blocks: BlockDto[];
+  orders: OrderDto[];
+  disagreements: DisagreementDto[];
+  share: ShareDto | null;
+}
+
+/** Ответ в выгрузке: вопрос и ответ словами, а не идентификаторами вариантов. */
+export interface ExportAnswerDto {
+  questionId: string;
+  portion: PortionKey;
+  question: string;
+  answer: string;
 }
 
 // ── Запросы ───────────────────────────────────────────────────────────────────
@@ -210,7 +242,9 @@ export interface CreateProfileRequest {
 export type AnswerInput =
   | { questionId: string; kind: "выбор"; option: string }
   | { questionId: string; kind: "шкала"; scale: 1 | 2 | 3 | 4 | 5 }
-  | { questionId: string; kind: "открытый"; text: string };
+  | { questionId: string; kind: "открытый"; text: string }
+  /** Одна величина или две, если вопрос спрашивает обе сразу. */
+  | { questionId: string; kind: "число"; numbers: number[] };
 
 export interface SubmitPortionRequest {
   portion: PortionKey;
@@ -273,6 +307,16 @@ export type ErrorCode =
   | "unknown_slice"
   | "payload_too_large"
   | "rate_limited"
+  /** Блок закрыт: оплаченного заказа на этот срез нет либо доступ отозван. */
+  | "payment_required"
+  /** Срез уже куплен или оплата по нему идёт: второй заказ не создаётся. */
+  | "slice_already_ordered"
+  /** Заказ не может перейти в запрошенное состояние. */
+  | "invalid_transition"
+  /** Подпись уведомления не сошлась. */
+  | "invalid_signature"
+  /** Возврат по этому заказу автоматически не проводится. */
+  | "refund_unavailable"
   | "internal_error";
 
 export interface ErrorDto {
@@ -288,6 +332,11 @@ export type OrderResponse = Wire<{ order: OrderDto; page: PageStateDto }>;
 export type GenerationResponse = Wire<{ generation: GenerationDto }>;
 export type DisagreementResponse = Wire<{ disagreement: DisagreementDto; page: PageStateDto }>;
 export type ShareResponse = Wire<{ share: ShareDto | null; page: PageStateDto }>;
+export type BlockResponse = Wire<{ block: BlockDto }>;
+export type ExportResponse = Wire<ExportDto>;
+export type DeleteResponse = Wire<{ deleted: true }>;
+/** Ответ на уведомление провайдера. Провайдеру уходит только машинный исход. */
+export type WebhookResponse = Wire<{ received: true; result: "applied" | "duplicate" | "ignored" }>;
 
 /** Публичный вид проходит обе стены: без координат и без закрытых блоков. */
 export type PublicPageResponse = Viewable<Wire<PublicPageDto>>;
@@ -302,7 +351,9 @@ const contractIsCoordinateFree: [
   AssertClean<{ generation: GenerationDto }>,
   AssertClean<{ disagreement: DisagreementDto; page: PageStateDto }>,
   AssertClean<{ share: ShareDto | null; page: PageStateDto }>,
-] = [true, true, true, true, true, true, true];
+  AssertClean<ExportDto>,
+  AssertClean<{ block: BlockDto }>,
+] = [true, true, true, true, true, true, true, true, true];
 void contractIsCoordinateFree;
 
 // То же для публичного вида: ни одно поле не способно принести блок 3, 4 или срез.
@@ -364,13 +415,65 @@ export interface ApiEndpoints {
     body: DisagreementRequest;
     response: DisagreementResponse;
   };
-  /** Покупка среза. Оплата подключается в E8. */
+  /**
+   * Покупка среза: заводит заказ и платёж у провайдера. Второй заказ на тот же
+   * срез не создаётся, пока первый жив.
+   */
   purchase: {
     method: "POST";
     path: "/api/p/:profileId/orders";
     params: { profileId: string };
     body: PurchaseRequest;
     response: OrderResponse;
+  };
+  /**
+   * Возврат средств и отзыв доступа. Возврат полный, пока итоговый текст среза
+   * не собран; после сборки автоматического возврата нет.
+   */
+  refund: {
+    method: "POST";
+    path: "/api/p/:profileId/orders/:orderId/refunds";
+    params: { profileId: string; orderId: string };
+    body: null;
+    response: OrderResponse;
+  };
+  /**
+   * Уведомление провайдера. Единственный вход, которым заказ становится
+   * оплаченным: клиенту такой переход недоступен.
+   */
+  webhook: {
+    method: "POST";
+    path: "/api/payments/:provider/webhook";
+    params: { provider: string };
+    body: unknown;
+    response: WebhookResponse;
+  };
+  /**
+   * Текст одного блока. Для платного среза требует оплаченного заказа:
+   * без него — отказ, а не пустой блок.
+   */
+  blockText: {
+    method: "GET";
+    path: "/api/p/:profileId/blocks/:slot";
+    params: { profileId: string; slot: string };
+    body: null;
+    response: BlockResponse;
+  };
+  /** Выгрузка данных человека в читаемом виде. */
+  exportProfile: {
+    method: "GET";
+    path: "/api/p/:profileId/export";
+    params: { profileId: string };
+    body: null;
+    response: ExportResponse;
+  };
+  /** Удаление профиля со всеми ответами, блоками и заказами. Отменить нельзя. */
+  deleteProfile: {
+    method: "DELETE";
+    path: "/api/p/:profileId";
+    params: { profileId: string };
+    body: null;
+    response: DeleteResponse;
   };
   /** Статус генерации текста блока. */
   generationStatus: {
@@ -428,6 +531,11 @@ export const API: {
   editAnswer: { method: "PATCH", path: "/api/p/:profileId/answers/:questionId" },
   disagree: { method: "POST", path: "/api/p/:profileId/disagreements" },
   purchase: { method: "POST", path: "/api/p/:profileId/orders" },
+  refund: { method: "POST", path: "/api/p/:profileId/orders/:orderId/refunds" },
+  webhook: { method: "POST", path: "/api/payments/:provider/webhook" },
+  blockText: { method: "GET", path: "/api/p/:profileId/blocks/:slot" },
+  exportProfile: { method: "GET", path: "/api/p/:profileId/export" },
+  deleteProfile: { method: "DELETE", path: "/api/p/:profileId" },
   generationStatus: { method: "GET", path: "/api/p/:profileId/generations/:generationId" },
   share: { method: "POST", path: "/api/p/:profileId/share" },
   revokeShare: { method: "DELETE", path: "/api/p/:profileId/share" },

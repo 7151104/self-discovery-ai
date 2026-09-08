@@ -10,10 +10,7 @@ import { ConfigError, loadConfig, type ServerConfig } from "./config.js";
 import { openDatabase } from "./db/sqlite.js";
 import { up } from "./db/migrate.js";
 import { createHttpServer } from "./http/server.js";
-
-const log = (event: string, fields: Record<string, string | number | boolean> = {}): void => {
-  process.stdout.write(`${JSON.stringify({ event, ...fields })}\n`);
-};
+import { log } from "./log.js";
 
 function packageVersion(): string {
   try {
@@ -43,7 +40,13 @@ function configure(): ServerConfig {
 }
 
 const config = configure();
-const db = openDatabase({ path: config.databasePath });
+const db = openDatabase({ path: config.databasePath, keys: config.keys });
+
+if (!config.keys.active) {
+  // Разработка без ключа: чувствительные поля лягут открытым текстом.
+  // В рабочем окружении сюда не попасть — там ключ обязателен.
+  log("encryption.disabled", { environment: config.environment });
+}
 
 if (config.autoMigrate) {
   const applied = up(db);
@@ -59,6 +62,8 @@ server.listen(config.port, config.host, () => {
     port: config.port,
     database: config.databasePath,
     rateLimit: config.rateLimit.enabled,
+    payments: config.payments.provider,
+    encryption: config.keys.active?.id ?? "off",
   });
 });
 

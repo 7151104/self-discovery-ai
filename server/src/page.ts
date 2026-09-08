@@ -32,7 +32,7 @@ import {
   listAnswers,
   listBlocks,
   listDisagreements,
-  listOrders,
+  paidSlices,
   type AnswerRecord,
   type BlockRecord,
   type ProfileRecord,
@@ -68,12 +68,46 @@ export function toLadderAnswers(records: AnswerRecord[]): LadderAnswers {
   return answers as LadderAnswers;
 }
 
-/** Порция, в которой задан вопрос лестницы. */
+/**
+ * Идентификатор вопроса добора: `<срез>:<вопрос>`.
+ *
+ * Собственные идентификаторы вопросов в файлах срезов (`S1`, `S2`, …) у всех
+ * срезов одинаковые, а ответы лежат в одной таблице по ключу «профиль плюс
+ * вопрос». Без приставки ответы разных срезов затирали бы друг друга.
+ * Вопросы лестницы приставки не получают: их тождество — идентификатор банка
+ * (`docs/14-state.md`, решение о доборе полной карты).
+ */
+export const sliceQuestionId = (slice: string, questionId: string): string => `${slice}:${questionId}`;
+
+/** Разбор такого идентификатора обратно. Не добор — null. */
+export function parseSliceQuestionId(id: string): { slice: string; questionId: string } | null {
+  const separator = id.indexOf(":");
+  if (separator <= 0) return null;
+  const slice = id.slice(0, separator);
+  const questionId = id.slice(separator + 1);
+  if (!rawContent.slices.some((candidate) => candidate.id === slice)) return null;
+  return { slice, questionId };
+}
+
+/** Ключ порции добора: у дорогих срезов их две (`docs/07-monetization-route.md`). */
+export const slicePortionKey = (slice: string, portion: number): PortionKey => `slice:${slice}:${portion}`;
+
+/** Порция, в которой задан вопрос: ступень лестницы или порция добора. */
 export function portionOf(questionId: string): PortionKey | null {
   const question = rawContent.questions.find((candidate) => candidate.id === questionId);
-  if (!question) return null;
-  return `step:${question.step as 1 | 2 | 3 | 4}`;
+  if (question) return `step:${question.step as 1 | 2 | 3 | 4}`;
+
+  const parsed = parseSliceQuestionId(questionId);
+  if (!parsed) return null;
+
+  const known = sliceQuestion(parsed.slice, parsed.questionId);
+  return known ? slicePortionKey(parsed.slice, known.portion) : null;
 }
+
+const sliceContent = (slice: string) => rawContent.slices.find((candidate) => candidate.id === slice) ?? null;
+
+const sliceQuestion = (slice: string, questionId: string) =>
+  sliceContent(slice)?.questions.find((candidate) => candidate.id === questionId) ?? null;
 
 const projectMap = (bars: MapBar[]): MapBarDto[] =>
   bars.map((bar) => ({
@@ -124,6 +158,45 @@ const projectPortion = (page: PageState, answered: Set<string>): PortionDto | nu
           .filter((id) => answered.has(id)),
       }
     : null;
+
+/**
+ * Порция добора: вопросы платного среза (E8-04, Закон 2).
+ *
+ * Возвращает первую порцию, в которой остались неотвеченные вопросы. Пока она
+ * есть, отчёта по срезу не существует: платим за новые ответы, а не за
+ * перелицованный старый текст.
+ *
+ * Подводка — обещание среза из `content/slices/README.md`: собственной строки
+ * у порции добора в контенте нет, а придумывать её в коде нельзя.
+ */
+function projectSlicePortion(slice: string, answered: Set<string>): PortionDto | null {
+  const content = sliceContent(slice);
+  if (!content) return null;
+
+  const portions = [...new Set(content.questions.map((question) => question.portion))].sort((a, b) => a - b);
+
+  for (const portion of portions) {
+    const questions = content.questions.filter((question) => question.portion === portion);
+    const ids = questions.map((question) => sliceQuestionId(slice, question.id));
+    if (ids.every((id) => answered.has(id))) continue;
+
+    return {
+      key: slicePortionKey(slice, portion),
+      lead: content.promise,
+      questions: questions.map((question) => ({
+        id: sliceQuestionId(slice, question.id),
+        kind: question.type,
+        text: question.text,
+        options: question.options,
+        // Полюсов у шкал добора в контенте нет: подписи стоят в тексте вопроса.
+        scale: null,
+      })),
+      answered: ids.filter((id) => answered.has(id)),
+    };
+  }
+
+  return null;
+}
 
 function projectBlocks(page: PageState, stored: BlockRecord[], disagreed: Set<string>): BlockDto[] {
   const bySlot = new Map(stored.map((block) => [block.slot, block]));
@@ -234,22 +307,36 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     });
   }
 
-  const paidSlices = listOrders(db, profile.profileId)
-    .filter((order) => order.status === "paid")
-    .map((order) => order.slice);
+  const paid = paidSlices(db, profile.profileId);
 
-  // Оплаченный срез появляется на странице сразу: заголовок из `content/slices/`,
-  // текст пишет LLM (E4). До текста у клиента есть идентификатор генерации.
-  for (const slice of paidSlices) {
-    const known = rawContent.slices.find((candidate) => candidate.id === slice);
-    if (!known) continue;
+  /**
+   * Закон 2: оплата открывает не отчёт, а порцию доборов.
+   *
+   * Пока у оплаченного среза остались неотвеченные вопросы, страница отдаёт их
+   * и ничего больше: записи блока нет, а значит нет и заголовка, за которым
+   * можно было бы принять готовый отчёт. Блок заводится ровно тогда, когда
+   * добор пройден целиком, — с этого места срез ждёт текста от LLM (E4).
+   *
+   * «Добор пройден» здесь означает «на все вопросы среза есть ответы». Порог
+   * генерации (E2-05) и уточняющие вопросы требуют разбора открытых ответов,
+   * которого до E4 нет; когда он появится, это условие заменяется вызовом
+   * `checkThreshold` — правило останется в движке, а не переедет сюда.
+   */
+  let slicePortion: PortionDto | null = null;
+  for (const slice of paid) {
+    const remaining = projectSlicePortion(slice, answered);
+    if (remaining) {
+      slicePortion ??= remaining;
+      continue;
+    }
+
     ensureBlock(db, profile.profileId, {
       slot: `slice:${slice}`,
       profileVersion: profile.version,
       status: "pending",
       origin: "llm",
       purchased: true,
-      heading: known.title,
+      heading: sliceContent(slice)?.title ?? "",
       paragraphs: [],
       highlight: null,
     });
@@ -262,7 +349,7 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   const page: PageStateDto = {
     profileId: profile.profileId,
     url: pageUrl(options.publicOrigin, profile.profileId),
-    state: stateName(enginePage.step, blocks, paidSlices),
+    state: stateName(enginePage.step, blocks, paid),
     card: {
       name: enginePage.card?.name ?? profile.name,
       season: enginePage.card?.season ?? null,
@@ -275,7 +362,8 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     blocks: projectBlocks(enginePage, blocks, disagreed),
     doors: projectDoors(enginePage),
     offer: projectOffer(enginePage),
-    nextPortion: projectPortion(enginePage, answered),
+    // Порция добора идёт первой: после оплаты человек видит вопросы.
+    nextPortion: slicePortion ?? projectPortion(enginePage, answered),
     share: share ? { url: shareUrl(options.publicOrigin, share.token), createdAt: share.createdAt } : null,
     updatedAt: profile.updatedAt,
   };

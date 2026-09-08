@@ -43,12 +43,14 @@ test("чистая база поднимается одной командой",
       "blocks",
       "disagreements",
       "events",
+      "order_events",
       "orders",
       "portion_submissions",
       "profile_versions",
       "profiles",
       "schema_migrations",
       "share_tokens",
+      "webhook_deliveries",
     ]);
     assert.equal(schemaVersion(db), latest());
   } finally {
@@ -65,7 +67,9 @@ test("схема покрывает профиль, ответы, версии, 
       answers: ["profile_id", "question_id", "question_kind", "portion", "payload", "revision"],
       profile_versions: ["profile_id", "version", "reason", "snapshot"],
       blocks: ["profile_id", "slot", "status", "origin", "purchased", "stale", "body_payload"],
-      orders: ["profile_id", "slice", "amount", "status", "request_id"],
+      orders: ["profile_id", "slice", "amount", "status", "request_id", "provider_mode", "active_slice"],
+      order_events: ["order_id", "profile_id", "from_status", "to_status", "reason"],
+      webhook_deliveries: ["provider", "event_id", "kind", "order_id", "result"],
       disagreements: ["profile_id", "slot", "kind"],
       events: ["profile_id", "type", "payload"],
       portion_submissions: ["profile_id", "request_id", "portion", "answer_count", "profile_version"],
@@ -125,8 +129,9 @@ test("миграции откатываются по одной, в обратн
 
     // Шаг назад снимает только последнюю миграцию.
     assert.deepEqual(down(db), [latest()]);
-    assert.ok(!tables(db).includes("share_tokens"));
     assert.ok(tables(db).includes("profiles"));
+    // Последняя миграция пересобирает таблицу ответов, а не заводит свою.
+    assert.ok(tables(db).includes("answers"));
 
     assert.deepEqual(up(db), [latest()]);
 

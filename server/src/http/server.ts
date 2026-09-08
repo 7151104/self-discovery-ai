@@ -8,6 +8,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
 import { assertNoCoordinates, assertNoPrivateBlocks } from "./guard.js";
+import { log } from "../log.js";
+import { createProvider } from "../payments/registry.js";
 import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
 import { matchApi, matchPage, matchPublicPage } from "./router.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
@@ -30,7 +32,16 @@ const BUCKETS: Partial<Record<OperationName, Bucket>> = {
   publicPage: "state",
 };
 
-async function readBody(request: IncomingMessage, limit: number): Promise<unknown | "too_large" | "invalid"> {
+/**
+ * Тело запроса разобранным и дословно. Дословная строка нужна уведомлениям
+ * провайдера: подпись считается по байтам тела, а не по разобранному объекту.
+ */
+interface Body {
+  raw: string;
+  value: unknown;
+}
+
+async function readBody(request: IncomingMessage, limit: number): Promise<Body | "too_large" | "invalid"> {
   const chunks: Buffer[] = [];
   let size = 0;
 
@@ -41,9 +52,10 @@ async function readBody(request: IncomingMessage, limit: number): Promise<unknow
     chunks.push(buffer);
   }
 
-  if (!size) return null;
+  if (!size) return { raw: "", value: null };
+  const raw = Buffer.concat(chunks).toString("utf8");
   try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+    return { raw, value: JSON.parse(raw) as unknown };
   } catch {
     return "invalid";
   }
@@ -172,7 +184,7 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
     return;
   }
 
-  const result = countMiss(run(context, name, params, body));
+  const result = countMiss(run(context, name, params, body, request.headers));
 
   // Проверка на выходе: типы уже не дают собрать протёкший ответ, а это —
   // вторая линия на случай формы, собранной обходом типов (E3-06).
@@ -184,22 +196,38 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
   sendJson(response, result);
 }
 
-function run(context: Context, name: OperationName, params: Record<string, string>, body: unknown): HandlerResult {
+function run(
+  context: Context,
+  name: OperationName,
+  params: Record<string, string>,
+  body: Body,
+  headers: IncomingMessage["headers"],
+): HandlerResult {
   switch (name) {
     case "health":
       return handlers.health(context);
     case "createProfile":
-      return handlers.createProfile(context, body);
+      return handlers.createProfile(context, body.value);
     case "pageState":
       return handlers.pageState(context, params);
     case "submitPortion":
-      return handlers.submitPortion(context, params, body);
+      return handlers.submitPortion(context, params, body.value);
     case "editAnswer":
-      return handlers.editAnswer(context, params, body);
+      return handlers.editAnswer(context, params, body.value);
     case "disagree":
-      return handlers.disagree(context, params, body);
+      return handlers.disagree(context, params, body.value);
     case "purchase":
-      return handlers.purchase(context, params, body);
+      return handlers.purchase(context, params, body.value);
+    case "refund":
+      return handlers.refund(context, params);
+    case "webhook":
+      return handlers.webhook(context, params, { raw: body.raw, headers });
+    case "blockText":
+      return handlers.blockText(context, params);
+    case "exportProfile":
+      return handlers.exportProfile(context, params);
+    case "deleteProfile":
+      return handlers.deleteProfileHandler(context, params);
     case "generationStatus":
       return handlers.generationStatus(context, params);
     case "share":
@@ -215,6 +243,8 @@ export function createHttpServer(options: CreateOptions): Server {
   const context: Context = {
     db: options.db,
     config: options.config,
+    // Незнакомое имя провайдера — отказ при запуске, а не при первой оплате.
+    payments: createProvider({ payments: options.config.payments, publicOrigin: options.config.publicOrigin }),
     version: options.version,
     startedAt: Date.now(),
   };
@@ -223,10 +253,8 @@ export function createHttpServer(options: CreateOptions): Server {
 
   return createServer((request, response) => {
     dispatch(runtime, request, response).catch((error: unknown) => {
-      // В журнал уходит только машинный код: ни имён, ни ответов (docs/12, слой 7).
-      process.stderr.write(
-        `${JSON.stringify({ event: "request.failed", reason: error instanceof Error ? error.name : "unknown" })}\n`,
-      );
+      // Имя ошибки, а не её сообщение: в сообщении бывает содержимое запроса.
+      log("request.failed", { reason: error instanceof Error ? error.name : "unknown" });
       if (!response.headersSent) sendJson(response, handlers.fail(500, "internal_error"));
       else response.end();
     });

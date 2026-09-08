@@ -12,14 +12,17 @@ import { readMigrations, up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
 import { rawContent } from "./engine.js";
 import { createHttpServer } from "./http/server.js";
-import { saveBlockContent, updateOrderStatus } from "./store.js";
-import type { AnswerInput, PageStateDto, PortionKey } from "./contract/index.js";
+import { saveBlockContent } from "./store.js";
+import { fakeWebhook, FAKE_SIGNATURE_HEADER } from "./payments/fake.js";
+import type { WebhookKind } from "./payments/provider.js";
+import type { AnswerInput, OrderDto, PageStateDto, PortionDto, PortionKey } from "./contract/index.js";
 
 export { FORBIDDEN_FIELDS } from "./contract/index.js";
 
 export interface TestServer {
   origin: string;
   db: Db;
+  config: ServerConfig;
   close(): Promise<void>;
 }
 
@@ -29,12 +32,30 @@ export const latestMigration = (): string => {
   return versions[versions.length - 1] ?? "";
 };
 
-/** Сервер на случайном порту с чистой базой в памяти. */
+/**
+ * Ключ шифрования для тестов. Не секрет: он лежит в репозитории именно потому,
+ * что защищать в тестовой базе нечего. Рабочий ключ приходит из окружения и в
+ * репозитории отсутствует.
+ */
+export const TEST_KEY = "dGVzdC1rZXktZm9yLXVuaXQtdGVzdHMtMzItYnl0ZXM=";
+
+/** Секрет подписи уведомлений в тестах. Рабочий приходит из окружения. */
+export const TEST_WEBHOOK_SECRET = "test-webhook-secret";
+
+/**
+ * Сервер на случайном порту с чистой базой в памяти.
+ * По умолчанию поднимается с шифрованием: тесты идут тем же путём, что рабочее
+ * окружение, а не более коротким.
+ */
 export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<TestServer> {
-  const db = openDatabase({ path: ":memory:" });
+  const config: ServerConfig = loadConfig({
+    SDAI_ENCRYPTION_KEY: TEST_KEY,
+    SDAI_PAYMENT_WEBHOOK_SECRET: TEST_WEBHOOK_SECRET,
+    ...env,
+  });
+  const db = openDatabase({ path: ":memory:", keys: config.keys });
   up(db);
 
-  const config: ServerConfig = loadConfig(env);
   const server = createHttpServer({ db, config, version: "test" });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
@@ -42,6 +63,7 @@ export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<Test
   return {
     origin: `http://127.0.0.1:${port}`,
     db,
+    config,
     close: () =>
       new Promise<void>((resolve) => {
         server.close(() => {
@@ -112,30 +134,106 @@ export async function profileAtStep(origin: string, step: 0 | 1 | 2 | 3 | 4): Pr
   return page;
 }
 
+/** Доставка уведомления провайдера с подписью. Тот же путь, что у настоящего. */
+export async function deliverWebhook(
+  origin: string,
+  input: { kind: WebhookKind; orderId: string; reference: string; amount: number; eventId?: string },
+  secret: string = TEST_WEBHOOK_SECRET,
+): Promise<Reply<{ result: string }>> {
+  const { raw, signature } = fakeWebhook(secret, input);
+  const response = await fetch(`${origin}/api/payments/fake/webhook`, {
+    method: "POST",
+    headers: { "content-type": "application/json", [FAKE_SIGNATURE_HEADER]: signature },
+    body: raw,
+  });
+  return { status: response.status, body: (await response.json()) as { result: string } };
+}
+
+export interface PaidProfile {
+  page: PageStateDto;
+  slice: string;
+  orderId: string;
+  reference: string;
+  price: number;
+}
+
+/**
+ * Профиль с оплаченным срезом. Оплата идёт настоящим маршрутом: заказ,
+ * уведомление провайдера, подпись — без денег, но и без обходных путей.
+ */
+export async function purchaseSlice(origin: string, sliceId?: string): Promise<PaidProfile> {
+  const page = await profileAtStep(origin, 4);
+  const slice = sliceId ?? page.offer?.slice ?? "slice_node_finish";
+
+  const order = await call<{ order: OrderDto }>(origin, "POST", `/api/p/${page.profileId}/orders`, {
+    slice,
+    requestId: `buy-${slice}`,
+  });
+  const orderId = order.body.order.orderId;
+  const reference = referenceOf(order.body.order);
+
+  await deliverWebhook(origin, {
+    kind: "payment.succeeded",
+    orderId,
+    reference,
+    amount: order.body.order.price,
+  });
+
+  const state = await call<PageStateDto>(origin, "GET", `/api/p/${page.profileId}`);
+  return { page: state.body, slice, orderId, reference, price: order.body.order.price };
+}
+
+/** Идентификатор платежа у провайдера: он зашит в выданный адрес оплаты. */
+const referenceOf = (order: OrderDto): string =>
+  order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "";
+
+/** Ответы одной порции добора: состав вопросов берётся из состояния страницы. */
+export const answersForPortion = (portion: PortionDto): AnswerInput[] =>
+  portion.questions.map((question): AnswerInput => {
+    if (question.kind === "выбор") {
+      return { questionId: question.id, kind: "выбор", option: question.options[0]?.key ?? "A" };
+    }
+    if (question.kind === "шкала") return { questionId: question.id, kind: "шкала", scale: 4 };
+    if (question.kind === "число") return { questionId: question.id, kind: "число", numbers: [5, 2] };
+    return { questionId: question.id, kind: "открытый", text: OPEN_ANSWER };
+  });
+
+/** Проходит все порции добора до конца. Возвращает состояние страницы после последней. */
+export async function answerSlicePortions(origin: string, profileId: string): Promise<PageStateDto> {
+  let page = (await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`)).body;
+
+  for (let guard = 0; guard < 5; guard += 1) {
+    const portion = page.nextPortion;
+    if (!portion || !portion.key.startsWith("slice:")) break;
+    const reply = await call<PageStateDto>(origin, "POST", `/api/p/${profileId}/portions`, {
+      portion: portion.key,
+      answers: answersForPortion(portion),
+      requestId: `portion-${portion.key}`,
+    });
+    page = reply.body;
+  }
+
+  return page;
+}
+
 /**
  * Профиль в платном состоянии.
  *
- * Оплата — задача E8, тексты платных срезов — E4, поэтому заказ переводится в
- * оплаченный и блок среза записывается напрямую в хранилище. Проекции состояния
- * этого достаточно: она собирает страницу из того, что лежит в базе.
+ * Оплата проходит целиком; текст среза пишет LLM (E4), поэтому в состоянии
+ * `delivered` он записывается прямо в хранилище — своей задачи у сервера тут нет.
  */
 export async function profileAtPaidState(
   origin: string,
   db: Db,
   options: { delivered: boolean },
 ): Promise<PageStateDto> {
-  const page = await profileAtStep(origin, 4);
-  const slice = page.offer?.slice ?? "slice_node_finish";
-
-  const order = await call<{ order: { orderId: string } }>(origin, "POST", `/api/p/${page.profileId}/orders`, {
-    slice,
-    requestId: "paid",
-  });
-  updateOrderStatus(db, page.profileId, order.body.order.orderId, "paid");
+  const paid = await purchaseSlice(origin);
+  const profileId = paid.page.profileId;
+  await answerSlicePortions(origin, profileId);
 
   if (options.delivered) {
-    saveBlockContent(db, page.profileId, {
-      slot: `slice:${slice}`,
+    saveBlockContent(db, profileId, {
+      slot: `slice:${paid.slice}`,
       profileVersion: 1,
       purchased: true,
       heading: "Почему ты останавливаешься у финиша",
@@ -144,7 +242,7 @@ export async function profileAtPaidState(
     });
   }
 
-  const state = await call<PageStateDto>(origin, "GET", `/api/p/${page.profileId}`);
+  const state = await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`);
   return state.body;
 }
 

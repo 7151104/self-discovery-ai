@@ -201,7 +201,10 @@ test("покупка создаёт заказ по цене из контент
   assert.equal(first.status, 201);
   assert.equal(first.body.order.price, price);
   assert.equal(first.body.order.status, "created");
-  assert.equal(first.body.order.payment, null);
+  // Заказ сразу несёт адрес оплаты и режим провайдера (E8-01).
+  assert.equal(first.body.order.payment?.provider, "fake");
+  assert.equal(first.body.order.payment?.mode, "test");
+  assert.match(first.body.order.payment?.url ?? "", /\/pay\/fake\//);
 
   const repeat = await call<OrderResponse>(server.origin, "POST", `/api/p/${page.profileId}/orders`, {
     slice,

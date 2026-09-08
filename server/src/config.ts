@@ -9,9 +9,21 @@
  * Список переменных с описаниями — `.env.example`.
  */
 
+import { buildKeyring, KeyError, type Keyring } from "./db/crypto.js";
 import type { RateRules } from "./http/rate-limit.js";
 
 export type Environment = "development" | "production";
+
+/**
+ * Настройки оплаты. Провайдер выбирается по имени: реальный адаптер добавится
+ * одним модулем, когда основатель назовёт провайдера (`docs/14-state.md`).
+ */
+export interface PaymentConfig {
+  /** Имя провайдера в реестре `server/src/payments/`. */
+  provider: string;
+  /** Секрет для проверки подписи уведомлений. */
+  webhookSecret: string;
+}
 
 export interface ServerConfig {
   environment: Environment;
@@ -31,6 +43,12 @@ export interface ServerConfig {
   /** Брать адрес клиента из заголовка `x-forwarded-for`. Только за своим прокси. */
   trustProxy: boolean;
   rateLimit: { enabled: boolean; rules: RateRules };
+  payments: PaymentConfig;
+  /**
+   * Ключи шифрования чувствительных полей. Пустая связка означает открытое
+   * хранение и в рабочем окружении невозможна.
+   */
+  keys: Keyring;
 }
 
 export const DEFAULTS = {
@@ -43,6 +61,8 @@ export const DEFAULTS = {
   maxBodyBytes: 65_536,
   trustProxy: false,
   rateLimitEnabled: true,
+  /** Поддельный провайдер: единственный, который есть в репозитории. */
+  paymentProvider: "fake",
   /** Окна подобраны под живой сценарий: порция — минута, создание профиля — час. */
   rate: {
     createProfile: { limit: 20, windowMs: 60 * 60 * 1000 },
@@ -88,10 +108,50 @@ function readEnvironment(env: NodeJS.ProcessEnv): Environment {
 
 /**
  * Переменные, без которых рабочее окружение работает неправильно.
- * Без `SDAI_PUBLIC_ORIGIN` постоянная и публичная ссылки отдаются
- * относительными, то есть непригодными для отправки другому человеку.
+ *
+ * `SDAI_PUBLIC_ORIGIN` — без него постоянная и публичная ссылки относительные,
+ * то есть непригодные для отправки другому человеку.
+ * `SDAI_ENCRYPTION_KEY` — без него чувствительные поля лягут открытым текстом.
+ * `SDAI_PAYMENT_WEBHOOK_SECRET` — без него подпись уведомлений не проверяется.
  */
-const REQUIRED_IN_PRODUCTION = ["SDAI_PUBLIC_ORIGIN"] as const;
+const REQUIRED_IN_PRODUCTION = ["SDAI_PUBLIC_ORIGIN", "SDAI_ENCRYPTION_KEY", "SDAI_PAYMENT_WEBHOOK_SECRET"] as const;
+
+/**
+ * Поддельный провайдер и рабочее окружение несовместимы (E8-09).
+ *
+ * Проверка стоит в конфигурации, а не в коде оплаты: включить тестовые платежи
+ * на рабочем домене нельзя не потому, что кто-то не забыл проверить флаг, а
+ * потому, что с таким сочетанием переменных сервер не стартует.
+ */
+export const FAKE_PROVIDER = "fake";
+
+function readPayments(env: NodeJS.ProcessEnv, environment: Environment): PaymentConfig {
+  const provider = env["SDAI_PAYMENT_PROVIDER"] || DEFAULTS.paymentProvider;
+
+  if (environment === "production" && provider === FAKE_PROVIDER) {
+    throw new ConfigError(["SDAI_PAYMENT_PROVIDER"], "fake-provider-forbidden-in-production");
+  }
+
+  return { provider, webhookSecret: env["SDAI_PAYMENT_WEBHOOK_SECRET"] ?? "" };
+}
+
+function readKeys(env: NodeJS.ProcessEnv): Keyring {
+  const active = env["SDAI_ENCRYPTION_KEY"] || null;
+  const retired = (env["SDAI_ENCRYPTION_KEYS_RETIRED"] ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  try {
+    return buildKeyring(active, retired);
+  } catch (error) {
+    if (error instanceof KeyError) {
+      const variable = error.message.includes("retired") ? "SDAI_ENCRYPTION_KEYS_RETIRED" : "SDAI_ENCRYPTION_KEY";
+      throw new ConfigError([variable], error.message.replace("encryption-key:", ""));
+    }
+    throw error;
+  }
+}
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const environment = readEnvironment(env);
@@ -131,5 +191,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
         },
       },
     },
+    payments: readPayments(env, environment),
+    keys: readKeys(env),
   };
 }

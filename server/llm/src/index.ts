@@ -26,7 +26,7 @@ export {
 
 export { FakeProvider, answering, type FakeProviderOptions, type FakeTurn } from "./fake-provider.js";
 
-export { envelope, GOOD_TEXT, DEMO_ANSWERS, DEMO_PERSON } from "./fixtures.js";
+export { envelope, GOOD_TEXT, DEMO_ANSWERS, DEMO_PERSON, textOfVolume, sliceEnvelope } from "./fixtures.js";
 
 export {
   runGeneration,
@@ -41,12 +41,16 @@ export { DEFAULTS, LlmConfigError, loadLlmConfig, type LlmConfig, type ProviderN
 
 export {
   buildStep4Prompt,
+  buildSlicePrompt,
   instructionOf,
   openAnswerWords,
   outputTokenBudget,
+  sliceHeading,
+  sliceReportType,
   type AssembledPrompt,
   type PromptSegment,
   type SegmentKind,
+  type SliceTask,
 } from "./prompt.js";
 
 export {
@@ -86,6 +90,10 @@ export {
 
 export { generateLadderFinal, type Step4Options, type Step4Outcome, type Step4Reason } from "./step4.js";
 
-export { contentVersion, hashGenerationInput, stableGenerationInput } from "./input-hash.js";
+export { contentVersion, hashGenerationInput, hashSliceInput, stableGenerationInput, stableSliceInput } from "./input-hash.js";
 
-export { ladderCapOf, registerMarkers, reportTypes, volumeOf, type ReportType, type WordRange } from "./content.js";
+export { ladderCapOf, registerMarkers, reportTypes, volumeOf, assemblerPrompt, sliceOverlay, overlaySlices, reportTypeOfSlice, type ReportType, type WordRange } from "./content.js";
+
+export { crisisGate, crisisOf, avoidInstruction } from "./crisis.js";
+
+export { generatePaidSlice, findingsForSlice, openAnswersOf, sliceTaskOf, type SliceOptions, type SliceOutcome, type SliceReason } from "./slice.js";

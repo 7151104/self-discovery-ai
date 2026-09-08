@@ -233,3 +233,75 @@ export function ladderCapOf(coordinate: number): Confidence | null {
   capsCache ??= parseLadderCaps();
   return capsCache.get(coordinate) ?? null;
 }
+
+// ── Промпты платных срезов ─────────────────────────────────────────────────────
+
+const ASSEMBLER_FILE = "prompts/full-report-assembler.md";
+const OVERLAY_FILE = "prompts/paid-slice-templates.md";
+
+let assemblerCache: string | null = null;
+let overlayCache: Map<string, string> | null = null;
+
+/** Ассемблер полной сборки: fenced-блок из файла, без пересказа кодом. */
+export function assemblerPrompt(): string {
+  if (assemblerCache) return assemblerCache;
+  const file = readRepoFile(ASSEMBLER_FILE);
+  const block = /```text\n([\s\S]*?)```/.exec(file);
+  if (!block) throw new Error(`${ASSEMBLER_FILE}: нет блока задания`);
+  assemblerCache = block[1]!.trim();
+  return assemblerCache;
+}
+
+function parseOverlays(): Map<string, string> {
+  const file = readRepoFile(OVERLAY_FILE);
+  const overlays = new Map<string, string>();
+  const heading = /^## `([a-z_]+)`[^\n]*$/gm;
+  const starts: { slice: string; at: number }[] = [];
+  for (const match of file.matchAll(heading)) {
+    starts.push({ slice: match[1]!, at: match.index ?? 0 });
+  }
+  if (!starts.length) throw new Error(`${OVERLAY_FILE}: нет ни одной надстройки`);
+
+  for (const [index, start] of starts.entries()) {
+    const end = starts[index + 1]?.at ?? file.length;
+    const section = file.slice(start.at, end);
+    const block = /```\n([\s\S]*?)```/.exec(section);
+    if (!block) throw new Error(`${OVERLAY_FILE}: у среза ${start.slice} нет блока надстройки`);
+    overlays.set(start.slice, block[1]!.trim());
+  }
+  return overlays;
+}
+
+/** Надстройка среза из `prompts/paid-slice-templates.md`. Правка файла меняет промпт. */
+export function sliceOverlay(slice: string): string {
+  overlayCache ??= parseOverlays();
+  const overlay = overlayCache.get(slice);
+  if (!overlay) throw new Error(`${OVERLAY_FILE}: нет надстройки среза ${slice}`);
+  return overlay;
+}
+
+export function overlaySlices(): string[] {
+  overlayCache ??= parseOverlays();
+  return [...overlayCache.keys()];
+}
+
+/**
+ * Машинный тип отчёта среза. Идентификаторы срезов — те же, что в контенте;
+ * тип — из таблицы объёма `docs/06-report-structure.md`. Совместимость в первый
+ * релиз не входит (вопрос 10), для неё типа нет.
+ */
+export function reportTypeOfSlice(slice: string): ReportType {
+  if (slice === "slice_work") return "срез_работа";
+  if (slice === "slice_relationships") return "срез_отношения";
+  if (slice === "slice_decision_moment") return "разбор_решения";
+  if (slice === "slice_full_map") return "полная_карта";
+  if (
+    slice === "slice_node_finish" ||
+    slice === "slice_motivation" ||
+    slice === "slice_stress" ||
+    slice === "slice_reactivity" ||
+    slice === "slice_decisions"
+  )
+    return "срез_узел";
+  throw new Error(`llm/content: для среза ${slice} нет машинного типа отчёта`);
+}

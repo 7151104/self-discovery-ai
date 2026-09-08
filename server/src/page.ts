@@ -12,6 +12,8 @@
 import type {
   BlockDto,
   BlockSlot,
+  ClarificationsDto,
+  CrisisDto,
   DoorDto,
   MapBarDto,
   OfferDto,
@@ -24,8 +26,25 @@ import type {
   PublicSlot,
 } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
-import { BAR_DEFINITIONS, buildPage, rawContent } from "./engine.js";
-import type { LadderAnswers, MapBar, PageState, PageView } from "./engine.js";
+import {
+  applySlice,
+  buildPage,
+  checkThreshold,
+  crisisNotice,
+  detectCrisis,
+  rawContent,
+  SCORED_SLICES,
+} from "./engine.js";
+import type {
+  CrisisDecision,
+  CrisisNotice,
+  LadderAnswers,
+  MapBar,
+  PageState,
+  PageView,
+  SliceAnswers,
+} from "./engine.js";
+import { findingsForSlice, openAnswersOf } from "../llm/dist/index.js";
 import {
   ensureBlock,
   findActiveShareToken,
@@ -46,6 +65,28 @@ export function toLadderAnswers(records: AnswerRecord[]): LadderAnswers {
   const answers: Record<string, string | number> = {};
   for (const record of records) answers[record.questionId] = record.value;
   return answers as LadderAnswers;
+}
+
+/**
+ * Ответы добора одного среза. Тип «число» в базе лежит строкой через запятую —
+ * движок ждёт число или массив.
+ */
+export function toSliceAnswers(records: AnswerRecord[], slice: string): SliceAnswers {
+  const answers: SliceAnswers = {};
+  for (const record of records) {
+    const parsed = parseSliceQuestionId(record.questionId);
+    if (!parsed || parsed.slice !== slice) continue;
+    if (record.kind === "число") {
+      const parts = String(record.value)
+        .split(",")
+        .map((part) => Number(part))
+        .filter((value) => Number.isFinite(value));
+      answers[parsed.questionId] = parts.length <= 1 ? (parts[0] ?? 0) : parts;
+      continue;
+    }
+    answers[parsed.questionId] = record.value;
+  }
+  return answers;
 }
 
 /**
@@ -119,6 +160,31 @@ const projectOffer = (page: PageView): OfferDto | null =>
         questionCount: page.offer.questionCount,
       }
     : null;
+
+/**
+ * Контакты помощи: в движке поле `value`, в контракте — `line`.
+ * Стена `Wire<>` запрещает ключ `value` как координату.
+ */
+const projectCrisis = (notice: CrisisNotice | null): CrisisDto | null =>
+  notice
+    ? {
+        place: notice.place,
+        publishable: notice.publishable,
+        texts: notice.texts,
+        contacts: notice.contacts.map((contact) => ({ title: contact.title, line: contact.value })),
+      }
+    : null;
+
+const withoutPaidDoors = (doors: DoorDto[]): DoorDto[] => doors.filter((door) => door.state !== "paid");
+
+const blockedDecision = (reason: string): CrisisDecision => ({
+  blocked: true,
+  support: true,
+  hits: [],
+  categories: [],
+  avoid: [],
+  reason,
+});
 
 const projectPortion = (page: PageView, answered: Set<string>): PortionDto | null =>
   page.nextPortion
@@ -318,20 +384,59 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
    *
    * Пока у оплаченного среза остались неотвеченные вопросы, страница отдаёт их
    * и ничего больше: записи блока нет, а значит нет и заголовка, за которым
-   * можно было бы принять готовый отчёт. Блок заводится ровно тогда, когда
-   * добор пройден целиком, — с этого места срез ждёт текста от LLM (E4).
+   * можно было бы принять готовый отчёт. Блок заводится, когда добор пройден
+   * целиком — кроме кризиса: вместо блока человек видит поддержку и контакты.
    *
-   * «Добор пройден» здесь означает «на все вопросы среза есть ответы». Порог
-   * генерации (E2-05) и уточняющие вопросы требуют разбора открытых ответов,
-   * которого до E4 нет; когда он появится, это условие заменяется вызовом
-   * `checkThreshold` — правило останется в движке, а не переедет сюда.
+   * Порог считает движок (`checkThreshold`). Не взят — блок заводится (чтобы
+   * состояние осталось `paid_pending`), отчёт не пишется, наружу уходят
+   * уточняющие из файла среза.
    */
   let slicePortion: PortionDto | null = null;
+  let sliceCrisis: CrisisNotice | null = null;
+  let clarifications: ClarificationsDto | null = null;
+
   for (const slice of paid) {
     const remaining = projectSlicePortion(slice, answered);
+    const sliceAnswers = toSliceAnswers(stored, slice);
+    const open = openAnswersOf(slice, sliceAnswers);
+    const crisis = detectCrisis(open.map((item) => item.text).join("\n"));
+
+    if (crisis.blocked) {
+      sliceCrisis ??= crisisNotice("paid_slice", crisis);
+      continue;
+    }
+
     if (remaining) {
       slicePortion ??= remaining;
       continue;
+    }
+
+    if (!SCORED_SLICES.includes(slice)) {
+      ensureBlock(db, profile.profileId, {
+        slot: `slice:${slice}`,
+        profileVersion: profile.version,
+        status: "pending",
+        origin: "llm",
+        purchased: true,
+        heading: sliceContent(slice)?.title ?? "",
+        paragraphs: [],
+        highlight: null,
+      });
+      continue;
+    }
+
+    const findings = findingsForSlice(slice, sliceAnswers);
+    const before = enginePage.internal.profile;
+    const after = applySlice(slice, before, sliceAnswers, findings);
+    const threshold = checkThreshold(slice, after, sliceAnswers, findings, before);
+
+    if (threshold.blocked) {
+      sliceCrisis ??= crisisNotice("paid_slice", blockedDecision(threshold.blocked));
+      continue;
+    }
+
+    if (!threshold.passed) {
+      clarifications ??= { slice, questions: threshold.followUps };
     }
 
     ensureBlock(db, profile.profileId, {
@@ -345,6 +450,10 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
       highlight: null,
     });
   }
+
+  const crisis = projectCrisis(sliceCrisis ?? view.crisis);
+  const ladderBlocked = detectCrisis(answers.L12 ?? "").blocked;
+  const hidePaid = Boolean(crisis && (sliceCrisis || ladderBlocked));
 
   const blocks = listBlocks(db, profile.profileId);
   const latestJobs = new Map<string, GenerationJobRecord>();
@@ -369,10 +478,13 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     hook: view.hook,
     map: projectMap(view.map),
     blocks: projectBlocks(view, blocks, latestJobs, disagreed),
-    doors: projectDoors(view),
-    offer: projectOffer(view),
+    doors: hidePaid ? withoutPaidDoors(projectDoors(view)) : projectDoors(view),
+    offer: hidePaid ? null : projectOffer(view),
     // Порция добора идёт первой: после оплаты человек видит вопросы.
-    nextPortion: slicePortion ?? projectPortion(view, answered),
+    // Кризис вопросов больше не задаёт: ответ уже дан, разбор не пишется.
+    nextPortion: sliceCrisis ? null : (slicePortion ?? projectPortion(view, answered)),
+    crisis,
+    clarifications: sliceCrisis ? null : clarifications,
     share: share ? { url: shareUrl(options.publicOrigin, share.token), createdAt: share.createdAt } : null,
     updatedAt: profile.updatedAt,
   };

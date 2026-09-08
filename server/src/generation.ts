@@ -12,20 +12,35 @@ import {
   costOf,
   contentVersion,
   envelope,
+  findingsForSlice,
   generateLadderFinal,
+  generatePaidSlice,
   GenerationError,
   hashGenerationInput,
+  hashSliceInput,
   loadLlmConfig,
+  openAnswersOf,
+  sliceTaskOf,
+  crisisGate,
   type GenerationProvider,
   type GenerationResult,
   type LlmConfig,
+  type SliceReason,
+  type SliceTask,
   type Step4Reason,
 } from "../llm/dist/index.js";
 import type { BlockSlot, GenerationDto } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
-import { detectCrisis, type LlmTask } from "./engine.js";
+import {
+  applySlice,
+  checkThreshold,
+  SCORED_SLICES,
+  sliceDelivered,
+  type Block,
+  type LlmTask,
+} from "./engine.js";
 import { log } from "./log.js";
-import { assemble } from "./page.js";
+import { assemble, toSliceAnswers } from "./page.js";
 import {
   deferJob,
   failJob,
@@ -37,8 +52,11 @@ import {
   findProfile,
   insertCall,
   insertJob,
+  listAnswers,
+  listBlocks,
   listDueJobs,
   markJobStarted,
+  paidSlices,
   profileCostKopecks,
   releaseActiveJob,
   saveBlockContent,
@@ -95,16 +113,11 @@ export interface GenerationContext {
 }
 
 /**
- * Место для E4-06. Кризис проверяется до INSERT в очередь: если вернуть
- * `skip`, провайдер не вызывается и задание не создаётся.
- *
- * Детектор `detectCrisis` уже доступен из движка. Саму проверку пишет E4-06;
- * здесь постановка всегда разрешена.
+ * Кризисный крючок очереди (E4-06). Детектор — движок, решение «ставить
+ * задание или нет» — слой LLM. Постановка читает тот же крючок: `skip`
+ * означает, что INSERT не делается и провайдер не вызывается.
  */
-export function crisisGate(_openAnswer: string): "enqueue" | "skip" {
-  void detectCrisis;
-  return "enqueue";
-}
+export { crisisGate };
 
 export const toGenerationDto = (job: GenerationJobRecord): GenerationDto => ({
   id: job.generationId,
@@ -183,6 +196,106 @@ export function enqueueStep4(
   return inserted.job;
 }
 
+function ladderShownBlocks(context: GenerationContext, profile: ProfileRecord): Block[] {
+  const assembled = assemble({ db: context.db, profile, publicOrigin: "" });
+  const lookup = assembled.internal.view.blocks.filter((block) => block.paragraphs.length);
+  const saved = listBlocks(context.db, profile.profileId).find(
+    (block) => block.slot === "step4" && block.status === "ready" && block.paragraphs.length,
+  );
+  if (!saved) return lookup;
+  return [
+    ...lookup,
+    {
+      step: 4,
+      heading: saved.heading,
+      paragraphs: saved.paragraphs,
+      highlight: saved.highlight,
+      source: "llm",
+    },
+  ];
+}
+
+function currentSliceTask(context: GenerationContext, profile: ProfileRecord, slice: string): SliceTask | null {
+  if (!SCORED_SLICES.includes(slice)) return null;
+  const assembled = assemble({ db: context.db, profile, publicOrigin: "" });
+  const answers = toSliceAnswers(listAnswers(context.db, profile.profileId), slice);
+  if (!sliceDelivered(slice, answers)) return null;
+  const findings = findingsForSlice(slice, answers);
+  const before = assembled.internal.internal.profile;
+  const after = applySlice(slice, before, answers, findings);
+  const threshold = checkThreshold(slice, after, answers, findings, before);
+  if (threshold.blocked || !threshold.passed) return null;
+  const open = openAnswersOf(slice, answers);
+  if (crisisGate(open.map((item) => item.text).join("\n")) === "skip") return null;
+  return sliceTaskOf(slice, before, answers, {
+    before,
+    findings,
+    shownBlocks: ladderShownBlocks(context, profile),
+  });
+}
+
+function putJob(
+  context: GenerationContext,
+  profile: ProfileRecord,
+  slot: BlockSlot,
+  inputHash: string,
+  options: { regenerate?: boolean; requestId?: string } = {},
+): GenerationJobRecord {
+  const version = contentVersion();
+  const regenerate = options.regenerate === true;
+
+  if (options.requestId) {
+    const existing = findJobByRequest(context.db, profile.profileId, options.requestId);
+    if (existing) return existing;
+  }
+
+  if (regenerate) {
+    releaseActiveJob(context.db, profile.profileId, slot, "superseded");
+  } else {
+    const active = findActiveJob(context.db, profile.profileId, slot);
+    if (active) return active;
+    const latest = findLatestJob(context.db, profile.profileId, slot);
+    if (latest && latest.inputHash === inputHash && latest.status !== "pending") return latest;
+  }
+
+  const inserted = insertJob(context.db, profile.profileId, {
+    slot,
+    inputHash,
+    contentVersion: version,
+    regenerated: regenerate,
+    requestId: options.requestId ?? null,
+  });
+
+  if (inserted.created) {
+    log("generation.enqueued", {
+      profileId: profile.profileId,
+      generationId: inserted.job.generationId,
+      slot,
+      regenerated: regenerate ? 1 : 0,
+    });
+  }
+
+  return inserted.job;
+}
+
+/**
+ * Ставит в очередь оплаченные срезы, у которых добор пройден, порог взят
+ * и кризисный крючок не режет. Порог не взят — задания нет: отчёт не пишется.
+ */
+export function enqueuePaidSlices(context: GenerationContext, profile: ProfileRecord): void {
+  const version = contentVersion();
+  const stored = listBlocks(context.db, profile.profileId);
+  for (const slice of paidSlices(context.db, profile.profileId)) {
+    const slot: BlockSlot = `slice:${slice}`;
+    // Купленный готовый блок не переписывается: повторная постановка не нужна.
+    if (stored.some((block) => block.slot === slot && block.status === "ready")) continue;
+    const task = currentSliceTask(context, profile, slice);
+    if (!task) continue;
+    if (crisisGate(task.openAnswers.map((item) => item.text).join("\n")) === "skip") continue;
+    putJob(context, profile, slot, hashSliceInput(task, version));
+  }
+}
+
 const running = new WeakSet<Db>();
 const stopped = new WeakSet<LlmRuntime>();
 const workers = new WeakMap<LlmRuntime, Promise<void>>();
@@ -229,10 +342,18 @@ export function resumeGenerations(context: GenerationContext): void {
 async function processDueJobs(context: GenerationContext): Promise<void> {
   if (stopped.has(context.llm)) return;
   const inflight = inflightOf(context.llm);
-  for (const job of listDueJobs(context.db)) {
+  const seen = new Set<string>();
+  for (;;) {
     if (stopped.has(context.llm)) return;
-    if (inflight.has(job.generationId)) continue;
-    await processJob(context, job.generationId);
+    const due = listDueJobs(context.db).filter(
+      (job) => !inflight.has(job.generationId) && !seen.has(job.generationId),
+    );
+    if (!due.length) return;
+    for (const job of due) {
+      if (stopped.has(context.llm)) return;
+      seen.add(job.generationId);
+      await processJob(context, job.generationId);
+    }
   }
 }
 
@@ -356,8 +477,10 @@ function flushCalls(context: GenerationContext, job: GenerationJobRecord, drafts
 }
 
 const failureOf = (
-  reason: Step4Reason,
-): "cost_limit" | "provider" | "output" | "hijack" | "validation" | "storyline" => {
+  reason: Step4Reason | SliceReason,
+): "cost_limit" | "provider" | "output" | "hijack" | "validation" | "storyline" | "crisis" | "threshold" => {
+  if (reason === "кризис") return "crisis";
+  if (reason === "порог") return "threshold";
   if (reason === "предел стоимости") return "cost_limit";
   if (reason === "провайдер") return "provider";
   if (reason === "машинный выход") return "output";
@@ -365,6 +488,18 @@ const failureOf = (
   if (reason === "сюжет") return "storyline";
   return "validation";
 };
+
+type JobOutcome =
+  | {
+      ok: true;
+      heading: string;
+      paragraphs: string[];
+      highlight: string | null;
+      storyline?: GenerationResultBody["storyline"];
+      costKopecks: number;
+      attempts: number;
+    }
+  | { ok: false; reason: Step4Reason | SliceReason; attempts: number; costKopecks: number };
 
 async function runJob(context: GenerationContext, generationId: string, signal: AbortSignal): Promise<void> {
   if (stopped.has(context.llm) || signal.aborted) return;
@@ -377,14 +512,29 @@ async function runJob(context: GenerationContext, generationId: string, signal: 
     return;
   }
 
-  const task = currentTask(context, profile);
-  if (!task) {
+  const version = contentVersion();
+  let inputHash: string;
+  const slice = listed.slot.startsWith("slice:") ? listed.slot.slice("slice:".length) : null;
+
+  if (listed.slot === "step4") {
+    const task = currentTask(context, profile);
+    if (!task) {
+      failJob(context.db, listed, "superseded");
+      return;
+    }
+    inputHash = hashGenerationInput(task, version);
+  } else if (slice) {
+    const task = currentSliceTask(context, profile, slice);
+    if (!task) {
+      failJob(context.db, listed, "superseded");
+      return;
+    }
+    inputHash = hashSliceInput(task, version);
+  } else {
     failJob(context.db, listed, "superseded");
     return;
   }
 
-  const version = contentVersion();
-  const inputHash = hashGenerationInput(task, version);
   if (inputHash !== listed.inputHash) {
     failJob(context.db, listed, "superseded");
     return;
@@ -418,16 +568,52 @@ async function runJob(context: GenerationContext, generationId: string, signal: 
   const drafts: CallDraft[] = [];
   const provider = journalingProvider(context.llm.provider, (draft) => drafts.push(draft));
   const spentKopecks = profileCostKopecks(context.db, listed.profileId);
-
-  const outcome = await generateLadderFinal({
-    task,
+  const runOptions = {
     provider,
     retry: context.llm.config.retry,
     cost: context.llm.config.cost,
     spentKopecks,
     ...(context.llm.sleep ? { sleep: context.llm.sleep } : {}),
     signal,
-  });
+  };
+
+  let outcome: JobOutcome;
+  if (listed.slot === "step4") {
+    const task = currentTask(context, profile);
+    if (!task) {
+      failJob(context.db, listed, "superseded");
+      return;
+    }
+    const generated = await generateLadderFinal({ task, ...runOptions });
+    outcome = generated.ok
+      ? {
+          ok: true,
+          heading: generated.block.heading,
+          paragraphs: generated.block.paragraphs,
+          highlight: generated.block.highlight,
+          storyline: generated.storyline,
+          costKopecks: generated.costKopecks,
+          attempts: generated.attempts,
+        }
+      : generated;
+  } else {
+    const task = currentSliceTask(context, profile, slice!);
+    if (!task) {
+      failJob(context.db, listed, "superseded");
+      return;
+    }
+    const generated = await generatePaidSlice({ task, ...runOptions });
+    outcome = generated.ok
+      ? {
+          ok: true,
+          heading: generated.heading,
+          paragraphs: generated.paragraphs,
+          highlight: generated.highlight,
+          costKopecks: generated.costKopecks,
+          attempts: generated.attempts,
+        }
+      : generated;
+  }
 
   // Остановка сервера: задание остаётся живым и доиграется после старта.
   // Прерванный вызов в журнал не пишем — токенов не потрачено.
@@ -438,12 +624,13 @@ async function runJob(context: GenerationContext, generationId: string, signal: 
 
     if (outcome.ok) {
       const result: GenerationResultBody = {
-        heading: outcome.block.heading,
-        paragraphs: outcome.block.paragraphs,
-        highlight: outcome.block.highlight,
-        storyline: outcome.storyline,
+        heading: outcome.heading,
+        paragraphs: outcome.paragraphs,
+        highlight: outcome.highlight,
+        ...(outcome.storyline ? { storyline: outcome.storyline } : {}),
       };
       applyResult(context, listed, result, true, profile.version);
+      if (listed.slot === "step4") enqueuePaidSlices(context, profile);
       log("generation.ready", {
         profileId: listed.profileId,
         generationId: listed.generationId,

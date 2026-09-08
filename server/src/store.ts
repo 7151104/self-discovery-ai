@@ -844,16 +844,17 @@ export type GenerationFailureCode =
   | "output"
   | "storyline"
   | "superseded"
-  | "crisis";
+  | "crisis"
+  | "threshold";
 
 export type CallOutcome = "ok" | "temporary" | "permanent" | "timeout" | "cached";
 
-/** Готовый результат задания: текст блока и сюжет координаты 15. */
+/** Готовый результат задания: текст блока и сюжет координаты 15, если он есть. */
 export interface GenerationResultBody {
   heading: string;
   paragraphs: string[];
   highlight: string | null;
-  storyline: { value: string; code: string; confidence: "low" | "medium" | "high" };
+  storyline?: { value: string; code: string; confidence: "low" | "medium" | "high" };
 }
 
 export interface GenerationJobRecord {

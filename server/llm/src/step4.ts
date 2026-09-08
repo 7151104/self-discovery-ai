@@ -13,6 +13,7 @@
  */
 
 import { ladderCapOf, volumeOf } from "./content.js";
+import { crisisOf } from "./crisis.js";
 import { rawContent, type Block, type Confidence, type LlmTask } from "./engine.js";
 import { detectHijack, type HijackSign } from "./isolation.js";
 import { parseModelOutput, describeProblem, type Statement, type Storyline } from "./output.js";
@@ -25,6 +26,7 @@ import type { GenerationProvider } from "./provider.js";
 
 /** Почему блок не собран. Одна причина — один вид отказа для сервера. */
 export type Step4Reason =
+  | "кризис"
   | "предел стоимости"
   | "провайдер"
   | "машинный выход"
@@ -76,7 +78,23 @@ function storylineProblems(storyline: Storyline): string[] {
 
 export async function generateLadderFinal(options: Step4Options): Promise<Step4Outcome> {
   const { task, provider } = options;
-  const prompt = buildStep4Prompt(task, options.nonce);
+
+  /**
+   * Детектор до провайдера (E4-06). Даже если очередь как-то поставила задание
+   * с кризисным текстом, вызова не будет: цена ошибки — вред, а не потеря денег.
+   */
+  const crisis = crisisOf([task.input.openAnswer]);
+  if (crisis.blocked) {
+    return {
+      ok: false,
+      reason: "кризис",
+      details: crisis.reason ? [crisis.reason, ...crisis.categories] : crisis.categories,
+      attempts: 0,
+      costKopecks: 0,
+    };
+  }
+
+  const prompt = buildStep4Prompt(task, options.nonce, crisis.avoid);
   const volume = volumeOf(LADDER_FINAL);
 
   const run = await runGeneration({
@@ -107,6 +125,7 @@ export async function generateLadderFinal(options: Step4Options): Promise<Step4O
   if (!parsed.ok) return fail("машинный выход", parsed.problems.map(describeProblem));
 
   const { text, statements, storyline } = parsed.output;
+  if (!storyline) return fail("сюжет", ["сюжет: поле обязательно для финала лестницы"]);
 
   const hijack: HijackSign[] = detectHijack(text, { nonce: prompt.nonce, openAnswer: task.input.openAnswer });
   if (hijack.length) return fail("перехват", hijack.map((sign) => `${sign.kind}: ${sign.detail}`));

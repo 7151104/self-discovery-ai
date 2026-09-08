@@ -12,8 +12,9 @@
 import { createHash } from "node:crypto";
 
 import { readRepoFile } from "./content.js";
+import { crisisOf } from "./crisis.js";
 import { escapeUserText } from "./isolation.js";
-import { buildStep4Prompt } from "./prompt.js";
+import { buildSlicePrompt, buildStep4Prompt, type SliceTask } from "./prompt.js";
 import type { LlmTask } from "./engine.js";
 
 /**
@@ -25,6 +26,9 @@ const CONTENT_FILES = [
   "content/forbidden.md",
   "content/scoring-rules.md",
   "docs/06-report-structure.md",
+  "content/crisis.md",
+  "prompts/full-report-assembler.md",
+  "prompts/paid-slice-templates.md",
 ] as const;
 
 /** Граница, которая не меняется от вызова к вызову: только для хеша, не для провайдера. */
@@ -42,7 +46,8 @@ export function contentVersion(): string {
  * экранированный открытый ответ — без одноразовой границы конверта.
  */
 export function stableGenerationInput(task: LlmTask, version: string = contentVersion()): string {
-  const prompt = buildStep4Prompt(task, STABLE_NONCE);
+  const avoid = crisisOf([task.input.openAnswer]).avoid;
+  const prompt = buildStep4Prompt(task, STABLE_NONCE, avoid);
   return [
     version,
     prompt.instruction,
@@ -57,4 +62,23 @@ export function stableGenerationInput(task: LlmTask, version: string = contentVe
 /** Ключ кэша: хеш стабильного входа. */
 export function hashGenerationInput(task: LlmTask, version: string = contentVersion()): string {
   return digest(stableGenerationInput(task, version));
+}
+
+export function stableSliceInput(task: SliceTask, version: string = contentVersion()): string {
+  const avoid = crisisOf(task.openAnswers.map((item) => item.text)).avoid;
+  const prompt = buildSlicePrompt(task, STABLE_NONCE, avoid);
+  return [
+    version,
+    task.slice,
+    prompt.instruction,
+    prompt.segments
+      .filter((segment) => segment.kind === "данные")
+      .map((segment) => `${segment.title}\n${segment.body}`)
+      .join("\n\n"),
+    task.openAnswers.map((item) => `${item.id}\n${escapeUserText(item.text)}`).join("\n"),
+  ].join("\n\0\n");
+}
+
+export function hashSliceInput(task: SliceTask, version: string = contentVersion()): string {
+  return digest(stableSliceInput(task, version));
 }

@@ -20,7 +20,9 @@
  * Отрезки вида `инструкция` обязаны быть одинаковы при любом открытом ответе.
  */
 
-import { rawContent, type Block, type LlmTask, type Profile, type TriggeredNode } from "./engine.js";
+import { assemblerPrompt, reportTypeOfSlice, sliceOverlay, volumeOf, type ReportType } from "./content.js";
+import { avoidInstruction } from "./crisis.js";
+import { rawContent, type Block, type LlmTask, type Profile, type SliceAnswers, type SliceTextFindings, type TriggeredNode } from "./engine.js";
 import { newNonce, wrapUserText } from "./isolation.js";
 import { outputContractText } from "./output.js";
 import { wordCount } from "./text.js";
@@ -107,18 +109,24 @@ const renderBlocks = (blocks: Block[]): string =>
  * машинный контракт ответа и изоляцию пользовательского текста. Ни одного правила
  * о том, что писать в отчёте, здесь нет.
  */
-export function buildStep4Prompt(task: LlmTask, nonce: string = newNonce()): AssembledPrompt {
+export function buildStep4Prompt(
+  task: LlmTask,
+  nonce: string = newNonce(),
+  avoid: string[] = [],
+): AssembledPrompt {
   const { profile, node, shownBlocks, openAnswer } = task.input;
   const knownCoordinates = Object.values(profile.coordinates)
     .filter((coordinate) => coordinate.sources.length > 0)
     .map((coordinate) => coordinate.id);
 
   const envelope = wrapUserText(openAnswer, nonce);
+  const avoidBody = avoidInstruction(avoid);
 
   const segments: PromptSegment[] = [
     { title: "ЗАДАНИЕ", kind: "инструкция", body: task.prompt },
     { title: "ФОРМА ОТВЕТА", kind: "инструкция", body: outputContractText(knownCoordinates) },
     { title: "ОБРАЩЕНИЕ С ДАННЫМИ", kind: "инструкция", body: DATA_RULES },
+    ...(avoidBody ? [{ title: "ТЕМЫ ВНЕ РАЗБОРА", kind: "инструкция" as const, body: avoidBody }] : []),
     { title: "ПРОФИЛЬ КООРДИНАТ", kind: "данные", body: renderProfile(profile) },
     { title: "ПОКАЗАННЫЙ УЗЕЛ", kind: "данные", body: renderNode(node) },
     { title: "ПОКАЗАННЫЕ БЛОКИ", kind: "данные", body: renderBlocks(shownBlocks) },
@@ -129,6 +137,10 @@ export function buildStep4Prompt(task: LlmTask, nonce: string = newNonce()): Ass
     },
   ];
 
+  return finishPrompt(segments, nonce, knownCoordinates);
+}
+
+function finishPrompt(segments: PromptSegment[], nonce: string, knownCoordinates: number[]): AssembledPrompt {
   const render = (kinds: SegmentKind[]): string =>
     segments
       .filter((segment) => kinds.includes(segment.kind))
@@ -159,3 +171,73 @@ export const outputTokenBudget = (maxWords: number): number => Math.ceil(maxWord
 
 /** Слов в открытом ответе: порог задания движок уже проверил, здесь — для журнала. */
 export const openAnswerWords = (task: LlmTask): number => wordCount(task.input.openAnswer);
+
+/** Задание среза: профиль после добора, ответы и открытые тексты. */
+export interface SliceTask {
+  slice: string;
+  profile: Profile;
+  /** Профиль до добора: порог сравнивает «было / стало». */
+  before: Profile;
+  answers: SliceAnswers;
+  findings: SliceTextFindings;
+  shownBlocks: Block[];
+  openAnswers: { id: string; text: string }[];
+}
+
+const renderAnswers = (answers: SliceAnswers): string => {
+  const rows = Object.entries(answers)
+    .filter(([, value]) => value !== undefined)
+    .map(([id, value]) => `${id}: ${Array.isArray(value) ? value.join(", ") : String(value)}`);
+  return rows.length ? rows.join("\n") : "ответов добора нет";
+};
+
+/**
+ * Промпт платного среза: ассемблер + надстройка из файлов, затем тот же
+ * машинный контракт и изоляция открытых ответов, что у ступени 4.
+ */
+export function buildSlicePrompt(task: SliceTask, nonce: string = newNonce(), avoid: string[] = []): AssembledPrompt {
+  const knownCoordinates = Object.values(task.profile.coordinates)
+    .filter((coordinate) => coordinate.sources.length > 0)
+    .map((coordinate) => coordinate.id);
+  const type = reportTypeOfSlice(task.slice);
+  const volume = volumeOf(type);
+  const heading = rawContent.slices.find((item) => item.id === task.slice)?.title ?? task.slice;
+  const assignment = [
+    assemblerPrompt(),
+    "",
+    `Тип отчёта: ${type}. Объём: ${volume.min}–${volume.max} слов. Заголовок блока: ${heading}.`,
+    "",
+    sliceOverlay(task.slice),
+  ].join("\n");
+  const avoidBody = avoidInstruction(avoid);
+  const openBodies = task.openAnswers.map((item) => {
+    const envelope = wrapUserText(item.text, nonce);
+    return { id: item.id, body: envelope.text };
+  });
+
+  const segments: PromptSegment[] = [
+    { title: "ЗАДАНИЕ", kind: "инструкция", body: assignment },
+    {
+      title: "ФОРМА ОТВЕТА",
+      kind: "инструкция",
+      body: outputContractText(knownCoordinates, { storyline: "optional" }),
+    },
+    { title: "ОБРАЩЕНИЕ С ДАННЫМИ", kind: "инструкция", body: DATA_RULES },
+    ...(avoidBody ? [{ title: "ТЕМЫ ВНЕ РАЗБОРА", kind: "инструкция" as const, body: avoidBody }] : []),
+    { title: "ПРОФИЛЬ КООРДИНАТ", kind: "данные", body: renderProfile(task.profile) },
+    { title: "ПОКАЗАННЫЕ БЛОКИ", kind: "данные", body: renderBlocks(task.shownBlocks) },
+    { title: "ОТВЕТЫ ДОБОРА", kind: "данные", body: renderAnswers(task.answers) },
+    ...openBodies.map((item) => ({
+      title: `ОТКРЫТЫЙ ОТВЕТ ${item.id}`,
+      kind: "пользовательский текст" as const,
+      body: item.body,
+    })),
+  ];
+
+  return finishPrompt(segments, nonce, knownCoordinates);
+}
+
+export const sliceHeading = (slice: string): string =>
+  rawContent.slices.find((item) => item.id === slice)?.title ?? slice;
+
+export const sliceReportType = (slice: string): ReportType => reportTypeOfSlice(slice);

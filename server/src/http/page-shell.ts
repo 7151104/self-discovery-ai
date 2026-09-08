@@ -70,6 +70,22 @@ ${highlight}
   const portion = page.nextPortion
     ? `<section data-portion="${escape(page.nextPortion.key)}"><p>${escape(page.nextPortion.lead)}</p></section>`
     : "";
+  const offer = page.offer
+    ? `<section data-offer="${escape(page.offer.slice)}"><p>${escape(page.offer.promise)}</p></section>`
+    : "";
+  const crisis = page.crisis
+    ? `<section data-crisis="${escape(page.crisis.place)}" data-publishable="${page.crisis.publishable ? "true" : "false"}">
+${page.crisis.texts.map((entry) => `<p data-crisis-text="${escape(entry.id)}">${escape(entry.text)}</p>`).join("\n")}
+${page.crisis.contacts
+  .map((contact) => `<p data-crisis-contact="${escape(contact.title)}">${escape(contact.title)}: ${escape(contact.line)}</p>`)
+  .join("\n")}
+</section>`
+    : "";
+  const clarifications = page.clarifications
+    ? `<section data-clarifications="${escape(page.clarifications.slice)}">
+${page.clarifications.questions.map((question) => `<p>${escape(question)}</p>`).join("\n")}
+</section>`
+    : "";
 
   const body = `<body>
 <header><h1 data-role="name">${escape(page.card.name)}</h1>${theme}</header>
@@ -77,8 +93,11 @@ ${hook}
 <ul data-role="map">
 ${bars}
 </ul>
+${crisis}
 ${blocks}
+${clarifications}
 ${portion}
+${offer}
 <ul data-role="route">
 ${doors}
 </ul>

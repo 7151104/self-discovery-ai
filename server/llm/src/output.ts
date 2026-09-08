@@ -45,7 +45,8 @@ export interface Storyline {
 export interface ModelOutput {
   text: string;
   statements: Statement[];
-  storyline: Storyline;
+  /** `null` — срез: сюжет координаты 15 пишет финал лестницы, не отчёт среза. */
+  storyline: Storyline | null;
 }
 
 /** Почему машинный выход отклонён. */
@@ -85,7 +86,21 @@ const FIELD = {
  * Описание контракта для промпта. Собирается из тех же имён полей, что и разбор:
  * второго списка имён в репозитории нет, поэтому промпт и разбор не разъезжаются.
  */
-export function outputContractText(coordinates: number[]): string {
+export function outputContractText(
+  coordinates: number[],
+  options: { storyline?: "required" | "optional" } = {},
+): string {
+  const storyline = options.storyline ?? "required";
+  const storylineLines =
+    storyline === "required"
+      ? [
+          `- «${FIELD.storyline}» — сюжет из открытого ответа для координаты 15:`,
+          `  · «${FIELD.value}» — формулировка сюжета одной строкой, не длиннее 120 знаков;`,
+          `  · «${FIELD.code}» — машинный код сюжета латиницей через подчёркивание, например solo_then_drop;`,
+          `  · «${FIELD.confidence}» — ${CONFIDENCES.join(" | ")}.`,
+        ]
+      : [`- «${FIELD.storyline}» — не заполнять: сюжет координаты 15 этому отчёту не нужен.`];
+
   return [
     `Ответ — один объект JSON и ничего кроме него. Ни пояснений, ни разметки, ни заголовка.`,
     ``,
@@ -95,10 +110,7 @@ export function outputContractText(coordinates: number[]): string {
     `  · «${FIELD.phrase}» — фраза дословно, как она стоит в тексте;`,
     `  · «${FIELD.kind}» — один из: ${KINDS.map((kind) => `«${kind}»`).join(", ")};`,
     `  · «${FIELD.coordinate}» — номер координаты, о которой фраза; у видов «цитата» и «неизвестное» — null.`,
-    `- «${FIELD.storyline}» — сюжет из открытого ответа для координаты 15:`,
-    `  · «${FIELD.value}» — формулировка сюжета одной строкой, не длиннее 120 знаков;`,
-    `  · «${FIELD.code}» — машинный код сюжета латиницей через подчёркивание, например solo_then_drop;`,
-    `  · «${FIELD.confidence}» — ${CONFIDENCES.join(" | ")}.`,
+    ...storylineLines,
     ``,
     `Вид фразы означает регистр речи:`,
     `- «утверждение» — только о координате с confidence high;`,
@@ -146,6 +158,10 @@ function parseStoryline(value: unknown, problems: OutputProblem[]): Storyline | 
 export interface ParseOptions {
   /** Координаты профиля, о которых модели разрешено говорить. */
   knownCoordinates: number[];
+  /** По умолчанию обязателен: финал лестницы без сюжета не закрывает координату 15. */
+  storyline?: "required" | "optional";
+  /** По умолчанию обязателен. У среза в тестах можно принять текст без разметки. */
+  statements?: "required" | "optional";
 }
 
 /**
@@ -173,10 +189,13 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
   const text = envelope[FIELD.text];
   if (typeof text !== "string" || !text.trim()) problems.push({ kind: "пустой текст", detail: FIELD.text });
 
+  const statementsRequired = options.statements ?? "required";
+  const storylineRequired = options.storyline ?? "required";
+
   const rawStatements = envelope[FIELD.statements];
   const statements: Statement[] = [];
   if (!Array.isArray(rawStatements) || !rawStatements.length) {
-    problems.push({ kind: "нет поля", detail: FIELD.statements });
+    if (statementsRequired === "required") problems.push({ kind: "нет поля", detail: FIELD.statements });
   } else {
     for (const [index, entry] of rawStatements.entries()) {
       if (!isRecord(entry)) {
@@ -218,7 +237,12 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
     }
   }
 
-  const storyline = parseStoryline(envelope[FIELD.storyline], problems);
+  const storyline =
+    envelope[FIELD.storyline] === undefined || envelope[FIELD.storyline] === null
+      ? null
+      : parseStoryline(envelope[FIELD.storyline], problems);
+  if (storylineRequired === "required" && !storyline && !problems.some((problem) => problem.kind === "сюжет" || problem.kind === "нет поля"))
+    problems.push({ kind: "нет поля", detail: FIELD.storyline });
 
   if (typeof text === "string" && statements.length) {
     for (const statement of statements) {
@@ -235,7 +259,8 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
     }
   }
 
-  if (problems.length || typeof text !== "string" || !storyline) return { ok: false, problems };
+  if (problems.length || typeof text !== "string") return { ok: false, problems };
+  if (storylineRequired === "required" && !storyline) return { ok: false, problems };
   return { ok: true, output: { text, statements, storyline } };
 }
 

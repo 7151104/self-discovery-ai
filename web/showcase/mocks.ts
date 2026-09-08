@@ -1,17 +1,19 @@
 /**
- * Моковые данные витрины.
+ * Моковые данные витрины: то, что пришло бы с сервера.
  *
- * Здесь и только здесь живут русские строки: компоненты текстов не знают,
- * они принимают их параметрами. Настоящие тексты придут из `content/`
- * реестром микрокопии (E5-03) — до него витрина показывает заглушки,
- * похожие по длине и тону на будущие.
+ * Строки интерфейса сюда не переписываются — они приходят из реестра
+ * микрокопии через `web/src/page-copy.ts`. Здесь остаётся только то, что на
+ * настоящей странице отдаёт сервер: карточка, крючок, блоки разбора, вопросы,
+ * подписи полос и дверей. Это тексты `content/step*.md` и `content/doors.md`,
+ * и в витрине они моковые.
  *
  * Подписи полос, полюсов и заголовки дверей взяты из `docs/11-ui-page-spec.md`,
  * чтобы витрина показывала настоящую длину строки, а не «Lorem ipsum».
  */
 
 import type { BlockDto, CardDto, DoorDto, MapBarDto, OfferDto } from "../src/contract.js";
-import type { Zone } from "../components/map.js";
+import { SUBMIT_FROM_WORDS } from "../components/open-field.js";
+import { blockTexts, mapTexts, offerTexts, portionTexts, routeTexts } from "../src/page-copy.js";
 
 export const card: CardDto = {
   name: "Кирилл",
@@ -23,21 +25,9 @@ export const card: CardDto = {
 
 export const hook = "Ты не бросаешь дела — ты останавливаешься за шаг до конца";
 
-export const zoneLabels: Record<Zone, string> = {
-  "far-low": "у левого края",
-  low: "ближе к левому краю",
-  "mid-low": "левее середины",
-  center: "посередине",
-  "mid-high": "правее середины",
-  high: "ближе к правому краю",
-  "far-high": "у правого края",
-};
-
-export const fillLabels: Record<MapBarDto["fill"], string> = {
-  empty: "пока закрыто",
-  approximate: "пока предположение",
-  precise: "видно точно",
-};
+/** Тексты карты приходят из реестра микрокопии, а не сочиняются витриной. */
+export const zoneLabel = mapTexts.zone;
+export const fillLabels = mapTexts.fill();
 
 const triggerOptions = [
   "когда меня не воспринимают всерьёз",
@@ -103,7 +93,7 @@ export const mapBars: MapBarDto[] = [
     fill: "empty",
     position: null,
     category: null,
-    hint: "Откроется, когда ответишь на вопросы про планы и решения",
+    hint: "Откроется на вопросах про планы и решения",
   },
   {
     id: "holding",
@@ -112,7 +102,7 @@ export const mapBars: MapBarDto[] = [
     fill: "empty",
     position: null,
     category: null,
-    hint: "Откроется, когда ответишь на вопросы про то, как тебя задевает",
+    hint: "Откроется на вопросах про то, как тебя задевает",
   },
 ];
 
@@ -139,12 +129,9 @@ export const block: BlockDto = {
   stale: false,
 };
 
-export const blockActions = [
-  { id: "disagree", label: "Не согласен с этим" },
-  { id: "share", label: "Поделиться" },
-];
+export const blockActions = blockTexts.actions();
 
-export const staleNote = "Обновилось после правки ответа";
+export const staleNote = blockTexts.updated();
 
 export const doors: DoorDto[] = [
   { id: "door-decisions", title: "Как ты принимаешь решения", state: "opens_with_answers", price: null, slice: null },
@@ -163,8 +150,11 @@ export const doorsWithOffer: DoorDto[] = doors.map((door) =>
 );
 
 export const doorNotes: Record<string, string> = {
-  "door-decisions": "Откроется после четырёх вопросов",
-  "door-work": "Открыт",
+  "door-decisions": routeTexts.tag("opens_with_answers"),
+  "door-work": routeTexts.tag("open"),
+  "door-finish": routeTexts.tag("paid"),
+  "door-close": routeTexts.tag("paid"),
+  "door-map": routeTexts.tag("paid"),
 };
 
 export const offer: OfferDto = {
@@ -177,12 +167,13 @@ export const offer: OfferDto = {
 };
 
 export const offerLabels = {
-  buy: "Открыть",
-  contents: "Что внутри: механизм · когда включился · три действия под тебя",
-  decline: "Не сейчас — страница останется",
+  buy: offerTexts.buy(offer.price),
+  contents: offerTexts.contents(offer.questionCount),
+  decline: offerTexts.decline(),
+  oneDoor: offerTexts.oneDoor(),
 };
 
-export const formatPrice = (price: number): string => `${price} ₽`;
+export const formatPrice = routeTexts.price;
 
 export const choiceQuestion = {
   group: "q-trigger",
@@ -211,15 +202,15 @@ export const scaleQuestion = {
 export const openQuestion = {
   id: "q-open",
   label: "Опиши случай, когда ты остановился у самого конца",
-  hint: "Пары предложений мало — опиши, как оно обычно идёт",
-  submitLabel: "Отправить",
-  counterText: (state: { words: number }): string => `${state.words} слов`,
+  hint: portionTexts.openTooShort(),
+  submitLabel: portionTexts.openSubmit(),
+  counterText: (state: { words: number }): string => portionTexts.counter(state, SUBMIT_FROM_WORDS),
   short: "Бросил проект перед сдачей",
   medium: "Бросил проект перед сдачей, хотя оставалось",
   long:
     "Собирал этот проект четыре месяца, а за неделю до сдачи перестал открывать файл и в итоге отдал сырым, хотя всё было почти готово",
 };
 
-/** Тексты, объясняющие витрину. Продуктом не являются. */
-export const mapLabel = "Карта: семь полос";
-export const routeLabel = "Маршрут";
+export const mapLabel = mapTexts.label();
+export const routeLabel = routeTexts.label();
+export const mapClosedNote = mapTexts.closedNote();

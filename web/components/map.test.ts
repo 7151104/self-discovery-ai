@@ -27,7 +27,7 @@ const map = (bars = mock.mapBars, animated?: ReadonlySet<string>) =>
   renderMap({
     bars,
     label: mock.mapLabel,
-    zoneLabels: mock.zoneLabels,
+    zoneLabel: mock.zoneLabel,
     fillLabels: mock.fillLabels,
     ...(animated === undefined ? {} : { animated }),
   });
@@ -92,7 +92,7 @@ test("позиция маркера сведена к именованной з�
 
 test("текстовая альтернатива описывает полосу словами, без чисел", () => {
   for (const bar of mock.mapBars) {
-    const description = barDescription(bar, { bars: mock.mapBars, label: mock.mapLabel, zoneLabels: mock.zoneLabels, fillLabels: mock.fillLabels });
+    const description = barDescription(bar, { bars: mock.mapBars, label: mock.mapLabel, zoneLabel: mock.zoneLabel, fillLabels: mock.fillLabels });
     assert.ok(description !== null, `${bar.id} без описания`);
     assert.equal(/\d|%/.test(description), false, `в описании число: ${description}`);
   }

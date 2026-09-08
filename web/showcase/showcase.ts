@@ -200,18 +200,18 @@ const mapSection = (): VNode =>
     "Семь полос, три состояния и категориальная полоса. Ни чисел, ни процентов, ни названий координат.",
     phone(
       "Заполняется: точные, предположительные и пустые полосы",
-      renderMap({ bars: mock.mapBars, label: mock.mapLabel, zoneLabels: mock.zoneLabels, fillLabels: mock.fillLabels }),
+      renderMap({ bars: mock.mapBars, label: mock.mapLabel, zoneLabel: mock.zoneLabel, fillLabels: mock.fillLabels }),
     ),
     phone(
       "Состояние s0: данных ещё нет, каждая полоса объясняет, чем откроется",
-      renderMap({ bars: mock.emptyMapBars, label: mock.mapLabel, zoneLabels: mock.zoneLabels, fillLabels: mock.fillLabels }),
+      renderMap({ bars: mock.emptyMapBars, label: mock.mapLabel, zoneLabel: mock.zoneLabel, fillLabels: mock.fillLabels }),
     ),
     phone(
       "Маркер уже приезжал: при повторном показе анимации нет",
       renderMap({
         bars: mock.mapBars,
         label: mock.mapLabel,
-        zoneLabels: mock.zoneLabels,
+        zoneLabel: mock.zoneLabel,
         fillLabels: mock.fillLabels,
         animated: new Set(mock.mapBars.map((bar) => bar.id)),
       }),
@@ -274,8 +274,8 @@ const paymentSection = (): VNode =>
     "payment",
     "Точка оплаты",
     "Одно предложение и ничего больше: ни таймеров, ни второй кнопки с другим продуктом.",
-    phone("Первый шаг оплаты", renderPaymentStep({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice })),
-    phone("Предложение внутри страницы", renderOffer({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice })),
+    phone("Первый шаг оплаты", renderPaymentStep({ offer: mock.offer, labels: mock.offerLabels })),
+    phone("Предложение внутри страницы", renderOffer({ offer: mock.offer, labels: mock.offerLabels })),
   );
 
 /**

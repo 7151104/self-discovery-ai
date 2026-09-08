@@ -41,10 +41,11 @@ export interface MapProps {
    */
   animated?: ReadonlySet<string>;
   /**
-   * Словесные названия зон для текстовой альтернативы: «ближе к левому полюсу»
-   * и подобные. Без них полоса остаётся без описания, но чисел всё равно нет.
+   * Словесное описание положения маркера для текстовой альтернативы. Зависит
+   * от полосы, потому что называется через её полюс: «перевес — импульсы».
+   * Без него полоса остаётся без описания, но чисел всё равно нет.
    */
-  zoneLabels?: Record<Zone, string>;
+  zoneLabel?: (bar: MapBarDto, zone: Zone) => string;
   /** Названия состояний полосы словами: точная, предположительная, пустая. */
   fillLabels?: Record<MapBarDto["fill"], string>;
 }
@@ -60,8 +61,8 @@ export function barDescription(bar: MapBarDto, props: MapProps): string | null {
   if (bar.category !== null) {
     return bar.category.selected === null ? `${bar.label}: ${fill}` : `${bar.label}: ${bar.category.selected}. ${fill}`;
   }
-  const zone = bar.position === null ? null : props.zoneLabels?.[zoneOf(bar.position)];
-  return zone === undefined || zone === null ? `${bar.label}: ${fill}` : `${bar.label}: ${zone}. ${fill}`;
+  const zone = bar.position === null ? null : (props.zoneLabel?.(bar, zoneOf(bar.position)) ?? null);
+  return zone === null ? `${bar.label}: ${fill}` : `${bar.label}: ${zone}. ${fill}`;
 }
 
 const renderPoles = (bar: MapBarDto): VNode | null =>

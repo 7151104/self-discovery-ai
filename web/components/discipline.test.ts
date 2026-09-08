@@ -90,16 +90,14 @@ const cases: { name: string; node: VNode }[] = [
     name: "точка оплаты",
     node: renderPaymentStep({
       offer: { slice: "s", title: "T", price: 590, promise: "P", questionCount: "10" },
-      labels: { buy: "B", contents: "C", decline: "D" },
-      formatPrice: (price) => String(price),
+      labels: { buy: "B", contents: "C", decline: "D", oneDoor: "O" },
     }),
   },
   {
     name: "предложение",
     node: renderOffer({
       offer: { slice: "s", title: "T", price: 590, promise: "P", questionCount: "10" },
-      labels: { buy: "B", contents: "C", decline: "D" },
-      formatPrice: (price) => String(price),
+      labels: { buy: "B", contents: "C", decline: "D", oneDoor: "O" },
     }),
   },
   { name: "шапка", node: renderHead({ name: "N", season: null, theme: "T", metaphor: "M", cta: "C" }) },

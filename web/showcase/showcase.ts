@@ -11,16 +11,19 @@
  * для визуальных регрессий E11-04.
  */
 
+import type { QuestionDto } from "../src/contract.js";
 import { h, mount, type Child, type VNode } from "../src/dom.js";
 import { TOKEN_GROUPS } from "../tokens/tokens.js";
 import { renderBlock, blockFromDto } from "../components/block.js";
 import { renderDoor, doorVisual, renderRoute, type DoorVisual } from "../components/door.js";
 import { renderMap } from "../components/map.js";
 import { renderOffer, renderPaymentStep } from "../components/offer.js";
-import { renderOpenField } from "../components/open-field.js";
+import { renderOpenField, SUBMIT_FROM_WORDS } from "../components/open-field.js";
 import { renderOptions } from "../components/option.js";
 import { renderHead, renderHook } from "../components/page-head.js";
+import { renderPortion, type PortionLabels } from "../components/portion.js";
 import { renderScale } from "../components/scale.js";
+import { portionTexts } from "../src/page-copy.js";
 import * as mock from "./mocks.js";
 
 const section = (id: string, title: string, note: string, ...items: Child[]): VNode =>
@@ -278,6 +281,80 @@ const paymentSection = (): VNode =>
     phone("Предложение внутри страницы", renderOffer({ offer: mock.offer, labels: mock.offerLabels })),
   );
 
+const portionCard = (index: number, total: number, question: QuestionDto, value?: string | null): VNode => {
+  const labels: PortionLabels = {
+    lead: mock.portionLead,
+    progress: portionTexts.progress(index, total),
+    back: mock.portionLabels.back,
+    scaleMarks: mock.portionLabels.scaleMarks,
+    scaleHint: mock.portionLabels.scaleHint,
+    openHint: mock.portionLabels.openHint,
+    openSubmit: mock.portionLabels.openSubmit,
+    counterText: (state) => portionTexts.counter(state, SUBMIT_FROM_WORDS),
+  };
+  return renderPortion({
+    id: `showcase-${question.kind}`,
+    question,
+    index,
+    total,
+    labels,
+    value: value ?? null,
+  });
+};
+
+const portionSection = (): VNode =>
+  section(
+    "portion",
+    "Порция вопросов",
+    "Карточка внизу заполненной части: один вопрос, прогресс внутри порции, общее число вопросов не заявляется.",
+    phone(
+      "Выбор: первый вопрос, кнопки «дальше» нет",
+      portionCard(0, 4, {
+        id: "Q1",
+        kind: "выбор",
+        text: mock.choiceQuestion.label,
+        options: mock.choiceQuestion.options.map((option) => ({ key: option.value, text: option.text })),
+        scale: null,
+      }),
+    ),
+    phone(
+      "Выбор: второй вопрос, есть «назад»",
+      portionCard(1, 4, {
+        id: "Q1",
+        kind: "выбор",
+        text: mock.choiceQuestion.label,
+        options: mock.choiceQuestion.options.map((option) => ({ key: option.value, text: option.text })),
+        scale: null,
+      }),
+    ),
+    phone(
+      "Шкала: пять отметок, подписи полюсов, без чисел",
+      portionCard(1, 4, {
+        id: "Q2",
+        kind: "шкала",
+        text: mock.scaleQuestion.label,
+        options: [],
+        scale: mock.scaleQuestion.poles,
+      }),
+    ),
+    phone("Открытый: пусто, кнопка выключена", portionCard(0, 1, {
+      id: "L12",
+      kind: "открытый",
+      text: mock.openQuestion.label,
+      options: [],
+      scale: null,
+    }, "")),
+    phone("Открытый: от пятнадцати слов кнопка включается", portionCard(0, 1, {
+      id: "L12",
+      kind: "открытый",
+      text: mock.openQuestion.label,
+      options: [],
+      scale: null,
+    }, mock.openQuestion.long)),
+    phone("Число: две величины, поля подписаны", portionCard(2, 10, mock.numberQuestion)),
+    phone("Число: обе величины введены", portionCard(2, 10, mock.numberQuestion, "4,1")),
+  );
+
 /**
  * Разделы витрины. Отдельный раздел открывается как `?section=map` — этим же
  * снимаются картинки для визуальных регрессий E11-04, по разделу за снимок.
@@ -290,6 +367,7 @@ export const SECTIONS = [
   mapSection,
   doorSection,
   paymentSection,
+  portionSection,
 ];
 
 export function renderShowcase(only?: string | null): VNode {

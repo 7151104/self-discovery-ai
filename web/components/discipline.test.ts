@@ -18,7 +18,9 @@ import { renderOffer, renderPaymentStep } from "./offer.js";
 import { renderOpenField } from "./open-field.js";
 import { renderOption, renderOptions } from "./option.js";
 import { renderHead, renderHook } from "./page-head.js";
+import { renderPortion } from "./portion.js";
 import { renderScale } from "./scale.js";
+import { renderWait } from "./wait.js";
 import { renderToString, type VNode } from "../src/dom.js";
 import { componentFiles } from "../src/test-support.js";
 import { webRoot } from "../src/paths.js";
@@ -102,6 +104,54 @@ const cases: { name: string; node: VNode }[] = [
   },
   { name: "шапка", node: renderHead({ name: "N", season: null, theme: "T", metaphor: "M", cta: "C" }) },
   { name: "крючок", node: renderHook("H") },
+  {
+    name: "порция выбора",
+    node: renderPortion({
+      id: "step:1",
+      question: { id: "Q1", kind: "выбор", text: "Q", options: [{ key: "A", text: "T" }], scale: null },
+      index: 1,
+      total: 3,
+      labels: {
+        lead: "L",
+        progress: "P",
+        back: "B",
+        scaleMarks: ["a", "b", "c", "d", "e"],
+        scaleHint: "H",
+        openHint: "H",
+        openSubmit: "S",
+        counterText: (state) => `w ${state.words}`,
+      },
+    }),
+  },
+  {
+    name: "порция числа",
+    node: renderPortion({
+      id: "slice:s",
+      question: {
+        id: "S5",
+        kind: "число",
+        text: "Q",
+        options: [
+          { key: "a", text: "A" },
+          { key: "b", text: "B" },
+        ],
+        scale: null,
+      },
+      index: 0,
+      total: 1,
+      labels: {
+        lead: "L",
+        progress: "P",
+        back: null,
+        scaleMarks: ["a", "b", "c", "d", "e"],
+        scaleHint: "H",
+        openHint: "H",
+        openSubmit: "S",
+        counterText: (state) => `w ${state.words}`,
+      },
+    }),
+  },
+  { name: "ожидание", node: renderWait({ title: "T", topics: "X", longNote: "N" }) },
 ];
 
 for (const item of cases) {

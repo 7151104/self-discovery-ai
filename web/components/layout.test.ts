@@ -148,7 +148,7 @@ test("компоненты со скрытой радиокнопкой рису
 
 test("у каждого нажимаемого элемента есть состояние наведения", () => {
   const css = componentFiles().map((name) => componentCss(name)).join("\n");
-  for (const name of ["option", "scale__mark", "field__submit", "block__action", "door__face", "offer__buy", "offer__decline", "summary"]) {
+  for (const name of ["option", "scale__mark", "field__submit", "block__action", "door__face", "offer__buy", "offer__decline", "portion__back", "portion__number-input", "summary"]) {
     const rule = new RegExp(`\\.?${name}[^{]*:hover`);
     assert.ok(rule.test(css), `${name}: нет состояния наведения`);
   }

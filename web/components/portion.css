@@ -50,6 +50,54 @@
   transform: scale(1.4);
 }
 
+.portion__question {
+  max-width: var(--measure-block);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.portion__choice,
+.portion__number {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portion__number-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portion__number-label {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.portion__number-input {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  width: 100%;
+  padding: var(--space-3);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  transition: border-color var(--duration-fast) ease;
+}
+
+.portion__number-input:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
 .portion__back {
   min-height: var(--size-target);
   min-width: var(--size-target);
@@ -67,5 +115,9 @@
   .portion__back:hover {
     border-color: var(--color-line-strong);
     color: var(--color-text);
+  }
+
+  .portion__number-input:hover:not(:disabled) {
+    border-color: var(--color-line-strong);
   }
 }

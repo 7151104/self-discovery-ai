@@ -17,10 +17,10 @@ const markup = (only?: string): string => renderToString(renderShowcase(only));
 
 test("разделы витрины на месте", () => {
   const page = markup();
-  for (const id of ["tokens", "typography", "input", "block", "map", "door", "payment"]) {
+  for (const id of ["tokens", "typography", "input", "block", "map", "door", "payment", "portion"]) {
     assert.ok(page.includes(`data-section="${id}"`), `нет раздела ${id}`);
   }
-  assert.equal(SECTIONS.length, 7);
+  assert.equal(SECTIONS.length, 8);
 });
 
 test("раздел открывается отдельно: снимок на раздел для E11-04", () => {
@@ -77,4 +77,13 @@ test("во всей витрине цена печатается только т
   const page = markup();
   const prices = [...page.matchAll(/590/g)].length;
   assert.equal(prices, 4, "цена появляется в пяти состояниях двери, в двух маршрутах и на экране оплаты");
+});
+
+test("порция показана всеми четырьмя типами вопросов", () => {
+  const page = markup("portion");
+  for (const kind of ["choice", "scale", "open", "number"]) {
+    assert.ok(page.includes(`data-kind="${kind}"`), `нет типа ${kind}`);
+  }
+  assert.ok(page.includes("portion__back"), "нет кнопки «назад» на втором вопросе");
+  assert.equal(page.includes("из 12"), false, "общее число вопросов лестницы просочилось в порцию");
 });

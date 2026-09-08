@@ -9,16 +9,26 @@
  *   — прогресс только внутри порции; общее число вопросов не заявляется,
  *     потому что лестница не тест;
  *   — у типа «выбор» кнопки «дальше» нет: выбор и есть переход;
- *   — «назад» доступно везде, кроме первого вопроса порции.
+ *   — «назад» доступно везде, кроме первого вопроса порции;
+ *   — тип «число» бывает с одной величиной и с двумя: подписи полей
+ *     приходят в `options` вопроса, пока контракт не несёт их отдельно.
  *
  * Тексты приходят параметрами, как и у остальных компонентов.
  */
 
 import { h, type Handler, type VNode } from "../src/dom.js";
-import type { QuestionDto } from "../src/contract.js";
+import type { QuestionDto, QuestionKind } from "../src/contract.js";
 import { renderOpenField, type OpenFieldState } from "./open-field.js";
 import { renderOptions } from "./option.js";
 import { renderScale } from "./scale.js";
+
+/** Машинный ключ типа для атрибута: в разметке не кириллица. */
+export const PORTION_KIND: Record<QuestionKind, string> = {
+  выбор: "choice",
+  шкала: "scale",
+  открытый: "open",
+  число: "number",
+};
 
 export interface PortionLabels {
   /** Подводка порции. Приходит из контента вместе с самой порцией. */
@@ -69,6 +79,53 @@ const scaleValue = (value: PortionProps["value"]): 1 | 2 | 3 | 4 | 5 | undefined
   return mark === 1 || mark === 2 || mark === 3 || mark === 4 || mark === 5 ? mark : undefined;
 };
 
+/**
+ * Поля числового вопроса. Две величины — два поля; подписи берутся из
+ * `options`, если сервер их прислал, иначе одно поле с текстом вопроса.
+ */
+export function numberFields(question: QuestionDto): { key: string; label: string }[] {
+  if (question.options.length > 0) {
+    return question.options.map((option) => ({ key: option.key, label: option.text }));
+  }
+  return [{ key: question.id, label: question.text }];
+}
+
+/** Ответ типа «число»: одно значение или несколько через запятую, как на сервере. */
+const numberValues = (value: PortionProps["value"], count: number): string[] => {
+  const parts = (value ?? "").split(",").map((part) => part.trim());
+  return Array.from({ length: count }, (_, index) => parts[index] ?? "");
+};
+
+function renderNumber(props: PortionProps): VNode {
+  const fields = numberFields(props.question);
+  const values = numberValues(props.value, fields.length);
+  const disabled = props.disabled === true;
+
+  return h(
+    "div",
+    { class: "portion__number", role: "group", "aria-label": props.question.text },
+    h("p", { class: "portion__question" }, props.question.text),
+    fields.map((field, index) => {
+      const id = `${props.question.id}-${field.key}`;
+      return h(
+        "label",
+        { class: "portion__number-field", for: id },
+        h("span", { class: "portion__number-label" }, field.label),
+        h("input", {
+          class: "portion__number-input",
+          type: "text",
+          inputmode: "numeric",
+          id,
+          name: id,
+          value: values[index],
+          disabled,
+          onInput: props.onAnswer,
+        }),
+      );
+    }),
+  );
+}
+
 function renderQuestion(props: PortionProps): VNode {
   const { question, labels } = props;
 
@@ -99,20 +156,35 @@ function renderQuestion(props: PortionProps): VNode {
     });
   }
 
-  return renderOptions({
-    group: question.id,
-    label: question.text,
-    options: question.options.map((option) => ({ value: option.key, text: option.text })),
-    selected: props.value ?? null,
-    disabled: props.disabled === true,
-    onSelect: props.onAnswer,
-  });
+  if (question.kind === "число") {
+    return renderNumber(props);
+  }
+
+  return h(
+    "div",
+    { class: "portion__choice" },
+    h("p", { class: "portion__question" }, question.text),
+    renderOptions({
+      group: question.id,
+      label: question.text,
+      options: question.options.map((option) => ({ value: option.key, text: option.text })),
+      selected: props.value ?? null,
+      disabled: props.disabled === true,
+      onSelect: props.onAnswer,
+    }),
+  );
 }
 
 export function renderPortion(props: PortionProps): VNode {
   return h(
     "section",
-    { class: "portion", "data-portion": props.id, "data-kind": props.question.kind === "открытый" ? "open" : "closed" },
+    {
+      class: "portion",
+      "data-portion": props.id,
+      "data-kind": PORTION_KIND[props.question.kind],
+      "data-index": String(props.index),
+      "data-total": String(props.total),
+    },
     h("p", { class: "portion__lead" }, props.labels.lead),
     renderProgress(props),
     renderQuestion(props),

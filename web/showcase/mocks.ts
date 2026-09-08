@@ -219,3 +219,37 @@ export const openQuestion = {
 export const mapLabel = mapTexts.label();
 export const routeLabel = routeTexts.label();
 export const mapClosedNote = mapTexts.closedNote();
+
+/** Подводка порции: обещание конкретного результата, не «ещё вопросы». */
+export const portionLead = "Ещё четыре вопроса и покажу, где ты сам себе мешаешь";
+
+export const portionLabels = {
+  back: portionTexts.back(),
+  scaleHint: portionTexts.scaleHint(),
+  scaleMarks: [
+    portionTexts.scaleMark(1),
+    portionTexts.scaleMark(2),
+    portionTexts.scaleMark(3),
+    portionTexts.scaleMark(4),
+    portionTexts.scaleMark(5),
+  ] as [string, string, string, string, string],
+  openHint: portionTexts.openTooShort(),
+  openSubmit: portionTexts.openSubmit(),
+  counterText: (state: { words: number }): string => portionTexts.counter(state, SUBMIT_FROM_WORDS),
+};
+
+/**
+ * Числовой вопрос добора: две величины сразу. Подписи полей в контракте
+ * отдельного места не имеют — витрина кладёт их в `options`. Это мок,
+ * не решение сервера: сервер пока отдаёт пустой список.
+ */
+export const numberQuestion = {
+  id: "S5",
+  kind: "число" as const,
+  text: "Сколько раз за последний год ты начинал своё дело и сколько из них дошло до чужих глаз?",
+  options: [
+    { key: "started", text: "начинал" },
+    { key: "finished", text: "дошло до чужих глаз" },
+  ],
+  scale: null,
+};

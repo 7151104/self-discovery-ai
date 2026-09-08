@@ -54,7 +54,7 @@ test("resolvePublicFile не выпускает за корень dist", () => {
     "/web/%2e%2e/%2e%2e/package.json",
     "/web/src/%2e%2e/%2e%2e/package.json",
     "/web/..%2fpackage.json",
-    "/web/src/app.js%2f..%2f..%2fpackage.json",
+    "/web/src/app.js%2f..%2f..%2f..%2f..%2fpackage.json",
     "/web/src/app.js%00.css",
   ];
   for (const path of escapes) {
@@ -171,7 +171,7 @@ test("попытка обхода каталога web/dist не отдаёт ч
     "/web/src/%2e%2e/%2e%2e/package.json",
     "/web/..%2fpackage.json",
     "/web/src/app.js/../../../package.json",
-    "/web/src/app.js%2f..%2f..%2fpackage.json",
+    "/web/src/app.js%2f..%2f..%2f..%2f..%2fpackage.json",
   ];
 
   for (const path of attempts) {

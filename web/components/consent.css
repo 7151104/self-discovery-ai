@@ -1,0 +1,64 @@
+/*
+ * Отметка согласия в карточке входа. Чекбокс не предзажат;
+ * цель — вся строка отметки, не меньше --size-target.
+ */
+
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.consent__title {
+  padding: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.consent__body {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.consent__mark {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--size-target);
+  cursor: pointer;
+}
+
+.consent__input {
+  flex: none;
+  width: var(--size-target);
+  height: var(--size-target);
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.consent__text {
+  padding-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.consent__refuse {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.consent__link {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}

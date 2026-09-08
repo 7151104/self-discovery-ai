@@ -9,7 +9,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { visibleText } from "./dom.js";
+import { findAll, visibleText } from "./dom.js";
 import { byClass, focusable, componentLookup, tokenPixels } from "./test-support.js";
 import { declaredPx } from "./css.js";
 import { BASE_VIEWPORT_HEIGHT_PX } from "../tokens/tokens.js";
@@ -89,7 +89,14 @@ test("лестница: вход без даты, порции, карта 3→5
   const intro = visibleText(app.tree());
   assert.ok(intro.includes(introTexts.dateHint()));
   assert.ok(intro.includes("не делается ни одного вывода о характере"));
+  assert.ok(byClass(app.tree(), "consent").length === 1);
+  assert.equal(byClass(app.tree(), "consent")[0]?.attrs["data-consent"], "off");
+  assert.equal(findAll(app.tree(), "dialog").length, 0);
 
+  await app.intro("Аня", null);
+  assert.equal(app.session().screen, "intro", "без отметки профиль не создаётся");
+
+  app.consent(true);
   await app.intro("Аня", null);
   const s0 = app.session().page;
   assert.ok(s0);
@@ -98,7 +105,8 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.equal(byClass(app.tree(), "head__theme").length, 0);
   assert.equal(filledBars(s0), 0);
   assert.ok(byClass(app.tree(), "route").length === 1);
-  assert.equal(app.tree().attrs["data-profiled"], "false");
+  const pageNode = () => byClass(app.tree(), "page")[0];
+  assert.equal(pageNode()?.attrs["data-profiled"], "false");
   assert.ok(visibleText(app.tree()).includes(s0.nextPortion?.questions[0]?.text ?? "NO"));
 
   const firstTree = app.tree();
@@ -146,7 +154,7 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.ok(s3);
   assert.equal(s3.state, "s3");
   assert.equal(filledBars(s3), 7);
-  assert.equal(app.tree().attrs["data-profiled"], "true");
+  assert.equal(pageNode()?.attrs["data-profiled"], "true");
   if (s1.hook && s3.hook) assert.notEqual(s3.hook, s1.hook);
   const blocks = byClass(app.tree(), "block").map((item) => String(item.attrs["data-block"]));
   assert.deepEqual(
@@ -155,6 +163,10 @@ test("лестница: вход без даты, порции, карта 3→5
   );
   assert.ok(byClass(app.tree(), "door").some((door) => door.attrs["data-state"] === "opens_with_answers"));
   assert.ok(byClass(app.tree(), "door").some((door) => door.attrs["data-state"] === "locked_profiled"));
+  assert.ok(visibleText(app.tree()).includes("не медицинская и не психологическая помощь"));
+  const hrefs = findAll(app.tree(), "a").map((item) => String(item.attrs["href"]));
+  assert.ok(hrefs.includes("/legal/privacy"));
+  assert.ok(hrefs.includes("/legal/offer"));
 });
 
 test("с датой рождения шапка показывает тему периода", async (t) => {
@@ -163,6 +175,7 @@ test("с датой рождения шапка показывает тему п
   const host = hostOf(server.origin, "/");
   const app = createPageApp(host);
   await app.start();
+  app.consent(true);
   await app.intro("Кирилл", "1990-05-05");
   const page = app.session().page;
   assert.ok(page);

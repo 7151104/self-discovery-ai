@@ -7,7 +7,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { API_CREATE_PROFILE, API_PAGE_STATE, API_SUBMIT_PORTION, fillPath, PAGE_PATH, parseRoute } from "./route.js";
+import { API_CREATE_PROFILE, API_PAGE_STATE, API_SUBMIT_PORTION, fillPath, LEGAL_PATHS, PAGE_PATH, parseRoute } from "./route.js";
 import { repoRoot } from "./paths.js";
 
 const contract = (await import(pathToFileURL(join(repoRoot, "server/dist/contract/index.js")).href)) as typeof import("../../server/dist/contract/index.js");
@@ -17,6 +17,7 @@ test("шаблоны адресов совпадают с контрактом",
   assert.equal(API_PAGE_STATE, contract.API.pageState.path);
   assert.equal(API_CREATE_PROFILE, contract.API.createProfile.path);
   assert.equal(API_SUBMIT_PORTION, contract.API.submitPortion.path);
+  assert.deepEqual(LEGAL_PATHS, contract.LEGAL_PATHS);
 });
 
 test("подстановка параметров совпадает с buildPath контракта", () => {

@@ -17,6 +17,7 @@ import {
   routeTexts,
   waitTexts,
 } from "./page-copy.js";
+import { offerLegalLinks } from "./legal-copy.js";
 import type { PageViewLabels } from "./page.js";
 
 export function pageLabels(page: PageStateDto): PageViewLabels {
@@ -41,6 +42,8 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
       contents: offerTexts.contentsLabel(),
       decline: offerTexts.decline(),
       oneDoor: offerTexts.oneDoor(),
+      legalLead: offerTexts.legal(),
+      legalLinks: offerLegalLinks(),
     },
     portion: {
       back: portionTexts.back(),

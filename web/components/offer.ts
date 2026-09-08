@@ -24,6 +24,9 @@ export interface OfferLabels {
   decline: string;
   /** Почему цена одна: остальные двери на этом шаге без цен. */
   oneDoor?: string | null;
+  /** Согласие с офертой: мелкий текст у кнопки. */
+  legalLead?: string | null;
+  legalLinks?: { label: string; href: string }[];
 }
 
 export interface OfferProps {
@@ -47,6 +50,17 @@ export function renderOffer(props: OfferProps): VNode {
     h("p", { class: "offer__contents" }, props.labels.contents),
     h("button", { class: "offer__decline", type: "button", onClick: props.onDecline }, props.labels.decline),
     props.labels.oneDoor ? h("p", { class: "offer__one-door" }, props.labels.oneDoor) : null,
+    props.labels.legalLead
+      ? h(
+          "p",
+          { class: "offer__legal" },
+          props.labels.legalLead,
+          ...(props.labels.legalLinks ?? []).flatMap((link, index) => [
+            index === 0 ? " " : " · ",
+            h("a", { class: "offer__legal-link", href: link.href }, link.label),
+          ]),
+        )
+      : null,
   );
 }
 

@@ -10,6 +10,14 @@ export const API_PAGE_STATE = "/api/p/:profileId";
 export const API_CREATE_PROFILE = "/api/profiles";
 export const API_SUBMIT_PORTION = "/api/p/:profileId/portions";
 
+/** Постоянные адреса документов: копия `LEGAL_PATHS` контракта. */
+export const LEGAL_PATHS = {
+  privacy: "/legal/privacy",
+  consent: "/legal/consent",
+  offer: "/legal/offer",
+  disclaimers: "/legal/disclaimers",
+} as const;
+
 export type Route =
   | { kind: "page"; profileId: string }
   | { kind: "intro" }

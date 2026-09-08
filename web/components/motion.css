@@ -1,0 +1,68 @@
+/*
+ * Слой движения (E6-09).
+ *
+ * Движения на странице ровно столько, сколько нужно, чтобы человек заметил:
+ * страница выросла. Появление блока, приезд маркера карты (map.css) и
+ * подсветка паузы «собираю» (wait.css) — всё.
+ *
+ * Файл идёт последним в собранной таблице стилей, потому что заканчивается
+ * выключателем: при `prefers-reduced-motion: reduce` переходы гасятся
+ * целиком, а не замедляются. Ноль берётся токеном --duration-instant, а не
+ * литералом: длительности живут в одной шкале, включая нулевую.
+ */
+
+@keyframes block-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-3));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Блок проявляется один раз: показанный однажды приходит с data-enter="off". */
+.block[data-enter="on"],
+.wait[data-enter="on"] {
+  animation-name: block-enter;
+  animation-duration: var(--duration-base);
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+  animation-fill-mode: both;
+}
+
+.block[data-enter="off"],
+.wait[data-enter="off"] {
+  animation-name: none;
+}
+
+/*
+ * Прокрутка к новому блоку. Плавность объявлена стилем, а не считается
+ * скриптом: скрипту остаётся сказать, к чему прокручивать.
+ */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Снижение движения ─────────────────────────────────────────────────────
+   Выключено всё: и то, что объявлено здесь, и то, что появится позже.
+   Значения состояний остаются конечными, поэтому страница не «замирает
+   в середине перехода», а сразу оказывается в итоговом виде. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: var(--duration-instant) !important;
+    animation-delay: var(--duration-instant) !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--duration-instant) !important;
+    transition-delay: var(--duration-instant) !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}

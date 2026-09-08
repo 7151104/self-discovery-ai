@@ -239,6 +239,7 @@ export interface DurationToken {
  * (`docs/12-target-state.md`, 5.5).
  */
 export const DURATIONS: DurationToken[] = [
+  { name: "duration-instant", ms: 0, purpose: "снижение движения: перехода нет вовсе" },
   { name: "duration-fast", ms: 120, purpose: "фокус, наведение, нажатие" },
   { name: "duration-base", ms: 240, purpose: "появление блока и смена состояния двери" },
   { name: "duration-marker", ms: 480, purpose: "приезд маркера карты из центра — один раз" },
@@ -246,6 +247,18 @@ export const DURATIONS: DurationToken[] = [
 
 /** Приёмка E6-07: маркер едет 400–600 мс. */
 export const MARKER_DURATION_RANGE = { min: 400, max: 600 } as const;
+
+/** Приёмка E6-09: ни одна анимация на пути прохождения не длиннее 600 мс. */
+export const MAX_DURATION_MS = 600;
+
+/**
+ * Пауза «собираю» между последним ответом порции и новым блоком
+ * (`docs/11-ui-page-spec.md`: 600–900 мс). Это не анимация, а задержка показа:
+ * мгновенный ответ обесценивает результат, длинная имитация раздражает.
+ * Ввод паузу не ждёт — она сокращается ответом (`web/src/motion.ts`).
+ */
+export const COLLECTING_PAUSE_MS = 700;
+export const COLLECTING_PAUSE_RANGE = { min: 600, max: 900 } as const;
 
 export interface BorderToken {
   name: string;

@@ -15,6 +15,9 @@
  * один абзац не может быть длиннее всего блока. Нижняя граница 80 слов — на
  * собранный блок из трёх абзацев, её здесь не проверяем: линтер видит абзацы
  * по отдельности.
+ *
+ * Строка «Объём отчёта» в шапке `content/slices/*.md` сверяется с диапазоном
+ * машинного типа этого среза в той же таблице: расхождение — отказ.
  */
 
 import { readFileSync } from "node:fs";
@@ -113,6 +116,153 @@ export function lookupVolume(): WordRange {
   }
   lookupVolumeCache = { min, max };
   return lookupVolumeCache;
+}
+
+let reportVolumeCache: Map<string, WordRange> | null = null;
+
+/**
+ * Объёмы отчётов по машинному типу из таблицы `docs/06`. Чисел в коде нет:
+ * правка таблицы меняет и валидатор, и эту сверку.
+ */
+export function reportVolumes(): Map<string, WordRange> {
+  if (reportVolumeCache) return reportVolumeCache;
+  const doc = repoFile("docs/06-report-structure.md");
+  const from = doc.indexOf("## Объём");
+  if (from < 0) throw new Error("docs/06-report-structure.md: нет раздела «Объём»");
+
+  const volumes = new Map<string, WordRange>();
+  for (const line of doc.slice(from).split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) {
+      if (volumes.size) break;
+      continue;
+    }
+    if (/^\|[\s:|-]+\|$/.test(trimmed)) continue;
+    const cells = trimmed
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+    const types = [...(cells[1] ?? "").matchAll(/`([^`]+)`/g)].map((match) => match[1]!.trim());
+    if (!types.length) continue;
+    const range = /(\d+)\s*[–—-]\s*(\d+)/.exec(cells[2] ?? "");
+    if (!range) throw new Error(`docs/06-report-structure.md: в строке «${cells[1]}» нет диапазона слов`);
+    const min = Number(range[1]);
+    const max = Number(range[2]);
+    if (!(min > 0 && max > min)) throw new Error(`docs/06-report-structure.md: объём «${cells[2]}» бессмыслен`);
+    for (const type of types) volumes.set(type, { min, max });
+  }
+
+  for (const type of ["срез_узел", "срез_работа", "срез_отношения", "разбор_решения", "полная_карта"]) {
+    if (!volumes.has(type)) throw new Error(`docs/06-report-structure.md: в таблице объёма нет типа «${type}»`);
+  }
+  reportVolumeCache = volumes;
+  return reportVolumeCache;
+}
+
+/**
+ * Машинный тип отчёта среза. Словарь тот же, что `reportTypeOfSlice` в слое
+ * генерации: типы живут в `docs/06`, соответствие среза типу — в коде, потому
+ * что в файле среза типа нет. Чисел объёма здесь нет.
+ */
+export function sliceReportType(slice: string): string | null {
+  if (slice === "slice_work") return "срез_работа";
+  if (slice === "slice_relationships") return "срез_отношения";
+  if (slice === "slice_decision_moment") return "разбор_решения";
+  if (slice === "slice_full_map") return "полная_карта";
+  if (
+    slice === "slice_node_finish" ||
+    slice === "slice_motivation" ||
+    slice === "slice_stress" ||
+    slice === "slice_reactivity" ||
+    slice === "slice_decisions"
+  )
+    return "срез_узел";
+  return null;
+}
+
+const VOLUME_LINE = /\*\*Объём отчёта:\*\*\s*(\d+)\s*[–—-]\s*(\d+)/;
+
+function sliceVolumeFiles(): { file: string; slice: string }[] {
+  const out: { file: string; slice: string }[] = [];
+  for (const slice of rawContent.slices) {
+    if (slice.file) out.push({ file: `content/slices/${slice.file}`, slice: slice.id });
+  }
+  out.push({ file: `content/slices/${extra.fullMap.file}`, slice: extra.fullMap.slice });
+  return out;
+}
+
+/**
+ * Шапка файла среза («Объём отчёта») обязана совпадать с диапазоном его
+ * машинного типа в `docs/06`. Расхождение — отказ, не предупреждение.
+ */
+export function lintSliceVolumeDeclarations(read: (relative: string) => string = repoFile): Finding[] {
+  const volumes = reportVolumes();
+  const findings: Finding[] = [];
+
+  for (const { file, slice } of sliceVolumeFiles()) {
+    const type = sliceReportType(slice);
+    if (!type) {
+      findings.push({
+        kind: "отказ",
+        file,
+        place: `шапка · ${slice}`,
+        group: "объём",
+        form: "слов",
+        match: slice,
+        reason: `для среза ${slice} нет машинного типа отчёта`,
+        action: "Завести машинный тип в docs/06-report-structure.md и в соответствие среза типу.",
+      });
+      continue;
+    }
+    const range = volumes.get(type);
+    if (!range) {
+      findings.push({
+        kind: "отказ",
+        file,
+        place: `шапка · ${slice}`,
+        group: "объём",
+        form: "слов",
+        match: type,
+        reason: `тип «${type}» не разобран из таблицы docs/06-report-structure.md`,
+        action: `Добавить тип «${type}» в таблицу объёма docs/06-report-structure.md.`,
+      });
+      continue;
+    }
+
+    const source = read(file);
+    const match = VOLUME_LINE.exec(source);
+    if (!match) {
+      findings.push({
+        kind: "отказ",
+        file,
+        place: `шапка · ${slice}`,
+        group: "объём",
+        form: "слов",
+        match: "нет",
+        reason: `в шапке нет строки «Объём отчёта», тип «${type}» в docs/06 — ${range.min}–${range.max}`,
+        action: `Вернуть строку «**Объём отчёта:** ${range.min}–${range.max} слов» — как в docs/06 для типа «${type}».`,
+      });
+      continue;
+    }
+
+    const min = Number(match[1]);
+    const max = Number(match[2]);
+    if (min !== range.min || max !== range.max) {
+      findings.push({
+        kind: "отказ",
+        file,
+        place: `шапка · ${slice}`,
+        group: "объём",
+        form: "слов",
+        match: `${min}–${max}`,
+        reason: `срез ${slice} объявляет ${min}–${max}, тип «${type}» в docs/06 — ${range.min}–${range.max}`,
+        action: `Выровнять «**Объём отчёта:**» с таблицей docs/06-report-structure.md для типа «${type}»: ${range.min}–${range.max}.`,
+      });
+    }
+  }
+
+  return findings;
 }
 
 const lookupCeiling = (source: string): CorpusEntry["volume"] => {
@@ -436,6 +586,9 @@ export function lintCorpus(entries: CorpusEntry[] = collectCorpus()): LintReport
     for (const finding of lintEntry(entry)) {
       (finding.kind === "отказ" ? rejects : warnings).push(finding);
     }
+  }
+  for (const finding of lintSliceVolumeDeclarations()) {
+    (finding.kind === "отказ" ? rejects : warnings).push(finding);
   }
   return { entries: entries.length, rejects, warnings };
 }

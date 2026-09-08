@@ -28,6 +28,7 @@ import { viewLabels } from "./labels.js";
 import * as mock from "./mocks.js";
 import { renderPersonalPage } from "./page.js";
 import { PAGE_STATE_CASES, pageStates } from "./page-states.js";
+import { installClientErrorReporter } from "../src/errors.js";
 
 const section = (id: string, title: string, note: string, ...items: Child[]): VNode =>
   h(
@@ -498,4 +499,7 @@ export function renderShowcase(only?: string | null): VNode {
 }
 
 const root = typeof document === "undefined" ? null : document.querySelector("#app");
-if (root !== null) mount(renderShowcase(new URL(location.href).searchParams.get("section")), root);
+if (root !== null) {
+  installClientErrorReporter();
+  mount(renderShowcase(new URL(location.href).searchParams.get("section")), root);
+}

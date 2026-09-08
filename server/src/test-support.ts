@@ -23,6 +23,8 @@ import type { GenerationProvider } from "../llm/dist/index.js";
 import { saveBlockContent } from "./store.js";
 import { fakeWebhook, FAKE_SIGNATURE_HEADER } from "./payments/fake.js";
 import type { WebhookKind } from "./payments/provider.js";
+import { createErrorTracker } from "./observability/registry.js";
+import type { ErrorTracker } from "./observability/provider.js";
 import type { AnswerInput, OrderDto, PageStateDto, PortionDto, PortionKey } from "./contract/index.js";
 
 export { FORBIDDEN_FIELDS } from "./contract/index.js";
@@ -32,6 +34,7 @@ export interface TestServer {
   db: Db;
   config: ServerConfig;
   llm: LlmRuntime;
+  errors: ErrorTracker;
   close(): Promise<void>;
 }
 
@@ -41,6 +44,8 @@ export interface TestServerOptions {
   provider?: GenerationProvider;
   databasePath?: string;
   sleep?: (ms: number) => Promise<void>;
+  /** Подмена базы: тесты трекера роняют запрос изнутри обработчика. */
+  wrapDb?: (db: Db) => Db;
 }
 
 /** Номер последней миграции: тесты не переписываются при добавлении новой. */
@@ -80,6 +85,8 @@ export async function startTestServer(
   });
   const db = openDatabase({ path: options.databasePath ?? ":memory:", keys: config.keys });
   up(db);
+  const runtimeDb = options.wrapDb ? options.wrapDb(db) : db;
+  const errors = createErrorTracker(config.errors);
 
   const llm = createLlmRuntime({
     env,
@@ -88,7 +95,7 @@ export async function startTestServer(
     ...(options.provider ? { provider: options.provider } : {}),
   });
 
-  const server = createHttpServer({ db, config, llm });
+  const server = createHttpServer({ db: runtimeDb, config, llm, errors });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 
@@ -97,6 +104,7 @@ export async function startTestServer(
     db,
     config,
     llm,
+    errors,
     close: () =>
       new Promise<void>((resolve) => {
         abortInflightGenerations(llm);

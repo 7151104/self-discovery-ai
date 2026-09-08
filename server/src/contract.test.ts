@@ -77,6 +77,7 @@ test("реестр покрывает страницу, оплату, публи
     "purchase",
     "refund",
     "regenerate",
+    "reportError",
     "revokeShare",
     "share",
     "submitPortion",

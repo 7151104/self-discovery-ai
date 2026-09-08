@@ -1,0 +1,42 @@
+# Внешняя проверка доступности по расписанию (E10-09).
+#
+# Та же команда, что таймер на машине: `node tools/check-health.mjs`.
+# Адрес — секрет репозитория SDAI_HEALTH_URL. Пока домена нет (вопрос 4),
+# секрет пуст и задание выходит успешно с пометкой: падать на отсутствии
+# адреса значило бы красный конвейер до появления площадки.
+#
+# Когда секрет задан, отказ /api/health роняет задание — это и есть
+# оповещение GitHub (письмо владельцу репозитория о упавшем workflow).
+
+name: Доступность
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: GET /api/health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Поставить Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Проверить доступность
+        env:
+          SDAI_HEALTH_URL: ${{ secrets.SDAI_HEALTH_URL }}
+        run: |
+          if [ -z "$SDAI_HEALTH_URL" ]; then
+            echo "Секрет SDAI_HEALTH_URL не задан: внешняя проверка ждёт домен."
+            exit 0
+          fi
+          node tools/check-health.mjs

@@ -9,7 +9,7 @@
  * создаёт записей.
  */
 
-export type Bucket = "createProfile" | "portion" | "state" | "miss";
+export type Bucket = "createProfile" | "portion" | "state" | "miss" | "errors";
 
 export interface BucketRule {
   /** Сколько запросов разрешено в окне. */

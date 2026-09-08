@@ -56,6 +56,21 @@ export interface BuildInfo {
   builtAt: string | null;
 }
 
+/**
+ * Приёмник ошибок (E10-06). Имя выбирается по реестру
+ * `server/src/observability/registry.ts`: пока известно одно значение `fake`.
+ */
+export interface ErrorsConfig {
+  /** Имя приёмника в реестре. */
+  tracker: string;
+  /**
+   * Файл JSONL для поддельного приёмника. Пусто — только память процесса.
+   * В рабочем окружении не обязателен: поддельный приёмник без файла не теряет
+   * процесс, а внешний сервис ещё не назван.
+   */
+  path: string;
+}
+
 /** Резервные копии (E10-05). Расписание задаёт таймер, а не сервер. */
 export interface BackupConfig {
   /**
@@ -93,6 +108,7 @@ export interface ServerConfig {
   keys: Keyring;
   build: BuildInfo;
   backup: BackupConfig;
+  errors: ErrorsConfig;
 }
 
 export const DEFAULTS = {
@@ -107,6 +123,8 @@ export const DEFAULTS = {
   rateLimitEnabled: true,
   /** Поддельный провайдер: единственный, который есть в репозитории. */
   paymentProvider: "fake",
+  /** Поддельный приёмник: единственный, который есть в репозитории. */
+  errorTracker: "fake",
   backupDirectory: "server/.backups",
   /**
    * Срок хранения копий. Две недели — столько, чтобы порча данных, замеченная
@@ -119,6 +137,8 @@ export const DEFAULTS = {
     portion: { limit: 60, windowMs: 60 * 1000 },
     state: { limit: 120, windowMs: 60 * 1000 },
     miss: { limit: 20, windowMs: 60 * 1000 },
+    /** Клиентские ошибки: хватает на падение страницы, не хватает на залив. */
+    errors: { limit: 30, windowMs: 60 * 1000 },
   } satisfies RateRules,
 } as const;
 
@@ -266,6 +286,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
           limit: readInteger(env, "SDAI_RATE_MISS", DEFAULTS.rate.miss.limit),
           windowMs: DEFAULTS.rate.miss.windowMs,
         },
+        errors: {
+          limit: readInteger(env, "SDAI_RATE_ERROR", DEFAULTS.rate.errors.limit),
+          windowMs: DEFAULTS.rate.errors.windowMs,
+        },
       },
     },
     payments: readPayments(env, environment),
@@ -274,6 +298,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     backup: {
       directory: env["SDAI_BACKUP_DIR"] || DEFAULTS.backupDirectory,
       keepDays: readInteger(env, "SDAI_BACKUP_KEEP_DAYS", DEFAULTS.backupKeepDays),
+    },
+    errors: {
+      tracker: env["SDAI_ERROR_TRACKER"] || DEFAULTS.errorTracker,
+      path: env["SDAI_ERROR_TRACKER_PATH"] || "",
     },
   };
 }

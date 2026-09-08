@@ -611,6 +611,12 @@ export function findOrder(db: Db, profileId: string, orderId: string): OrderReco
   return row ? toOrder(row) : null;
 }
 
+/** Заказ по идентификатору платежа: так его находит страница оплаты провайдера. */
+export function findOrderByReference(db: Db, reference: string): OrderRecord | null {
+  const row = db.get<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE provider_ref = ?`, [reference]);
+  return row ? toOrder(row) : null;
+}
+
 /** Заказ по идентификатору без профиля: так его находит уведомление провайдера. */
 export function findOrderById(db: Db, orderId: string): OrderRecord | null {
   const row = db.get<OrderRow>(`SELECT ${ORDER_COLUMNS} FROM orders WHERE order_id = ?`, [orderId]);

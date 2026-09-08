@@ -28,6 +28,17 @@ import * as handlers from "./handlers.js";
 import type { Context, HandlerResult } from "./handlers.js";
 import type { OperationName } from "../contract/index.js";
 import { renderLegalHtml, renderLegalMissing } from "../legal-page.js";
+import {
+  matchFakePayment,
+  outcomeOf,
+  renderFakePaymentMissing,
+  renderFakePaymentPage,
+  returnOf,
+  safeReturn,
+  settleRequest,
+  type FakePaymentRoute,
+} from "../payments/fake-page.js";
+import { findOrderByReference } from "../store.js";
 
 export interface CreateOptions {
   db: Db;
@@ -117,6 +128,68 @@ function sendStatic(response: ServerResponse, result: { status: number; headers:
   response.end(result.body);
 }
 
+/** Тело формы: не JSON, поэтому обычный разбор его отвергает. */
+async function readRaw(request: IncomingMessage, limit: number): Promise<string | null> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = chunk as Buffer;
+    size += buffer.length;
+    if (size > limit) return null;
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function sendRedirect(response: ServerResponse, location: string): void {
+  response.writeHead(303, { location, "cache-control": "no-store", "x-robots-tag": "noindex, nofollow" });
+  response.end();
+}
+
+/**
+ * Страница поддельного провайдера и её кнопки. Нажатие не переводит заказ в
+ * оплаченный: оно собирает подписанное уведомление и отдаёт его обычному
+ * обработчику. Обхода выдачи доступа здесь нет.
+ */
+async function serveFakePayment(
+  context: Context,
+  route: FakePaymentRoute,
+  method: string,
+  url: URL,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  const order = findOrderByReference(context.db, route.reference);
+  if (!order) {
+    sendHtml(response, 404, renderFakePaymentMissing());
+    return;
+  }
+
+  if (!route.settle) {
+    if (method !== "GET") {
+      sendHtml(response, 405, renderFakePaymentMissing());
+      return;
+    }
+    sendHtml(response, 200, renderFakePaymentPage(order, safeReturn(url.searchParams.get("return"), context.config.publicOrigin)));
+    return;
+  }
+
+  if (method !== "POST") {
+    sendHtml(response, 405, renderFakePaymentMissing());
+    return;
+  }
+
+  const body = await readRaw(request, context.config.maxBodyBytes);
+  if (body === null) {
+    sendJson(response, handlers.fail(413, "payload_too_large"));
+    return;
+  }
+
+  const notice = settleRequest(order, outcomeOf(body), context.config.payments.webhookSecret);
+  handlers.webhook(context, { provider: "fake" }, { raw: notice.raw, headers: notice.headers });
+  sendRedirect(response, returnOf(body, context.config.publicOrigin));
+}
+
 interface Runtime {
   context: Context;
   limiter: RateLimiter;
@@ -186,6 +259,16 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
   if (method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
     sendHtml(response, 200, renderClientDocument());
     return;
+  }
+
+  // Страница провайдера существует только пока провайдер поддельный. С настоящим
+  // человек уходит на его сайт, и этого маршрута в сервере нет вовсе.
+  if (context.payments.name === "fake") {
+    const fakeRoute = matchFakePayment(url.pathname);
+    if (fakeRoute) {
+      await serveFakePayment(context, fakeRoute, method, url, request, response);
+      return;
+    }
   }
 
   if (url.pathname === "/legal" || url.pathname.startsWith("/legal/")) {

@@ -139,7 +139,7 @@ function parseQuestions() {
   return { questions: out, leads };
 }
 
-// ── Полный банк 35+3 ──────────────────────────────────────────────────────────
+// ── Полный банк 40+3 ──────────────────────────────────────────────────────────
 
 const BANK_TYPES = ["шкала", "выбор", "открытый"];
 const BANK_DIRECTIONS = ["прямой", "обратный"];
@@ -198,8 +198,8 @@ function parseFullBank() {
 
   const closed = out.filter((question) => question.type !== "открытый");
   const open = out.filter((question) => question.type === "открытый");
-  if (closed.length !== 35 || open.length !== 3)
-    throw new Error(`questions-full-bank.md: закрытых ${closed.length}, открытых ${open.length}, ожидалось 35 и 3`);
+  if (closed.length !== 40 || open.length !== 3)
+    throw new Error(`questions-full-bank.md: закрытых ${closed.length}, открытых ${open.length}, ожидалось 40 и 3`);
 
   closed.forEach((question, i) => {
     if (question.id !== `Q${i + 1}`) throw new Error(`questions-full-bank.md: вместо Q${i + 1} записан ${question.id}`);

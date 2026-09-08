@@ -34,8 +34,8 @@ const synthesis = {
   periodTask: { value: "выход в видимость", code: "visibility", confidence: "medium" as const },
 };
 
-test("демо: в файле ответов лежат все 35 закрытых вопросов", () => {
-  assert.equal(Object.keys(demoAnswers).length, 35);
+test("демо: в файле ответов лежат все 40 закрытых вопросов", () => {
+  assert.equal(Object.keys(demoAnswers).length, 40);
 });
 
 test("полный банк закрывает все 16 координат, включая те, что лестница оставляет пустыми", () => {
@@ -76,9 +76,10 @@ test("демо: значения ключевых координат совпа�
 test("обратные вопросы инвертируются: без инверсии координата легла бы в другую сторону", () => {
   const profile = buildProfileFromBank(demoAnswers, synthesis);
 
-  // Q1 = 5 «нужно время в одиночестве», Q2 = 2 «идеи появляются в разговоре» (обратный).
+  // Q1 = 5 «нужно время в одиночестве», Q2 = 2 «идеи появляются в разговоре» (обратный), Q36 = 5 последний случай.
   assert.equal(profile.coordinates[1]?.code, "solitude");
   assert.equal(profile.coordinates[1]?.band, "high");
+  assert.equal(profile.coordinates[1]?.confidence, "high", "три согласных ответа координаты 1 дают high");
 
   // Q15 = 5 «тянет к незнакомому», Q16 = 2 «предпочитаю проверенное» (обратный).
   assert.equal(profile.coordinates[6]?.code, "novelty");
@@ -102,7 +103,11 @@ test("вопрос с ролью «низкий вес» сам по себе д
   const profile = buildProfileFromBank(demoAnswers, synthesis);
   assert.equal(profile.coordinates[10]?.code, "freedom");
   assert.equal(profile.coordinates[10]?.confidence, "low");
-  assert.equal(profile.coordinates[10]?.value, "свобода", "значение берётся из текста варианта в банке");
+  assert.equal(
+    profile.coordinates[10]?.value,
+    "чтобы никто не указывал, как делать",
+    "значение берётся из текста варианта в банке",
+  );
 });
 
 test("уверенность растёт от числа согласных вопросов и падает от разброса", () => {
@@ -146,6 +151,17 @@ test("та же арифметика считает и лестницу: рас�
     fromBank.coordinates[11]?.confidence === "high" && fromLadder.coordinates[11]?.confidence === "high",
     "по полному банку уверенность не может быть ниже, чем по лестнице",
   );
+});
+
+test("координаты 1, 4 и 12 способны получить high: третий свой вопрос снимает прежний предел", () => {
+  const solitude = buildProfileFromBank({ ...demoAnswers, Q1: 5, Q2: 1, Q36: 5 }, synthesis);
+  assert.equal(solitude.coordinates[1]?.confidence, "high");
+
+  const people = buildProfileFromBank({ ...demoAnswers, Q9: 1, Q10: 5, Q37: 1, Q11: "B" }, synthesis);
+  assert.equal(people.coordinates[4]?.confidence, "high");
+
+  const compete = buildProfileFromBank({ ...demoAnswers, Q27: 1, Q28: 5, Q38: 1 }, synthesis);
+  assert.equal(compete.coordinates[12]?.confidence, "high");
 });
 
 test("дата рождения в скоринг банка не попадает: источники — только вопросы банка", () => {

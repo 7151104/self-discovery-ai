@@ -118,11 +118,11 @@ test("лестница переводится в идентификаторы б
   }
 });
 
-test("добор — остаток банка: 24 закрытых плюс О2 и О3, вопросов лестницы в нём нет", () => {
+test("добор — остаток банка: 29 закрытых плюс О2 и О3, вопросов лестницы в нём нет", () => {
   const remainder = fullMapRemainder({ ladder });
 
-  assert.equal(remainder.length, 26);
-  assert.equal(remainder.filter((question) => question.type !== "открытый").length, 24);
+  assert.equal(remainder.length, 31);
+  assert.equal(remainder.filter((question) => question.type !== "открытый").length, 29);
   assert.deepEqual(
     remainder.filter((question) => question.type === "открытый").map((question) => question.id),
     ["О2", "О3"],
@@ -168,7 +168,7 @@ test("вопрос, на который ответ уже есть, второй
   const first = fullMapPortion(1).questions.map((question) => question.id);
   const remainder = fullMapRemainder({ ladder, bank: upToPortion(1) });
 
-  assert.equal(remainder.length, 16);
+  assert.equal(remainder.length, 21);
   for (const id of first) {
     assert.ok(!remainder.some((question) => question.id === id), `${id}: задан второй раз`);
   }
@@ -177,10 +177,10 @@ test("вопрос, на который ответ уже есть, второй
 
 // ── Порции ────────────────────────────────────────────────────────────────────
 
-test("порции выдаются 10 + 10 + 6, между ними промежуточные блоки", () => {
+test("порции выдаются 10 + 11 + 10, между ними промежуточные блоки", () => {
   assert.deepEqual(
     fullMapPortions().map((portion) => portion.questions.length),
-    [10, 10, 6],
+    [10, 11, 10],
   );
 
   const first = nextFullMapPortion({ ladder });
@@ -195,7 +195,7 @@ test("порции выдаются 10 + 10 + 6, между ними проме�
 
   const third = nextFullMapPortion({ ladder, bank: upToPortion(2) });
   assert.equal(third?.number, 3);
-  assert.equal(third?.questions.length, 6);
+  assert.equal(third?.questions.length, 10);
   assert.equal(third?.interlude, null, "после последней порции идёт разбор, а не блок");
 
   assert.equal(nextFullMapPortion(full), null);
@@ -336,8 +336,8 @@ test("подтипы добора приходят из контента и ст
 
   for (const code of codes) assert.ok(known.includes(code), `подтипа ${code} нет в файле среза`);
   assert.ok(codes.includes("map_full"), "карта собрана, а подтип не поставлен");
-  assert.ok(codes.includes("map_thin_pairs"), "потолок пар не назван");
   assert.ok(codes.includes("map_motive_hypothesis"), "мотив на одном вопросе низкого веса остался без пометки");
+  assert.ok(!codes.includes("map_thin_pairs"), "потолок пар снят калибровкой банка");
 
   for (const configuration of profile.configurations) {
     const subtype = fullMap().subtypes.find((candidate) => candidate.code === configuration.code)!;
@@ -346,26 +346,13 @@ test("подтипы добора приходят из контента и ст
   }
 });
 
-test("потолок из границ точности: координаты на двух вопросах выше medium не идут", () => {
-  const thin = /\((\d[\d,\s]*)\)/.exec(
-    fullMap().subtypes.find((subtype) => subtype.code === "map_thin_pairs")!.text,
-  );
-  const coordinates = [...thin![1]!.matchAll(/\d+/g)].map((match) => Number(match[0]));
-  assert.deepEqual(coordinates, [1, 4, 12], "список пар в файле среза изменился");
-
-  // Ответы, на которых основание решений по банку доходит до high.
-  const strong: BankAnswers = { ...portionAnswers, Q9: 1, Q10: 5, Q11: "B" };
-  assert.equal(buildProfileFromBank({ ...demo, Q9: 1, Q10: 5, Q11: "B" }).coordinates[4]?.confidence, "high");
+test("калибровка банка: координаты 1, 4 и 12 в доборе полной карты могут получить high", () => {
+  const strong: BankAnswers = { ...portionAnswers, Q9: 1, Q10: 5, Q37: 1, Q11: "B", Q1: 5, Q2: 1, Q36: 5 };
+  assert.equal(buildProfileFromBank({ ...demo, Q9: 1, Q10: 5, Q37: 1, Q11: "B" }).coordinates[4]?.confidence, "high");
 
   const profile = buildFullMapProfile({ ladder, bank: strong }, synthesis);
-  for (const id of coordinates) {
-    assert.notEqual(
-      profile.coordinates[id]?.confidence,
-      "high",
-      `координата ${id}: потолок банка не применён, продукт пообещал точность, которой нет`,
-    );
-  }
-  assert.equal(profile.coordinates[4]?.confidence, "medium");
+  assert.equal(profile.coordinates[1]?.confidence, "high");
+  assert.equal(profile.coordinates[4]?.confidence, "high");
 });
 
 test("расхождение ключевого способа входа со шкалами получает имя среза", () => {
@@ -377,11 +364,11 @@ test("расхождение ключевого способа входа со �
 
   /*
    * У демо-человека расхождение настоящее: ключевой Q29 говорит «начинаю сам», а
-   * самоотчёт Q26 с лестницы — «нужен внешний срок». Когда самоотчёт и шкалы
-   * входа согласны с ключевым, расхождения нет.
+   * самоотчёт Q26 с лестницы — «нужен внешний срок». Q31 (последний случай) согласен
+   * с ключевым. Когда самоотчёт и шкалы входа согласны с ключевым, расхождения нет.
    */
   const agreed = buildFullMapProfile(
-    { ladder: { ...ladder, L11: 2 }, bank: { ...portionAnswers, Q30: 1, Q31: 1 } },
+    { ladder: { ...ladder, L11: 2 }, bank: { ...portionAnswers, Q30: 1, Q31: "A" } },
     synthesis,
   );
   assert.ok(!agreed.flags.includes("entry_mismatch"), "расхождение поставлено там, где ответы согласны");

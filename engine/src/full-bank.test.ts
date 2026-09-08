@@ -1,5 +1,5 @@
 /**
- * Полный банк 35+3: состав, разметка и неизменность формулировок.
+ * Полный банк 40+3: состав, разметка и неизменность формулировок.
  *
  * Тексты вопросов — продукт: они выверены и правятся только в
  * `content/questions-full-bank.md`. Контрольного списка текстов в коде нет
@@ -20,12 +20,12 @@ const bankFile = repoFile("content/questions-full-bank.md");
 const closed = rawContent.bank.filter((question) => question.type !== "открытый");
 const open = rawContent.bank.filter((question) => question.type === "открытый");
 
-test("банк отдаёт 35 закрытых и 3 открытых вопроса", () => {
-  assert.equal(closed.length, 35);
+test("банк отдаёт 40 закрытых и 3 открытых вопроса", () => {
+  assert.equal(closed.length, 40);
   assert.equal(open.length, 3);
   assert.deepEqual(
     closed.map((question) => question.id),
-    Array.from({ length: 35 }, (_, i) => `Q${i + 1}`),
+    Array.from({ length: 40 }, (_, i) => `Q${i + 1}`),
   );
   assert.deepEqual(
     open.map((question) => question.id),

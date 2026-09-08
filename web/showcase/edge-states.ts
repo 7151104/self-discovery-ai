@@ -71,15 +71,18 @@ export const EDGE_CASES: EdgeCase[] = [
   {
     id: "no-node",
     situation: "Ни один узел не сработал",
-    page: withBlocks(pageStates.s3, [
-      pageStates.s3.blocks[0] as BlockDto,
-      pageStates.s3.blocks[1] as BlockDto,
-      {
-        ...(pageStates.s3.blocks[2] as BlockDto),
-        paragraphs: [NODE_NONE],
-        highlight: null,
-      },
-    ]),
+    page: {
+      ...withBlocks(pageStates.s3, [
+        pageStates.s3.blocks[0] as BlockDto,
+        pageStates.s3.blocks[1] as BlockDto,
+        {
+          ...(pageStates.s3.blocks[2] as BlockDto),
+          paragraphs: [NODE_NONE],
+          highlight: null,
+        },
+      ]),
+      hook: null,
+    },
     notice: notice("no-node", [edgeTexts.noNode()]),
   },
   {

@@ -27,6 +27,7 @@ import { renderFooter } from "./footer.js";
 import { renderLegalDoc } from "./legal-doc.js";
 import { renderIntro } from "./intro.js";
 import { renderMissing } from "./missing.js";
+import { renderSharePanel } from "./share-panel.js";
 import { renderToString, type VNode } from "../src/dom.js";
 import { componentFiles } from "../src/test-support.js";
 import { webRoot } from "../src/paths.js";
@@ -208,6 +209,22 @@ const cases: { name: string; node: VNode }[] = [
     node: renderDisclaimerList({ items: [{ id: "d", text: "T {{X}}" }], unfilledLabel: "u" }) as VNode,
   },
   { name: "документ", node: renderLegalDoc({ title: "T" }) },
+  {
+    name: "панель шеринга",
+    node: renderSharePanel({
+      imageReady: "R",
+      imageOnly: "O",
+      saveLabel: "S",
+      svg: "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+      privacy: "P",
+      live: "L",
+      openLabel: "N",
+      publicOn: null,
+      link: null,
+      closeLabel: null,
+      closed: null,
+    }),
+  },
 ];
 
 for (const item of cases) {

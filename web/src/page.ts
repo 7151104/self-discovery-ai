@@ -15,7 +15,7 @@
  */
 
 import { h, type Handler, type VNode } from "./dom.js";
-import type { BlockDto, DoorDto, PageStateDto, PageStateName, PortionDto } from "./contract.js";
+import type { BlockDto, DisagreementKind, DoorDto, PageStateDto, PageStateName, PortionDto, PublicPageDto } from "./contract.js";
 import { blockFromDto, renderBlock, type BlockAction } from "../components/block.js";
 import { renderRoute, type RouteContext } from "../components/door.js";
 import { enterFlag } from "./motion.js";
@@ -23,6 +23,7 @@ import { renderMap, type Zone } from "../components/map.js";
 import { renderOffer, type OfferLabels } from "../components/offer.js";
 import { renderHead, renderHook } from "../components/page-head.js";
 import { renderPortion, type PortionLabels } from "../components/portion.js";
+import { renderSharePanel, type SharePanelProps } from "../components/share-panel.js";
 import { renderWait, waitFromPage, type WaitState } from "../components/wait.js";
 
 /** Подписи дверей становятся профильными после ступени 3. */
@@ -53,7 +54,16 @@ export interface PageViewLabels {
     formatPrice: (price: number) => string;
     tag: (state: DoorDto["state"]) => string;
   };
-  block: { actions: BlockAction[]; updated: string; diverged: string };
+  block: {
+    actions: BlockAction[];
+    updated: string;
+    diverged: string;
+    disagreeDone?: string;
+    disagreeTitle?: string;
+    disagreeEffect?: string;
+    disagreeKinds?: { id: DisagreementKind; label: string }[];
+    acknowledged?: string;
+  };
   offer: OfferLabels;
   portion: {
     back: string;
@@ -72,6 +82,7 @@ export interface PageViewLabels {
     collecting: string;
   };
   head: { period: (theme: string) => string; noPeriod: string };
+  public?: { makeOwn: string; makeOwnHint: string; title?: string };
 }
 
 export interface PageViewOptions {
@@ -93,6 +104,17 @@ export interface PageViewOptions {
   onAnswer?: Handler;
   onBack?: Handler;
   onSubmit?: Handler;
+  /** Публичный вид: без действий блока и без маршрута оплаты. */
+  publicView?: boolean;
+  /** Блок, у которого открыт выбор варианта несогласия. */
+  disagreeing?: string | null;
+  onDisagree?: (blockId: string) => void;
+  onDisagreePick?: (blockId: string, kind: DisagreementKind) => void;
+  onShare?: () => void;
+  onDecline?: Handler;
+  onBuy?: Handler;
+  onOwn?: Handler;
+  sharePanel?: SharePanelProps | null;
 }
 
 const routeContext = (page: PageStateDto): RouteContext => ({
@@ -151,17 +173,54 @@ export function filledBars(page: PageStateDto): number {
   return page.map.filter((bar) => bar.fill !== "empty").length;
 }
 
+/**
+ * Публичный ответ сервера в ту же форму, которую собирает страница.
+ * Блоков 3 и 4 в нём нет по типу: подставить их нечем.
+ */
+export function pageFromPublic(view: PublicPageDto): PageStateDto {
+  return {
+    profileId: "",
+    url: "",
+    state: view.state,
+    card: { name: view.name, season: null, theme: null, metaphor: null, cta: "" },
+    hook: view.hook,
+    map: view.map,
+    blocks: view.blocks.map((block) => ({
+      id: block.id,
+      heading: block.heading,
+      paragraphs: block.paragraphs,
+      highlight: block.highlight,
+      generation: null,
+      disagreed: false,
+      purchased: false,
+      stale: false,
+    })),
+    doors: [],
+    offer: null,
+    nextPortion: null,
+    share: null,
+    updatedAt: "",
+  };
+}
+
 export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, options: PageViewOptions = {}): VNode {
   const now = options.now ?? Date.parse(page.updatedAt);
   const wait = waitFromPage(page, { now, reopened: options.reopened === true });
   const theme = page.card.theme === null ? null : labels.head.period(page.card.theme);
+  const publicTitle = options.publicView === true ? labels.public?.title : undefined;
   const card = {
     ...page.card,
+    name: publicTitle ?? page.card.name,
     theme,
     metaphor: page.card.theme === null ? null : page.card.metaphor,
   };
-  const actions = blockActions(page, labels);
+  const actions = options.publicView === true ? [] : blockActions(page, labels);
   const seenBlocks = options.seenBlocks ?? new Set(page.blocks.map((block) => block.id));
+  const kinds = labels.block.disagreeKinds ?? [];
+  const visibleBlocks =
+    options.publicView === true
+      ? page.blocks.filter((block) => block.id === "step1" || block.id === "step2")
+      : page.blocks;
 
   const children: VNode[] = [renderHead(card)];
   if (options.notice) children.push(...renderNotices(options.notice));
@@ -177,7 +236,9 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     }),
   );
 
-  for (const block of orderedBlocks(page.blocks)) {
+  if (options.sharePanel) children.push(renderSharePanel(options.sharePanel));
+
+  for (const block of orderedBlocks(visibleBlocks)) {
     if (block.generation?.status === "pending") {
       if (wait !== null) {
         children.push(
@@ -194,12 +255,39 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       continue;
     }
     if (block.generation?.status === "failed") continue;
+    const picking = options.disagreeing === block.id && kinds.length > 0;
+    const blockActionsFor = actions.map((action) => {
+      if (action.id === "disagree") {
+        return {
+          ...action,
+          label: block.disagreed ? (labels.block.disagreeDone ?? action.label) : action.label,
+          onSelect: () => options.onDisagree?.(block.id),
+        };
+      }
+      if (action.id === "share") {
+        return { ...action, onSelect: options.onShare };
+      }
+      return action;
+    });
+    const visibleActions = picking ? blockActionsFor.filter((action) => action.id !== "disagree") : blockActionsFor;
+    const staleNote = blockNote(block, labels);
+    const note = staleNote ?? (block.disagreed ? (labels.block.acknowledged ?? null) : null);
     children.push(
       renderBlock({
-        ...blockFromDto(block, {
-          actions,
-          note: blockNote(block, labels),
-        }),
+        ...blockFromDto(block, { actions: visibleActions, note }),
+        note,
+        actions: visibleActions,
+        picker: picking
+          ? {
+              title: labels.block.disagreeTitle ?? "",
+              options: kinds.map((kind) => ({
+                id: kind.id,
+                label: kind.label,
+                onSelect: () => options.onDisagreePick?.(block.id, kind.id),
+              })),
+              note: labels.block.disagreeEffect ?? null,
+            }
+          : null,
         entering: enterFlag(block.id, seenBlocks) === "on",
       }),
     );
@@ -228,11 +316,18 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         onSubmit: options.onSubmit,
       }),
     );
-  } else if (page.offer !== null) {
-    children.push(renderOffer({ offer: page.offer, labels: labels.offer }));
+  } else if (page.offer !== null && options.publicView !== true) {
+    children.push(
+      renderOffer({
+        offer: page.offer,
+        labels: labels.offer,
+        onBuy: options.onBuy,
+        onDecline: options.onDecline,
+      }),
+    );
   }
 
-  if (page.doors.length > 0) {
+  if (page.doors.length > 0 && options.publicView !== true) {
     children.push(
       renderRoute({
         doors: page.doors,
@@ -240,7 +335,19 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         formatPrice: labels.route.formatPrice,
         notes: doorNotes(page, labels),
         label: labels.route.label,
+        strict: false,
       }),
+    );
+  }
+
+  if (options.publicView === true && labels.public) {
+    children.push(
+      h(
+        "div",
+        { class: "page__own" },
+        h("p", { class: "page__own-hint" }, labels.public.makeOwnHint),
+        h("button", { class: "missing__action", type: "button", onClick: options.onOwn }, labels.public.makeOwn),
+      ),
     );
   }
 
@@ -252,6 +359,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       "data-edge": options.notice?.id ?? null,
       "data-collecting": options.collecting === true ? "on" : "off",
       "data-profiled": PROFILED.has(page.state) ? "true" : "false",
+      "data-view": options.publicView === true ? "public" : "owner",
     },
     ...children,
   );

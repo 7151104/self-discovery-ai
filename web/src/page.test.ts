@@ -129,3 +129,42 @@ test("пауза «собираю» стоит на месте порции", ()
   assert.ok(byClass(node, "wait").some((item) => item.attrs["data-wait"] === "collecting"));
   assert.ok(visibleText(node).includes(copy("UI_WAIT_COLLECTING")));
 });
+
+test("публичный вид скрывает блоки 3 и 4, маршрут и действия блока", () => {
+  const node = renderPersonalPage(pageStates.s3, viewLabels(pageStates.s3), { publicView: true });
+  assert.equal(node.attrs["data-view"], "public");
+  const blocks = byClass(node, "block").map((item) => String(item.attrs["data-block"]));
+  assert.deepEqual(blocks, ["step1", "step2"]);
+  assert.equal(byClass(node, "offer").length, 0);
+  assert.equal(byClass(node, "route").length, 0);
+  assert.equal(visibleText(node).includes(copy("UI_BLOCK_DISAGREE")), false);
+  assert.ok(visibleText(node).includes(copy("UI_PUBLIC_MAKE_OWN")));
+  assert.ok(visibleText(node).includes(copy("UI_PUBLIC_TITLE", { имя: pageStates.s3.card.name })));
+});
+
+test("выбор несогласия открывается в блоке тремя вариантами", () => {
+  const node = draw("s2", { disagreeing: "step1" });
+  const kinds = findAll(node, "button").filter((item) => item.attrs["data-action"] === "disagree-kind");
+  assert.deepEqual(
+    kinds.map((item) => item.attrs["data-kind"]),
+    ["not_about_me", "partly", "too_general"],
+  );
+  assert.ok(visibleText(node).includes(copy("UI_DISAGREE_TITLE")));
+  assert.ok(visibleText(node).includes(copy("UI_DISAGREE_EFFECT")));
+});
+
+test("все девять краевых состояний собираются той же функцией страницы", () => {
+  assert.equal(EDGE_CASES.length, 9);
+  for (const item of EDGE_CASES) {
+    const node = renderPersonalPage(item.page, viewLabels(item.page), {
+      notice: item.notice,
+      portionIndex: item.portionIndex,
+      portionValue: item.portionValue,
+    });
+    assert.equal(node.attrs["data-page"], item.page.state);
+    if (item.notice) {
+      assert.equal(node.attrs["data-edge"], item.notice.id);
+      assert.ok(visibleText(node).includes(item.notice.texts[0]!), `нет текста краевого «${item.situation}»`);
+    }
+  }
+});

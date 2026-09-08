@@ -1,0 +1,72 @@
+/*
+ * Панель шеринга: картинка и публичная ссылка. Картинка занимает ширину
+ * колонки, без фиксированной высоты — иначе при масштабе текста 200%
+ * обрежется.
+ */
+
+.share-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+}
+
+.share-panel__title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.share-panel__note,
+.share-panel__privacy,
+.share-panel__live,
+.share-panel__on,
+.share-panel__link,
+.share-panel__closed {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.share-panel__save,
+.share-panel__open,
+.share-panel__close {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  align-self: flex-start;
+  text-decoration: none;
+  transition: color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.share-panel__open {
+  border-color: var(--color-line-strong);
+}
+
+@media (hover: hover) {
+  .share-panel__save:hover,
+  .share-panel__open:hover,
+  .share-panel__close:hover {
+    color: var(--color-text-strong);
+    border-color: var(--color-line-strong);
+  }
+}
+
+.share-panel__preview {
+  width: 100%;
+  height: auto;
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-inset);
+}

@@ -6,9 +6,14 @@
  */
 
 export const PAGE_PATH = "/p/:profileId";
+export const PUBLIC_PAGE_PATH = "/s/:token";
 export const API_PAGE_STATE = "/api/p/:profileId";
 export const API_CREATE_PROFILE = "/api/profiles";
 export const API_SUBMIT_PORTION = "/api/p/:profileId/portions";
+export const API_DISAGREE = "/api/p/:profileId/disagreements";
+export const API_SHARE = "/api/p/:profileId/share";
+export const API_PUBLIC_PAGE = "/api/s/:token";
+export const API_PURCHASE = "/api/p/:profileId/orders";
 
 /** Постоянные адреса документов: копия `LEGAL_PATHS` контракта. */
 export const LEGAL_PATHS = {
@@ -20,10 +25,12 @@ export const LEGAL_PATHS = {
 
 export type Route =
   | { kind: "page"; profileId: string }
+  | { kind: "public"; token: string }
   | { kind: "intro" }
   | { kind: "missing" };
 
 const PAGE = /^\/p\/([^/]+)\/?$/;
+const PUBLIC = /^\/s\/([^/]+)\/?$/;
 
 const INTRO_PATHS = new Set(["/", "/index.html", "/web/page", "/web/page/", "/web/page/index.html"]);
 
@@ -40,11 +47,20 @@ export function pageHref(profileId: string): string {
   return fillPath(PAGE_PATH, { profileId });
 }
 
+export function publicHref(token: string): string {
+  return fillPath(PUBLIC_PAGE_PATH, { token });
+}
+
 export function parseRoute(pathname: string): Route {
   const match = PAGE.exec(pathname);
   const profileId = match?.[1];
   if (profileId !== undefined && profileId.length > 0) {
     return { kind: "page", profileId: decodeURIComponent(profileId) };
+  }
+  const shared = PUBLIC.exec(pathname);
+  const token = shared?.[1];
+  if (token !== undefined && token.length > 0) {
+    return { kind: "public", token: decodeURIComponent(token) };
   }
   if (INTRO_PATHS.has(pathname)) return { kind: "intro" };
   return { kind: "missing" };

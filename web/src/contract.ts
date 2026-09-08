@@ -17,6 +17,7 @@ export type {
   CardDto,
   CreateProfileRequest,
   DisagreementKind,
+  DisagreementRequest,
   DoorDto,
   ErrorCode,
   ErrorDto,
@@ -26,7 +27,10 @@ export type {
   PageStateDto,
   PageStateName,
   PortionDto,
+  PublicPageDto,
+  PurchaseRequest,
   QuestionDto,
   QuestionKind,
+  ShareDto,
   SubmitPortionRequest,
 } from "../../server/dist/contract/index.js";

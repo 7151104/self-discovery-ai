@@ -1,5 +1,6 @@
 /**
- * Живой клиент личной страницы: адрес `/p/{profileId}`, ступень 0, порции.
+ * Живой клиент личной страницы: адрес `/p/{profileId}`, ступень 0, порции,
+ * несогласие, публичный вид и краевые состояния.
  *
  * Состояние страницы приходит с сервера. Сборку экрана делает
  * `renderPersonalPage` — та же функция, что у витрины.
@@ -10,9 +11,21 @@ import { renderDisclaimerList } from "../components/disclaimer.js";
 import { renderFooter } from "../components/footer.js";
 import { renderIntro } from "../components/intro.js";
 import { renderMissing } from "../components/missing.js";
+import type { SharePanelProps } from "../components/share-panel.js";
 import { h, mount, type VNode } from "./dom.js";
-import type { AnswerInput, PageStateDto, QuestionDto } from "./contract.js";
-import { createProfile, loadPage, submitPortion, type Transport } from "./api.js";
+import type { AnswerInput, DisagreementKind, PageStateDto, QuestionDto } from "./contract.js";
+import {
+  createProfile,
+  disagree,
+  enableShare,
+  loadPage,
+  loadPublic,
+  purchase,
+  revokeShare,
+  submitPortion,
+  type Transport,
+} from "./api.js";
+import { edgeNotice } from "./edges.js";
 import { collectingPause, scrollToNewBlock, windowHost, type MotionHost } from "./motion.js";
 import {
   consentCopy,
@@ -23,28 +36,43 @@ import {
   footerLinks,
   unfilledLabel,
 } from "./legal-copy.js";
-import { errorTexts, introTexts, missingTexts } from "./page-copy.js";
+import {
+  errorTexts,
+  introTexts,
+  missingTexts,
+  publicNotice,
+  publicTexts,
+  shareTexts,
+} from "./page-copy.js";
 import { pageLabels } from "./page-labels.js";
-import { renderPersonalPage } from "./page.js";
+import { pageFromPublic, renderPersonalPage } from "./page.js";
 import { pageHref, parseRoute } from "./route.js";
 import {
   acceptAnswer,
   choiceAnswer,
+  declineOffer,
   emptySession,
   goBack,
+  markPaymentFailed,
+  markShareClosed,
   newRequestId,
   numberAnswer,
   openAnswer,
+  openShare,
   portionRequest,
   rememberShown,
+  replacePage,
+  setDisagreeing,
   setDraft,
   setNameError,
   showIntro,
   showMissing,
   showPage,
+  showPublic,
   storedValue,
   type Session,
 } from "./session.js";
+import { shareDataFromPage, shareImage } from "../share/image.js";
 
 export interface AppHost extends Transport {
   location: { pathname: string };
@@ -64,6 +92,13 @@ export interface PageApp {
   intro: (name: string, birthDate: string | null) => Promise<void>;
   consent: (checked: boolean) => void;
   goOwn: () => void;
+  openDisagree: (blockId: string) => void;
+  pickDisagree: (blockId: string, kind: DisagreementKind) => Promise<void>;
+  share: () => void;
+  openPublicLink: () => Promise<void>;
+  closePublicLink: () => Promise<void>;
+  decline: () => void;
+  buy: () => Promise<void>;
 }
 
 const introLabels = () => ({
@@ -83,6 +118,39 @@ const currentQuestion = (session: Session): QuestionDto | null => {
   return portion.questions[session.questionIndex] ?? null;
 };
 
+const ownerPage = (session: Session): PageStateDto | null => {
+  if (session.page === null) return null;
+  if (session.offerDeclined && session.page.offer !== null) {
+    const slice = session.page.offer.slice;
+    return {
+      ...session.page,
+      offer: null,
+      doors: session.page.doors.map((door) => (door.slice === slice ? { ...door, price: null } : door)),
+    };
+  }
+  return session.page;
+};
+
+const sharePanel = (session: Session, onOpen: () => void, onClose: () => void): SharePanelProps | null => {
+  if (!session.shareOpen || session.page === null) return null;
+  const shared = session.page.share;
+  return {
+    imageReady: shareTexts.imageReady(),
+    imageOnly: shareTexts.imageOnly(),
+    saveLabel: shareTexts.save(),
+    svg: session.shareSvg,
+    privacy: shared ? null : shareTexts.privacy(),
+    live: shareTexts.live(),
+    openLabel: shared ? null : shareTexts.open(),
+    publicOn: shared ? shareTexts.publicOn() : null,
+    link: shared ? shareTexts.link(shared.url) : null,
+    closeLabel: shared ? shareTexts.close() : null,
+    closed: session.shareClosed ? shareTexts.closed() : null,
+    onOpen,
+    onClose,
+  };
+};
+
 export function renderSession(
   session: Session,
   handlers: {
@@ -93,11 +161,23 @@ export function renderSession(
     onSubmit?: () => void;
     consent?: VNode;
     submitDisabled?: boolean;
+    onDisagree?: (blockId: string) => void;
+    onDisagreePick?: (blockId: string, kind: DisagreementKind) => void;
+    onShare?: () => void;
+    onShareOpen?: () => void;
+    onShareClose?: () => void;
+    onDecline?: () => void;
+    onBuy?: () => void;
   },
 ): VNode {
   if (session.screen === "missing") {
+    const revoked = session.missingKind === "revoked";
     return renderMissing(
-      { title: missingTexts.title(), text: missingTexts.text(), action: missingTexts.action() },
+      {
+        title: revoked ? publicTexts.revoked() : missingTexts.title(),
+        text: revoked ? publicTexts.makeOwnHint() : missingTexts.text(),
+        action: missingTexts.action(),
+      },
       handlers.onOwn,
     );
   }
@@ -115,18 +195,43 @@ export function renderSession(
     return h("div", { class: "page", "data-page": "loading" });
   }
 
+  if (session.screen === "public") {
+    return renderPersonalPage(session.page, pageLabels(session.page), {
+      publicView: true,
+      notice: publicNotice({ name: session.page.card.name, map: session.page.map }),
+      seenBars: session.seenBars,
+      seenBlocks: session.seenBlocks,
+      onOwn: handlers.onOwn,
+    });
+  }
+
+  const page = ownerPage(session);
+  if (page === null) return h("div", { class: "page", "data-page": "loading" });
+
   const question = currentQuestion(session);
   const value = question === null ? null : storedValue(question, session.answers, session.draft);
 
-  return renderPersonalPage(session.page, pageLabels(session.page), {
-    portionIndex: session.page.nextPortion ? session.questionIndex : undefined,
+  return renderPersonalPage(page, pageLabels(page), {
+    portionIndex: page.nextPortion ? session.questionIndex : undefined,
     portionValue: value,
     collecting: session.collecting,
     seenBars: session.seenBars,
     seenBlocks: session.seenBlocks,
+    notice: edgeNotice(page, {
+      returned: session.returned,
+      offerDeclined: session.offerDeclined,
+      paymentFailed: session.paymentFailed,
+    }),
+    disagreeing: session.disagreeing,
+    sharePanel: sharePanel(session, () => handlers.onShareOpen?.(), () => handlers.onShareClose?.()),
     onAnswer: handlers.onAnswer,
     onBack: handlers.onBack,
     onSubmit: handlers.onSubmit,
+    onDisagree: handlers.onDisagree,
+    onDisagreePick: handlers.onDisagreePick,
+    onShare: handlers.onShare,
+    onDecline: handlers.onDecline,
+    onBuy: handlers.onBuy,
   });
 }
 
@@ -150,9 +255,14 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
     const product = disclaimersFor(disclaimerPlaces({ screen: session.screen, page: session.page }));
     const footer = disclaimersFor(["подвал"]);
     const label = unfilledLabel();
+    // Пометки состояния остаются на корне: подвал и дисклеймеры обрамляют
+    // страницу, но не отменяют того, что на ней сейчас происходит.
+    const marks = Object.fromEntries(
+      Object.entries(view.attrs).filter(([key]) => key.startsWith("data-")),
+    );
     return h(
       "div",
-      { class: "page-shell" },
+      { class: "page-shell", ...marks },
       view,
       renderDisclaimerList({ items: product, unfilledLabel: label }),
       renderFooter({ heading: footerHeading(), links: footerLinks() }),
@@ -249,6 +359,21 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
             if (question.kind === "открытый") void app.accept(openAnswer(question, session.draft));
             if (question.kind === "число") void app.accept(numberAnswer(question, session.draft));
           },
+          onDisagree: (blockId) => app.openDisagree(blockId),
+          onDisagreePick: (blockId, kind) => {
+            void app.pickDisagree(blockId, kind);
+          },
+          onShare: () => app.share(),
+          onShareOpen: () => {
+            void app.openPublicLink();
+          },
+          onShareClose: () => {
+            void app.closePublicLink();
+          },
+          onDecline: () => app.decline(),
+          onBuy: () => {
+            void app.buy();
+          },
           consent: session.screen === "intro" ? consentSlot() : undefined,
           submitDisabled: session.screen === "intro" ? !consented : undefined,
         }),
@@ -263,6 +388,18 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       }
       if (route.kind === "missing") {
         set(showMissing(session));
+        return;
+      }
+      if (route.kind === "public") {
+        const result = await loadPublic(route.token, host);
+        if (!result.ok) {
+          set(showMissing(session, "revoked"));
+          host.title?.(publicTexts.revoked());
+          return;
+        }
+        const page = pageFromPublic(result.page);
+        set(showPublic(session, page));
+        host.title?.(publicTexts.title(result.page.name));
         return;
       }
       const result = await loadPage(route.profileId, host);
@@ -304,6 +441,54 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       consented = false;
       host.history?.pushState(null, "", "/");
       set(showIntro(session));
+    },
+    openDisagree: (blockId) => {
+      set(setDisagreeing(session, session.disagreeing === blockId ? null : blockId));
+    },
+    pickDisagree: async (blockId, kind) => {
+      const page = session.page;
+      if (page === null || page.profileId.length === 0) return;
+      const before = page.blocks.find((block) => block.id === blockId);
+      const result = await disagree(page.profileId, blockId, kind, host);
+      if (!result.ok) return;
+      const after = result.page.blocks.find((block) => block.id === blockId);
+      if (before && after && before.paragraphs.join("\u0000") !== after.paragraphs.join("\u0000")) {
+        return;
+      }
+      set(replacePage(session, result.page));
+    },
+    share: () => {
+      const page = session.page;
+      if (page === null) return;
+      const data = shareDataFromPage(page);
+      const image = data === null ? null : shareImage(data);
+      set(openShare(session, image?.svg ?? null));
+    },
+    openPublicLink: async () => {
+      const page = session.page;
+      if (page === null || page.profileId.length === 0) return;
+      const result = await enableShare(page.profileId, host);
+      if (!result.ok) return;
+      set(replacePage({ ...session, shareOpen: true, shareClosed: false }, result.page));
+    },
+    closePublicLink: async () => {
+      const page = session.page;
+      if (page === null || page.profileId.length === 0) return;
+      const result = await revokeShare(page.profileId, host);
+      if (!result.ok) return;
+      set(markShareClosed(replacePage({ ...session, shareOpen: true }, result.page)));
+    },
+    decline: () => set(declineOffer(session)),
+    buy: async () => {
+      const page = session.page;
+      const slice = page?.offer?.slice;
+      if (page === null || slice === undefined || page.profileId.length === 0) return;
+      const result = await purchase(page.profileId, slice, newRequestId(), host);
+      if (!result.ok) {
+        set(markPaymentFailed(session));
+        return;
+      }
+      set(replacePage(session, result.page));
     },
   };
 

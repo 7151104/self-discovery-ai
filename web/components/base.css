@@ -77,6 +77,19 @@ button {
   border-color: var(--color-alert);
 }
 
+.page__own {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.page__own-hint {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
 @media (min-width: 30rem) {
   .page {
     padding: var(--space-5);

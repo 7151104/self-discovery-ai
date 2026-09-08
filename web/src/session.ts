@@ -6,7 +6,7 @@
 
 import type { AnswerInput, PageStateDto, QuestionDto, SubmitPortionRequest } from "./contract.js";
 
-export type Screen = "intro" | "page" | "missing" | "loading";
+export type Screen = "intro" | "page" | "public" | "missing" | "loading";
 
 export interface Session {
   screen: Screen;
@@ -20,6 +20,21 @@ export interface Session {
   introDate: string;
   seenBlocks: Set<string>;
   seenBars: Set<string>;
+  /** Блок, у которого открыт выбор варианта несогласия. */
+  disagreeing: string | null;
+  /** Панель шеринга открыта. */
+  shareOpen: boolean;
+  /** SVG картинки шеринга. null — ещё не собирали или крючка нет. */
+  shareSvg: string | null;
+  /** Публичную ссылку только что отозвали: показать «закрыто». */
+  shareClosed: boolean;
+  /** Отказ от оплаты в этот визит. */
+  offerDeclined: boolean;
+  /** Попытка оплаты не прошла. */
+  paymentFailed: boolean;
+  /** Возврат на порцию, где часть вопросов уже сохранена. */
+  returned: boolean;
+  missingKind: "missing" | "revoked";
 }
 
 export function emptySession(): Session {
@@ -35,6 +50,14 @@ export function emptySession(): Session {
     introDate: "",
     seenBlocks: new Set(),
     seenBars: new Set(),
+    disagreeing: null,
+    shareOpen: false,
+    shareSvg: null,
+    shareClosed: false,
+    offerDeclined: false,
+    paymentFailed: false,
+    returned: false,
+    missingKind: "missing",
   };
 }
 
@@ -96,13 +119,15 @@ export function showIntro(session: Session): Session {
   return { ...session, screen: "intro", page: null, collecting: false, nameError: null };
 }
 
-export function showMissing(session: Session): Session {
-  return { ...session, screen: "missing", page: null, collecting: false };
+export function showMissing(session: Session, kind: "missing" | "revoked" = "missing"): Session {
+  return { ...session, screen: "missing", page: null, collecting: false, missingKind: kind };
 }
 
 export function showPage(session: Session, page: PageStateDto, mode: "load" | "advance"): Session {
   const seenBlocks = mode === "load" ? new Set(page.blocks.map((block) => block.id)) : session.seenBlocks;
   const seenBars = mode === "load" ? new Set(page.map.filter((bar) => bar.fill !== "empty").map((bar) => bar.id)) : session.seenBars;
+  const returned =
+    mode === "load" && (page.nextPortion?.answered.length ?? 0) > 0;
   return {
     ...session,
     screen: "page",
@@ -113,6 +138,42 @@ export function showPage(session: Session, page: PageStateDto, mode: "load" | "a
     questionIndex: firstUnanswered(page, []),
     seenBlocks,
     seenBars,
+    disagreeing: null,
+    shareOpen: false,
+    shareSvg: null,
+    shareClosed: false,
+    offerDeclined: mode === "load" ? false : session.offerDeclined,
+    paymentFailed: mode === "load" ? false : session.paymentFailed,
+    returned,
+  };
+}
+
+/** То же состояние страницы без сброса курсора порции: несогласие, шеринг. */
+export function replacePage(session: Session, page: PageStateDto): Session {
+  return {
+    ...session,
+    screen: "page",
+    page,
+    collecting: false,
+    disagreeing: null,
+  };
+}
+
+export function showPublic(session: Session, page: PageStateDto): Session {
+  return {
+    ...session,
+    screen: "public",
+    page,
+    collecting: false,
+    answers: [],
+    draft: "",
+    questionIndex: 0,
+    seenBlocks: new Set(page.blocks.map((block) => block.id)),
+    seenBars: new Set(page.map.filter((bar) => bar.fill !== "empty").map((bar) => bar.id)),
+    disagreeing: null,
+    shareOpen: false,
+    shareSvg: null,
+    returned: false,
   };
 }
 
@@ -150,6 +211,26 @@ export function setDraft(session: Session, draft: string): Session {
 
 export function setNameError(session: Session, error: string | null): Session {
   return { ...session, nameError: error };
+}
+
+export function setDisagreeing(session: Session, blockId: string | null): Session {
+  return { ...session, disagreeing: blockId };
+}
+
+export function openShare(session: Session, svg: string | null): Session {
+  return { ...session, shareOpen: true, shareSvg: svg, shareClosed: false };
+}
+
+export function markShareClosed(session: Session): Session {
+  return { ...session, shareClosed: true };
+}
+
+export function declineOffer(session: Session): Session {
+  return { ...session, offerDeclined: true, paymentFailed: false };
+}
+
+export function markPaymentFailed(session: Session): Session {
+  return { ...session, paymentFailed: true };
 }
 
 export function newRequestId(): string {

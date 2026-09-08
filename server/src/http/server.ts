@@ -1,21 +1,34 @@
 /**
- * HTTP-транспорт на встроенном `node:http`: маршрут из контракта, разбор тела,
- * JSON наружу. Фреймворк не подключается — обоснование в `docs/14-state.md`.
+ * HTTP-транспорт на встроенном `node:http`: маршрут из контракта, ограничение
+ * частоты до обработчика, разбор тела, проверка ответа на выходе, JSON наружу.
+ * Фреймворк не подключается — обоснование в `docs/14-state.md`.
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
-import { renderPage, renderMissingPage } from "./page-shell.js";
-import { matchApi, matchPage } from "./router.js";
+import { assertNoCoordinates, assertNoPrivateBlocks } from "./guard.js";
+import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
+import { matchApi, matchPage, matchPublicPage } from "./router.js";
+import { RateLimiter, type Bucket } from "./rate-limit.js";
 import * as handlers from "./handlers.js";
 import type { Context, HandlerResult } from "./handlers.js";
+import type { OperationName } from "../contract/index.js";
 
 export interface CreateOptions {
   db: Db;
   config: ServerConfig;
   version: string;
 }
+
+/** Какой корзиной лимита считается операция. Остальные попадают в общую. */
+const BUCKETS: Partial<Record<OperationName, Bucket>> = {
+  createProfile: "createProfile",
+  submitPortion: "portion",
+  editAnswer: "portion",
+  pageState: "state",
+  publicPage: "state",
+};
 
 async function readBody(request: IncomingMessage, limit: number): Promise<unknown | "too_large" | "invalid"> {
   const chunks: Buffer[] = [];
@@ -34,6 +47,20 @@ async function readBody(request: IncomingMessage, limit: number): Promise<unknow
   } catch {
     return "invalid";
   }
+}
+
+/**
+ * Адрес клиента для счётчиков. Заголовку доверяем только когда об этом сказано
+ * явно: иначе лимит обходится подделкой заголовка.
+ */
+function clientOf(request: IncomingMessage, trustProxy: boolean): string {
+  if (trustProxy) {
+    const forwarded = request.headers["x-forwarded-for"];
+    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    const address = first?.split(",")[0]?.trim();
+    if (address) return address;
+  }
+  return request.socket.remoteAddress ?? "unknown";
 }
 
 function sendJson(response: ServerResponse, result: HandlerResult): void {
@@ -56,18 +83,62 @@ function sendHtml(response: ServerResponse, status: number, html: string): void 
   response.end(html);
 }
 
-async function dispatch(context: Context, request: IncomingMessage, response: ServerResponse): Promise<void> {
+interface Runtime {
+  context: Context;
+  limiter: RateLimiter;
+}
+
+async function dispatch(runtime: Runtime, request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const { context, limiter } = runtime;
   const url = new URL(request.url ?? "/", "http://localhost");
   const method = request.method ?? "GET";
+  const client = clientOf(request, context.config.trustProxy);
+
+  /** Отказ по лимиту не доходит до обработчика, поэтому записей не создаёт. */
+  const overLimit = (bucket: Bucket): HandlerResult | null => {
+    const decision = limiter.take(bucket, client);
+    if (decision.allowed) return null;
+    return { status: 429, body: { error: { code: "rate_limited" } } };
+  };
+
+  /** Ненайденный профиль или токен — попытка перебора, у неё свой счётчик. */
+  const countMiss = (result: HandlerResult): HandlerResult => {
+    if (result.status !== 404) return result;
+    return overLimit("miss") ?? result;
+  };
 
   const pageRoute = matchPage(url.pathname);
   if (pageRoute && method === "GET") {
-    const state = handlers.pageState(context, pageRoute);
+    const limited = overLimit("state");
+    if (limited) {
+      sendHtml(response, limited.status, renderMissingPage());
+      return;
+    }
+    const state = countMiss(handlers.pageState(context, pageRoute));
     if (state.status !== 200) {
       sendHtml(response, state.status, renderMissingPage());
       return;
     }
+    assertNoCoordinates(state.body);
     sendHtml(response, 200, renderPage(state.body));
+    return;
+  }
+
+  const publicRoute = matchPublicPage(url.pathname);
+  if (publicRoute && method === "GET") {
+    const limited = overLimit("state");
+    if (limited) {
+      sendHtml(response, limited.status, renderMissingPage());
+      return;
+    }
+    const state = countMiss(handlers.publicPage(context, publicRoute));
+    if (state.status !== 200) {
+      sendHtml(response, state.status, renderMissingPage());
+      return;
+    }
+    assertNoCoordinates(state.body);
+    assertNoPrivateBlocks(state.body);
+    sendHtml(response, 200, renderPublicPage(state.body));
     return;
   }
 
@@ -81,6 +152,16 @@ async function dispatch(context: Context, request: IncomingMessage, response: Se
     return;
   }
 
+  const { name, params } = route;
+  const bucket = BUCKETS[name];
+  if (bucket) {
+    const limited = overLimit(bucket);
+    if (limited) {
+      sendJson(response, limited);
+      return;
+    }
+  }
+
   const body = await readBody(request, context.config.maxBodyBytes);
   if (body === "too_large") {
     sendJson(response, handlers.fail(413, "payload_too_large"));
@@ -91,32 +172,42 @@ async function dispatch(context: Context, request: IncomingMessage, response: Se
     return;
   }
 
-  const { name, params } = route;
+  const result = countMiss(run(context, name, params, body));
+
+  // Проверка на выходе: типы уже не дают собрать протёкший ответ, а это —
+  // вторая линия на случай формы, собранной обходом типов (E3-06).
+  if (result.status < 400) {
+    assertNoCoordinates(result.body);
+    if (name === "publicPage") assertNoPrivateBlocks(result.body);
+  }
+
+  sendJson(response, result);
+}
+
+function run(context: Context, name: OperationName, params: Record<string, string>, body: unknown): HandlerResult {
   switch (name) {
     case "health":
-      sendJson(response, handlers.health(context));
-      return;
+      return handlers.health(context);
     case "createProfile":
-      sendJson(response, handlers.createProfile(context, body));
-      return;
+      return handlers.createProfile(context, body);
     case "pageState":
-      sendJson(response, handlers.pageState(context, params));
-      return;
+      return handlers.pageState(context, params);
     case "submitPortion":
-      sendJson(response, handlers.submitPortion(context, params, body));
-      return;
+      return handlers.submitPortion(context, params, body);
     case "editAnswer":
-      sendJson(response, handlers.editAnswer(context, params, body));
-      return;
+      return handlers.editAnswer(context, params, body);
     case "disagree":
-      sendJson(response, handlers.disagree(context, params, body));
-      return;
+      return handlers.disagree(context, params, body);
     case "purchase":
-      sendJson(response, handlers.purchase(context, params, body));
-      return;
+      return handlers.purchase(context, params, body);
     case "generationStatus":
-      sendJson(response, handlers.generationStatus(context, params));
-      return;
+      return handlers.generationStatus(context, params);
+    case "share":
+      return handlers.share(context, params);
+    case "revokeShare":
+      return handlers.revokeShare(context, params);
+    case "publicPage":
+      return handlers.publicPage(context, params);
   }
 }
 
@@ -127,9 +218,11 @@ export function createHttpServer(options: CreateOptions): Server {
     version: options.version,
     startedAt: Date.now(),
   };
+  const limiter = new RateLimiter(options.config.rateLimit.rules, options.config.rateLimit.enabled);
+  const runtime: Runtime = { context, limiter };
 
   return createServer((request, response) => {
-    dispatch(context, request, response).catch((error: unknown) => {
+    dispatch(runtime, request, response).catch((error: unknown) => {
       // В журнал уходит только машинный код: ни имён, ни ответов (docs/12, слой 7).
       process.stderr.write(
         `${JSON.stringify({ event: "request.failed", reason: error instanceof Error ? error.name : "unknown" })}\n`,

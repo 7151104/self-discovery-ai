@@ -6,7 +6,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { loadConfig } from "./config.js";
+import { ConfigError, loadConfig, type ServerConfig } from "./config.js";
 import { openDatabase } from "./db/sqlite.js";
 import { up } from "./db/migrate.js";
 import { createHttpServer } from "./http/server.js";
@@ -24,7 +24,25 @@ function packageVersion(): string {
   }
 }
 
-const config = loadConfig();
+/**
+ * Без обязательной переменной сервер не стартует и называет её. Значение
+ * переменной в вывод не попадает: в журнале только имя и причина.
+ */
+function configure(): ServerConfig {
+  try {
+    return loadConfig();
+  } catch (error) {
+    if (error instanceof ConfigError) {
+      process.stderr.write(
+        `${JSON.stringify({ event: "config.invalid", reason: error.reason, variables: error.variables })}\n`,
+      );
+      process.exit(1);
+    }
+    throw error;
+  }
+}
+
+const config = configure();
 const db = openDatabase({ path: config.databasePath });
 
 if (config.autoMigrate) {
@@ -35,7 +53,13 @@ if (config.autoMigrate) {
 const server = createHttpServer({ db, config, version: packageVersion() });
 
 server.listen(config.port, config.host, () => {
-  log("server.started", { host: config.host, port: config.port, database: config.databasePath });
+  log("server.started", {
+    environment: config.environment,
+    host: config.host,
+    port: config.port,
+    database: config.databasePath,
+    rateLimit: config.rateLimit.enabled,
+  });
 });
 
 const shutdown = (signal: string): void => {

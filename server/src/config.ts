@@ -109,6 +109,11 @@ export interface ServerConfig {
   build: BuildInfo;
   backup: BackupConfig;
   errors: ErrorsConfig;
+  /**
+   * Секрет служебных ручек воронки и метрик (E10-07, E10-08).
+   * Пустой — ручки отвечают отказом: в разработке сервер поднимается без него.
+   */
+  adminSecret: string;
 }
 
 export const DEFAULTS = {
@@ -303,5 +308,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       tracker: env["SDAI_ERROR_TRACKER"] || DEFAULTS.errorTracker,
       path: env["SDAI_ERROR_TRACKER_PATH"] || "",
     },
+    adminSecret: env["SDAI_ADMIN_SECRET"] || "",
   };
 }

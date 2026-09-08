@@ -22,6 +22,7 @@ import { captureError } from "../observability/report.js";
 import type { ErrorTracker } from "../observability/provider.js";
 import { renderClientDocument, renderMissingPage } from "./page-shell.js";
 import { matchApi, matchLegal, matchPage, matchPublicPage } from "./router.js";
+import { admin, matchAdmin } from "./admin.js";
 import { isStaticRequest, serveStatic } from "./static.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
 import * as handlers from "./handlers.js";
@@ -282,6 +283,21 @@ async function dispatch(runtime: Runtime, request: IncomingMessage, response: Se
       return;
     }
     sendHtml(response, 200, renderLegalHtml(legalRoute.id));
+    return;
+  }
+
+  const adminRoute = matchAdmin(method, url.pathname);
+  if (adminRoute === "method_not_allowed") {
+    sendJson(response, handlers.fail(405, "method_not_allowed"));
+    return;
+  }
+  if (adminRoute) {
+    const limited = overLimit("state");
+    if (limited) {
+      sendJson(response, limited);
+      return;
+    }
+    sendJson(response, admin(context, adminRoute, request.headers));
     return;
   }
 

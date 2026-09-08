@@ -825,9 +825,64 @@ export function recordEvent(
 
 export function listEvents(db: Db, profileId: string): { type: string; payload: string }[] {
   return db.all<{ type: string; payload: string }>(
-    "SELECT type, payload FROM events WHERE profile_id = ? ORDER BY created_at",
+    "SELECT type, payload FROM events WHERE profile_id = ? ORDER BY created_at, rowid",
     [profileId],
   );
+}
+
+/** Все события воронки, включая отвязанные после удаления профиля. */
+export function listAllEvents(db: Db): { type: string; profileId: string | null; payload: string }[] {
+  return db
+    .all<{ type: string; profile_id: string | null; payload: string }>(
+      "SELECT type, profile_id, payload FROM events ORDER BY created_at, rowid",
+    )
+    .map((row) => ({ type: row.type, profileId: row.profile_id, payload: row.payload }));
+}
+
+/**
+ * Сводка журнала вызовов и заданий (E10-08). Стоимость и время — только из
+ * `generation_calls`; доля отклонений валидатора — из `failure_code` заданий:
+ * вызов провайдера при отказе валидатора уже записан как `ok`.
+ */
+export interface GenerationTotals {
+  calls: number;
+  avgDurationMs: number | null;
+  totalCostKopecks: number;
+  profileCount: number;
+  avgProfileCostKopecks: number | null;
+  finishedJobs: number;
+  validatorRejected: number;
+}
+
+const roundOrNull = (value: number | null | undefined): number | null =>
+  value == null ? null : Math.round(value);
+
+export function generationTotals(db: Db): GenerationTotals {
+  const calls = db.get<{ n: number; avg_duration: number | null; total_cost: number | null }>(
+    "SELECT COUNT(*) AS n, AVG(duration_ms) AS avg_duration, SUM(cost_kopecks) AS total_cost FROM generation_calls",
+  );
+  const profiles = db.get<{ n: number; avg_cost: number | null }>(
+    `SELECT COUNT(*) AS n, AVG(total) AS avg_cost FROM (
+       SELECT SUM(cost_kopecks) AS total FROM generation_calls GROUP BY profile_id
+     )`,
+  );
+  const jobs = db.get<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM generation_jobs
+      WHERE status IN ('ready', 'failed')
+        AND (failure_code IS NULL OR failure_code != 'superseded')`,
+  );
+  const rejected = db.get<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM generation_jobs WHERE failure_code = 'validation'",
+  );
+  return {
+    calls: calls?.n ?? 0,
+    avgDurationMs: roundOrNull(calls?.avg_duration),
+    totalCostKopecks: calls?.total_cost ?? 0,
+    profileCount: profiles?.n ?? 0,
+    avgProfileCostKopecks: roundOrNull(profiles?.avg_cost),
+    finishedJobs: jobs?.n ?? 0,
+    validatorRejected: rejected?.n ?? 0,
+  };
 }
 
 // ── Генерация: очередь, журнал вызовов, кэш (E4-03, E4-10, E4-11) ─────────────

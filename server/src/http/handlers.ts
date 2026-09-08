@@ -46,6 +46,7 @@ import { canTransition } from "../payments/order-state.js";
 import type { PaymentProvider, WebhookEvent, WebhookHeaders } from "../payments/provider.js";
 import type { ErrorTracker } from "../observability/provider.js";
 import { captureError } from "../observability/report.js";
+import { notePageImpressions, recordFunnel, stepFromPage, stepFromPortion, stepFromSlot } from "../funnel.js";
 import {
   deleteBlock,
   deleteProfile,
@@ -74,7 +75,6 @@ import {
   listOrders,
   markBlocksStale,
   paidSlices,
-  recordEvent,
   recordProfileVersion,
   releaseActiveJob,
   revokeShareTokens,
@@ -203,8 +203,20 @@ function loadProfile(context: Context, profileId: string | undefined): ProfileRe
   return findProfile(context.db, profileId);
 }
 
-const page = (context: Context, profile: ProfileRecord): PageStateResponse =>
-  assemble({ db: context.db, profile, publicOrigin: context.config.publicOrigin }).page;
+const page = (context: Context, profile: ProfileRecord): PageStateResponse => {
+  const assembled = assemble({ db: context.db, profile, publicOrigin: context.config.publicOrigin }).page;
+  notePageImpressions(context.db, assembled, context.config.build.version);
+  return assembled;
+};
+
+/** Событие воронки: версия сборки всегда из того же места, что `GET /api/health`. */
+function funnel(
+  context: Context,
+  type: string,
+  input: { profileId?: string | null; step: string; payload?: Record<string, unknown>; once?: boolean },
+): void {
+  recordFunnel(context.db, type, { ...input, version: context.config.build.version });
+}
 
 /**
  * Ставит финал лестницы и готовые срезы в очередь и будит воркер.
@@ -264,8 +276,10 @@ export function createProfile(context: Context, raw: unknown): HandlerResult {
   const profile = context.db.transaction(() => {
     const created = insertProfile(context.db, { profileId: newProfileId(), name, birthDate });
     if (version !== null) insertConsent(context.db, created.profileId, version);
-    recordEvent(context.db, "profile.created", {
+    recordFunnel(context.db, "profile.created", {
       profileId: created.profileId,
+      step: "0",
+      version: context.config.build.version,
       payload: { hasBirthDate: birthDate === null ? 0 : 1, ...(version === null ? {} : { consentVersion: version }) },
     });
     return created;
@@ -332,9 +346,10 @@ export function submitPortion(context: Context, params: Record<string, string>, 
         value: answerValue(answer),
       })),
     );
-    recordEvent(context.db, "portion.submitted", {
+    funnel(context, "portion.submitted", {
       profileId: profile.profileId,
-      payload: { portion, answers: parsed.length },
+      step: stepFromPortion(portion),
+      payload: { portion, answerCount: parsed.length },
     });
 
     const version = revise(context, profile, "portion");
@@ -380,7 +395,11 @@ export function editAnswer(context: Context, params: Record<string, string>, raw
     ]);
     // Купленные и сгенерированные блоки не переписываются: на них отметка о расхождении.
     markBlocksStale(context.db, profile.profileId);
-    recordEvent(context.db, "answer.edited", { profileId: profile.profileId, payload: { portion } });
+    funnel(context, "answer.edited", {
+      profileId: profile.profileId,
+      step: stepFromPortion(portion),
+      payload: { portion },
+    });
     revise(context, profile, "answer_edit");
     // Вход генерации изменился: живое задание со старым хешем снимаем со слота,
     // место в уникальном индексе освобождается под новое.
@@ -415,8 +434,9 @@ export function disagree(context: Context, params: Record<string, string>, raw: 
       blockId: block.generation?.id ?? null,
       kind,
     });
-    recordEvent(context.db, "block.disagreed", {
+    funnel(context, "block.disagreed", {
       profileId: profile.profileId,
+      step: stepFromSlot(blockId),
       payload: { slot: blockId, kind },
     });
 
@@ -488,8 +508,9 @@ export function purchase(context: Context, params: Record<string, string>, raw: 
       providerRef: payment.reference,
       mode: context.payments.mode,
     });
-    recordEvent(context.db, "order.created", {
+    funnel(context, "order.created", {
       profileId: profile.profileId,
+      step: "paid",
       payload: { slice, provider: context.payments.name, mode: context.payments.mode },
     });
     return { order, created: true, url: payment.url };
@@ -561,8 +582,9 @@ function applyWebhook(context: Context, order: OrderRecord, event: WebhookEvent)
   transitionOrder(context.db, order, target, "webhook");
   if (target === "refunded") revokeSliceAccess(context, order);
 
-  recordEvent(context.db, `order.${target}`, {
+  funnel(context, `order.${target}`, {
     profileId: order.profileId,
+    step: "paid",
     payload: { slice: order.slice, provider: context.payments.name },
   });
   return "applied";
@@ -588,8 +610,9 @@ export function refund(context: Context, params: Record<string, string>): Handle
     (block) => block.slot === `slice:${order.slice}` && block.status === "ready",
   );
   if (delivered) {
-    recordEvent(context.db, "refund.manual_required", {
+    funnel(context, "refund.manual_required", {
       profileId: profile.profileId,
+      step: "paid",
       payload: { slice: order.slice },
     });
     return fail(409, "refund_unavailable");
@@ -603,8 +626,9 @@ export function refund(context: Context, params: Record<string, string>): Handle
     });
     const next = transitionOrder(context.db, order, "refunded", "refund_requested");
     revokeSliceAccess(context, order);
-    recordEvent(context.db, "order.refunded", {
+    funnel(context, "order.refunded", {
       profileId: profile.profileId,
+      step: "paid",
       payload: { slice: order.slice, initiator: "owner" },
     });
     return next;
@@ -797,7 +821,7 @@ export function deleteProfileHandler(context: Context, params: Record<string, st
 
   // Событие пишется без профиля: связывать запись об удалении с удалённым
   // человеком значит не удалить его.
-  recordEvent(context.db, "profile.deleted");
+  funnel(context, "profile.deleted", { step: "none" });
 
   const body: DeleteResponse = { deleted: true };
   return { status: 200, body };
@@ -813,11 +837,14 @@ export function share(context: Context, params: Record<string, string>): Handler
   const body = context.db.transaction(() => {
     const existing = findActiveShareToken(context.db, profile.profileId);
     const token = existing ?? insertShareToken(context.db, profile.profileId, newShareToken());
-    if (!existing) recordEvent(context.db, "share.enabled", { profileId: profile.profileId });
+    const current = page(context, profile);
+    if (!existing) {
+      funnel(context, "share.enabled", { profileId: profile.profileId, step: stepFromPage(current.state) });
+    }
 
     const response: ShareResponse = {
       share: { url: shareUrl(context.config.publicOrigin, token.token), createdAt: token.createdAt },
-      page: page(context, profile),
+      page: current,
     };
     return response;
   });
@@ -832,7 +859,13 @@ export function revokeShare(context: Context, params: Record<string, string>): H
 
   const body = context.db.transaction(() => {
     const revoked = revokeShareTokens(context.db, profile.profileId);
-    if (revoked) recordEvent(context.db, "share.revoked", { profileId: profile.profileId, payload: { revoked } });
+    if (revoked) {
+      funnel(context, "share.revoked", {
+        profileId: profile.profileId,
+        step: "none",
+        payload: { revoked },
+      });
+    }
     const response: ShareResponse = { share: null, page: page(context, profile) };
     return response;
   });
@@ -855,7 +888,15 @@ export function publicPage(context: Context, params: Record<string, string>): Ha
   const profile = findProfileByShareToken(context.db, token);
   if (!profile) return fail(404, "not_found");
 
-  const full = context.db.transaction(() => page(context, profile));
+  const full = context.db.transaction(() => {
+    const assembled = page(context, profile);
+    funnel(context, "share.viewed", {
+      profileId: profile.profileId,
+      step: stepFromPage(assembled.state),
+      once: true,
+    });
+    return assembled;
+  });
   const body: PublicPageResponse = assemblePublic(full);
   return { status: 200, body };
 }

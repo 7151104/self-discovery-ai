@@ -13,6 +13,7 @@ export * from "./types.js";
 export {
   applyDisagreement,
   applyDisagreements,
+  bankAnswersFromLadder,
   blockCoordinates,
   buildProfile,
   buildProfileFromBank,
@@ -41,6 +42,7 @@ export { selectOffer, selectOfferAfterSlice, buildDoors } from "./offers.js";
 export {
   applySlice,
   checkThreshold,
+  mediumOrBetter,
   nextSliceAfter,
   nextSlicePortion,
   sameSubtype,
@@ -53,6 +55,29 @@ export {
   type SlicePortion,
   type SliceReport,
 } from "./slices.js";
+export {
+  buildFullMapInterlude,
+  buildFullMapProfile,
+  fullMap,
+  fullMapAnswered,
+  fullMapBankAnswers,
+  fullMapDelivered,
+  fullMapInterlude,
+  fullMapInterludeText,
+  fullMapPortion,
+  fullMapPortions,
+  fullMapQuestions,
+  fullMapRemainder,
+  fullMapRemaining,
+  fullMapReport,
+  fullMapThreshold,
+  nextFullMapPortion,
+  FULL_MAP_SUBTYPES,
+  type FullMapInput,
+  type FullMapPortion,
+  type FullMapReport,
+  type FullMapSlice,
+} from "./full-map.js";
 export { buildSliceInterludeBlock } from "./blocks.js";
 export {
   diffProfiles,

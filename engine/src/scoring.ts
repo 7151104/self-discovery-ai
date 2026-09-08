@@ -14,12 +14,14 @@ import { rawContent } from "./generated/content.js";
 import type {
   Band,
   BankAnswers,
+  ChoiceAnswer,
   Confidence,
   CoordinateState,
   Disagreement,
   DisagreementKind,
   LadderAnswers,
   Profile,
+  ScaleAnswer,
 } from "./types.js";
 
 interface Assignment {
@@ -651,6 +653,44 @@ const optionText = (id: string, answer: string): string => {
 };
 
 /**
+ * Вопросы, чья группа смотрит в сторону, противоположную оси координаты
+ * (content/scoring-rules.md, «Полный банк: точные правила»): при чтении группа
+ * разворачивается к оси. Таблица одна, потому что полосу этих пар спрашивает не
+ * только сборка профиля — её же читают промежуточные блоки полной карты.
+ */
+const MIRRORED = new Set(["Q9", "Q10", "Q15", "Q16", "Q23", "Q25", "Q26", "Q27", "Q28"]);
+
+/** Обратный ли ответ при чтении: направление вопроса из банка плюс разворот группы к оси. */
+const bankReversed = (id: string): boolean => (bankQuestion(id).direction === "обратный") !== MIRRORED.has(id);
+
+/**
+ * Шкальные ответы банка как свидетельства для `scoreCoordinate`. Нужны тем, кто
+ * спрашивает полосу пары вопросов отдельно от профиля: своей арифметики у них
+ * быть не должно.
+ */
+export const bankScales = (ids: string[], answers: BankAnswers): ScaleEvidence[] =>
+  ids.flatMap((id) => {
+    const value = scaleAnswer(answers, id);
+    return value === undefined ? [] : [{ kind: "шкала" as const, question: id, value, reversed: bankReversed(id) }];
+  });
+
+/**
+ * Ответы лестницы в идентификаторах банка (таблица mapping в
+ * `content/questions-ladder.md`). Вопрос лестницы и вопрос банка — один вопрос с
+ * одной формулировкой, поэтому ответ переносится как есть; открытые ответы
+ * арифметики не дают и здесь не участвуют.
+ */
+export function bankAnswersFromLadder(answers: LadderAnswers): BankAnswers {
+  const out: BankAnswers = {};
+  for (const question of rawContent.questions) {
+    if (question.type === "открытый") continue;
+    const value = (answers as Record<string, ScaleAnswer | ChoiceAnswer | undefined>)[question.id];
+    if (value !== undefined) out[question.source] = value;
+  }
+  return out;
+}
+
+/**
  * Профиль по полному банку 35+3.
  *
  * Правила — content/scoring-rules.md, раздел «Полный банк: точные правила».
@@ -660,20 +700,14 @@ const optionText = (id: string, answer: string): string => {
 export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptions = {}): Profile {
   const { profile, assign } = createProfile(options);
 
-  /** Основной шкальный вопрос координаты: направление из банка, `mirror` — разворот группы к оси. */
-  const scale = (id: string, mirror = false): ScaleEvidence[] => {
-    const value = scaleAnswer(answers, id);
-    if (value === undefined) return [];
-    const reversed = (bankQuestion(id).direction === "обратный") !== mirror;
-    return [{ kind: "шкала", question: id, value, reversed }];
-  };
+  /** Основной шкальный вопрос координаты: направление из банка и разворот группы к оси. */
+  const scale = (id: string): ScaleEvidence[] => bankScales([id], answers);
 
   /** Дополняющий шкальный вопрос: только указывает сторону оси, в усреднении не участвует. */
-  const support = (id: string, mirror = false): PointerEvidence[] => {
+  const support = (id: string): PointerEvidence[] => {
     const value = scaleAnswer(answers, id);
     if (value === undefined) return [];
-    const reversed = (bankQuestion(id).direction === "обратный") !== mirror;
-    const normalized = reversed ? reverseScale(value) : value;
+    const normalized = bankReversed(id) ? reverseScale(value) : value;
     return [
       { kind: "указание", question: id, answer: String(value), direction: pointerOf(normalized), selfReport: true },
     ];
@@ -745,8 +779,8 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
 
   // 4 — основание решений. Группа Q9/Q10 смотрит на «логику», ось — на «людей».
   assignScaleCoordinate(4, [
-    ...scale("Q9", true),
-    ...scale("Q10", true),
+    ...scale("Q9"),
+    ...scale("Q10"),
     ...choice("Q8", DECISION_POINTER),
     ...choice("Q11", TRADEOFF_POINTER),
   ]);
@@ -771,7 +805,7 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
   }
 
   // 6 — открытость новому. Группа Q15/Q16 смотрит на «новое», ось — на «проверенное».
-  assignScaleCoordinate(6, [...scale("Q15", true), ...scale("Q16", true)]);
+  assignScaleCoordinate(6, [...scale("Q15"), ...scale("Q16")]);
 
   // 7 — эмоциональная реактивность. Q17, Q18 прямые, Q19 обратный, Q14 дополняет.
   assignScaleCoordinate(7, [...scale("Q17"), ...scale("Q18"), ...scale("Q19"), ...support("Q14")]);
@@ -860,9 +894,9 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
   {
     const score = scoreCoordinate([
       ...choice("Q24", { A: 1, B: 1, C: 1, D: 1, E: -1 }, true),
-      ...scale("Q23", true),
-      ...scale("Q25", true),
-      ...support("Q26", true),
+      ...scale("Q23"),
+      ...scale("Q25"),
+      ...support("Q26"),
     ]);
     if (score) {
       const band = completion?.band ?? bandForDirection(score);
@@ -879,7 +913,7 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
   }
 
   // 12 — позиция среди людей. Группа Q27/Q28 смотрит на кооперацию, ось — на соперничество.
-  assignScaleCoordinate(12, [...scale("Q27", true), ...scale("Q28", true)]);
+  assignScaleCoordinate(12, [...scale("Q27"), ...scale("Q28")]);
 
   // 13 — способ входа в дело. Ключевой Q29, шкалы Q30 и Q31, дополняет Q26.
   const entryAnswer = choiceAnswer(answers, "Q29");
@@ -889,7 +923,7 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
       ...choice("Q29", optionPointers(ENTRY), true),
       ...scale("Q30"),
       ...scale("Q31"),
-      ...support("Q26", true),
+      ...support("Q26"),
     ]);
     if (score) {
       const band = entry?.band ?? bandForDirection(score);

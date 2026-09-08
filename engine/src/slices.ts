@@ -219,8 +219,12 @@ const refinedBySlice = (profile: Profile, coordinate: number, slice: string): bo
   return Object.entries(rulesFor(slice).owns).some(([own, id]) => own === code && id === coordinate);
 };
 
-/** Сколько координат профиля закрыто не хуже medium. */
-const mediumOrBetter = (profile: Profile): number =>
+/**
+ * Сколько координат профиля закрыто не хуже medium. Число читают правила
+ * «Следующих дверей» и пороги срезов, включая порог полной карты, поэтому оно
+ * считается в одном месте.
+ */
+export const mediumOrBetter = (profile: Profile): number =>
   Object.values(profile.coordinates).filter((coordinate) => coordinate.sources.length && coordinate.confidence !== "low")
     .length;
 

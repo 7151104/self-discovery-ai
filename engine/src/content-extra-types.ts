@@ -206,6 +206,34 @@ export interface RawPayScreen {
   decline: string;
 }
 
+/**
+ * Письмо (content/emails.md). `withoutEmail` — место на странице, которое говорит то же
+ * самое: почта не основной носитель, и её может не быть вовсе (открытый вопрос 6).
+ */
+export interface RawEmail {
+  id: string;
+  title: string;
+  /** Событие, по которому письмо уходит. Писем по расписанию в продукте нет. */
+  when: string;
+  subject: string;
+  withoutEmail: string;
+  body: string[];
+  /** Имена подстановок вида `{имя}` в теме и теле. */
+  params: string[];
+}
+
+/** Общая часть подвала письма: стоит в каждом письме и правится один раз. */
+export interface RawEmailFooter {
+  id: string;
+  text: string;
+  where: string[];
+}
+
+export interface RawEmails {
+  emails: RawEmail[];
+  footer: RawEmailFooter[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
@@ -215,4 +243,5 @@ export interface RawExtraContent {
   uiCopy: RawUiCopy[];
   fullMap: RawFullMap;
   payScreens: RawPayScreen[];
+  emails: RawEmails;
 }

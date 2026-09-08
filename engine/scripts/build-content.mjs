@@ -1313,6 +1313,76 @@ function parseFullMap(bank, slices) {
 }
 
 /**
+ * Письма (E5-07): `content/emails.md`.
+ *
+ * Почта — не основной носитель, и решение о её сборе не принято (открытый вопрос 6). Поэтому
+ * у каждого письма обязательно поле «Без почты»: место на странице, которое говорит то же
+ * самое. Письмо без такого поля — единственный носитель своего содержания, и разбор падает.
+ */
+function parseEmails() {
+  const file = "content/emails.md";
+  const src = lines(read(file));
+
+  const emails = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## (EMAIL_[A-Z_]+) · (.+)$/.exec(src[i]);
+    if (!heading) continue;
+    const [, id, title] = heading;
+    const end = src.findIndex((line, j) => j > i && line.startsWith("## "));
+    const section = src.slice(i, end < 0 ? undefined : end);
+
+    const field = (label) => {
+      const line = section.find((candidate) => candidate.startsWith(`**${label}:**`));
+      if (!line) throw new Error(`${file}: у ${id} нет поля «${label}»`);
+      const value = line.replace(`**${label}:**`, "").trim();
+      if (!value) throw new Error(`${file}: у ${id} пустое поле «${label}»`);
+      return value;
+    };
+
+    const subject = field("Тема");
+    if (subject.endsWith(".")) throw new Error(`${file}: тема ${id} заканчивается точкой`);
+
+    const body = [];
+    for (const line of section) {
+      if (!line.startsWith(">")) continue;
+      const text = line.replace(/^>\s?/, "").trim();
+      if (text) body.push(text);
+    }
+    if (body.length < 2) throw new Error(`${file}: у ${id} меньше двух абзацев тела`);
+
+    emails.push({ id, title, when: field("Когда"), subject, withoutEmail: field("Без почты"), body });
+  }
+  if (!emails.length) throw new Error(`${file}: не найдено ни одного письма`);
+
+  const footer = [];
+  for (const cells of tableUnder(src, "## Общие части подвала", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^EMAIL_FOOTER_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у ${id} нет текста`);
+    const where = (cells[2] ?? "")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!where.length) throw new Error(`${file}: у ${id} не указано, где он показывается`);
+    footer.push({ id, text: cells[1], where });
+  }
+  if (!footer.length) throw new Error(`${file}: реестр общих частей подвала пуст`);
+
+  const params = (text) => [...text.matchAll(/\{([а-яё]+)\}/g)].map((match) => match[1]);
+  for (const email of emails) {
+    email.params = [...new Set([...params(email.subject), ...email.body.flatMap(params)])];
+  }
+
+  const seen = new Set();
+  for (const entry of [...emails, ...footer]) {
+    if (seen.has(entry.id)) throw new Error(`${file}: идентификатор ${entry.id} встречается дважды`);
+    seen.add(entry.id);
+  }
+
+  return { emails, footer };
+}
+
+/**
  * Экраны оплаты (E5-09): раздел «Экран оплаты» в каждом файле среза.
  *
  * Обещание на экране — то же, что в оффере, поэтому здесь оно не переписывается: в разделе
@@ -1369,6 +1439,7 @@ const extra = {
   fullMap: parseFullMap(content.bank, content.slices),
 };
 extra.payScreens = parsePayScreens(content.slices, extra.fullMap);
+extra.emails = parseEmails();
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
@@ -1390,5 +1461,6 @@ console.log(
     `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах, ` +
     `полная карта: ${extra.fullMap.portions.reduce((sum, portion) => sum + portion.questions.length, 0)} вопросов ` +
     `в ${extra.fullMap.portions.length} порциях, ${extra.fullMap.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар в блоках, ` +
-    `${extra.payScreens.length} экранов оплаты`,
+    `${extra.payScreens.length} экранов оплаты, ` +
+    `письма: ${extra.emails.emails.length} писем и ${extra.emails.footer.length} общих частей подвала`,
 );

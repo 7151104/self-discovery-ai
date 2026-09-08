@@ -6,8 +6,9 @@
  */
 
 import { ConfigError, loadConfig, type ServerConfig } from "./config.js";
+import type { Db } from "./db/driver.js";
 import { openDatabase } from "./db/sqlite.js";
-import { up } from "./db/migrate.js";
+import { checkMigrations, MigrationError, reportProblems, up } from "./db/migrate.js";
 import { createHttpServer } from "./http/server.js";
 import { log } from "./log.js";
 
@@ -38,10 +39,31 @@ if (!config.keys.active) {
   log("encryption.disabled", { environment: config.environment });
 }
 
-if (config.autoMigrate) {
-  const applied = up(db);
-  if (applied.length) log("migrate.up", { versions: applied.join(",") });
+/**
+ * Миграции при запуске (E10-04). Несовместимая миграция не даёт стартовать:
+ * сервер на схеме, которая не совпадает с репозиторием, хуже остановленного —
+ * он тихо пишет данные не туда.
+ *
+ * Автоматическое применение выключено — проверка всё равно проходит: применять
+ * вручную можно, работать на изменённом файле применённой миграции нельзя.
+ */
+function migrateOrRefuse(database: Db, settings: ServerConfig): void {
+  try {
+    if (settings.autoMigrate) {
+      const applied = up(database);
+      if (applied.length) log("migrate.up", { versions: applied.join(",") });
+      return;
+    }
+    const problems = checkMigrations(database);
+    if (problems.length) throw new MigrationError(problems);
+  } catch (error) {
+    if (!(error instanceof MigrationError)) throw error;
+    reportProblems(error.problems);
+    process.exit(1);
+  }
 }
+
+migrateOrRefuse(db, config);
 
 const server = createHttpServer({ db, config });
 

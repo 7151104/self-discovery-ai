@@ -13,6 +13,7 @@
     "lint:styles": "npm run build && node web/dist/src/lint-styles.js",
     "dev:server": "npm run build && node --disable-warning=ExperimentalWarning server/dist/main.js",
     "migrate": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/migrate.js",
+    "migrate:check": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/migrate.js check",
     "keygen": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/keygen.js",
     "pay": "npm run build && node --disable-warning=ExperimentalWarning server/dist/payments/simulate.js",
     "reencrypt": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/reencrypt.js",

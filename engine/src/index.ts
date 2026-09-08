@@ -96,8 +96,8 @@ export function completedStep(answers: LadderAnswers): 0 | 1 | 2 | 3 | 4 {
 }
 
 /**
- * Полное состояние страницы по текущим ответам.
- * `internalProfile` наружу отдавать нельзя — на клиент уходят только блоки и полосы.
+ * Полное состояние страницы по текущим ответам: публичная половина в `view`,
+ * профиль и задание для LLM — в `internal`. Наружу уходит только `view`.
  */
 export function buildPage(input: Step0Input, answers: LadderAnswers, options: ProfileOptions = {}): PageState {
   const step = completedStep(answers);
@@ -126,15 +126,16 @@ export function buildPage(input: Step0Input, answers: LadderAnswers, options: Pr
   const hook = step >= 3 ? (profile.nodes[0]?.text.split(". ")[0] ?? null) : (blocks[0]?.highlight ?? null);
 
   return {
-    step,
-    card: buildStep0Card(input),
-    hook: hook ? `${hook.replace(/\.$/, "")}.` : null,
-    map: buildMap(profile, answers),
-    blocks,
-    doors: buildDoors(profile, blocks, offer, step),
-    offer,
-    nextPortion: step < 4 ? portionForStep((step + 1) as 1 | 2 | 3 | 4) : null,
-    llmTask,
-    internalProfile: profile,
+    view: {
+      step,
+      card: buildStep0Card(input),
+      hook: hook ? `${hook.replace(/\.$/, "")}.` : null,
+      map: buildMap(profile, answers),
+      blocks,
+      doors: buildDoors(profile, blocks, offer, step),
+      offer,
+      nextPortion: step < 4 ? portionForStep((step + 1) as 1 | 2 | 3 | 4) : null,
+    },
+    internal: { profile, llmTask },
   };
 }

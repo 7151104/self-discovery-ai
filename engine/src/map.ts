@@ -10,6 +10,9 @@ import { rawContent } from "./generated/content.js";
 import type { Band, LadderAnswers, MapBar, Profile } from "./types.js";
 
 interface BarDefinition {
+  /** Устойчивый ключ полосы: им её опознаёт клиент вместо номера координаты. */
+  key: string;
+  /** Внутреннее: какая координата питает полосу. Наружу не выходит. */
   coordinate: number;
   label: string;
   poles: { low: string; high: string } | null;
@@ -20,13 +23,13 @@ interface BarDefinition {
 }
 
 export const BAR_DEFINITIONS: BarDefinition[] = [
-  { coordinate: 2, label: "Темп", poles: { low: "ровный поток", high: "импульсы" }, invert: false, hint: "Откроется на первых трёх вопросах" },
-  { coordinate: 11, label: "Доведение", poles: { low: "до конца", high: "обрыв" }, invert: false, hint: "Откроется на первых трёх вопросах" },
-  { coordinate: 9, label: "Под давлением", poles: { low: "замирание", high: "ускорение" }, invert: false, hint: "Откроется на первых трёх вопросах" },
-  { coordinate: 8, label: "Что задевает", poles: null, invert: false, hint: "Откроется на вопросах про то, что задевает" },
-  { coordinate: 3, label: "Внимание", poles: { low: "конкретика", high: "связи" }, invert: false, hint: "Откроется на вопросах про то, как ты обрабатываешь" },
-  { coordinate: 5, label: "Структура", poles: { low: "определённость", high: "открытый финал" }, invert: true, hint: "Откроется на вопросах про планы и решения" },
-  { coordinate: 7, label: "Удержание", poles: { low: "отпускает", high: "держит долго" }, invert: false, hint: "Откроется на вопросах про то, как тебя задевает" },
+  { key: "tempo", coordinate: 2, label: "Темп", poles: { low: "ровный поток", high: "импульсы" }, invert: false, hint: "Откроется на первых трёх вопросах" },
+  { key: "completion", coordinate: 11, label: "Доведение", poles: { low: "до конца", high: "обрыв" }, invert: false, hint: "Откроется на первых трёх вопросах" },
+  { key: "pressure", coordinate: 9, label: "Под давлением", poles: { low: "замирание", high: "ускорение" }, invert: false, hint: "Откроется на первых трёх вопросах" },
+  { key: "trigger", coordinate: 8, label: "Что задевает", poles: null, invert: false, hint: "Откроется на вопросах про то, что задевает" },
+  { key: "attention", coordinate: 3, label: "Внимание", poles: { low: "конкретика", high: "связи" }, invert: false, hint: "Откроется на вопросах про то, как ты обрабатываешь" },
+  { key: "structure", coordinate: 5, label: "Структура", poles: { low: "определённость", high: "открытый финал" }, invert: true, hint: "Откроется на вопросах про планы и решения" },
+  { key: "holding", coordinate: 7, label: "Удержание", poles: { low: "отпускает", high: "держит долго" }, invert: false, hint: "Откроется на вопросах про то, как тебя задевает" },
 ];
 
 const POSITION: Record<Band, number> = { low: 0.08, "mid-low": 0.3, mid: 0.5, "mid-high": 0.72, high: 0.92 };
@@ -41,7 +44,7 @@ export function buildMap(profile: Profile, answers: LadderAnswers): MapBar[] {
 
     if (!coordinate || !known) {
       return {
-        coordinate: definition.coordinate,
+        key: definition.key,
         label: definition.label,
         poles: definition.poles,
         state: "empty" as const,
@@ -62,7 +65,7 @@ export function buildMap(profile: Profile, answers: LadderAnswers): MapBar[] {
         };
 
     return {
-      coordinate: definition.coordinate,
+      key: definition.key,
       label: definition.label,
       poles: definition.poles,
       state: coordinate.confidence === "high" ? ("precise" as const) : ("approximate" as const),

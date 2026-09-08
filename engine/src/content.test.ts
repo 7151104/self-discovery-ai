@@ -93,6 +93,7 @@ test("полосы карты совпадают с таблицей в docs/11-
     const bar = BAR_DEFINITIONS[index]!;
     assert.equal(bar.label, cells[0]);
     assert.equal(bar.coordinate, Number(cells[1]));
+    assert.equal(`\`${bar.key}\``, cells[cells.length - 1], `${bar.label}: ключ полосы разошёлся с документом`);
   });
 });
 

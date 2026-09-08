@@ -1,0 +1,90 @@
+/*
+ * Вариант ответа. Цель — вся строка целиком, не кружок: на телефоне
+ * промахнуться нечем. Толщина рамки одинакова во всех состояниях,
+ * поэтому выбор варианта не сдвигает соседние строки.
+ */
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--size-target);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) ease, background-color var(--duration-fast) ease;
+}
+
+/* Родная радиокнопка остаётся в разметке: она даёт клавиатуру и скринридер.
+   Видимой её делает .option__mark, поэтому саму кнопку убираем из потока. */
+.option__input {
+  position: absolute;
+  width: var(--border-hair);
+  height: var(--border-hair);
+  margin: 0;
+  opacity: 0;
+}
+
+.option__mark {
+  flex: none;
+  width: var(--size-mark);
+  height: var(--size-mark);
+  border: var(--border-strong) solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-card);
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.option__text {
+  min-width: 0;
+}
+
+@media (hover: hover) {
+  .option[data-state="rest"]:hover {
+    border-color: var(--color-line-strong);
+  }
+}
+
+.option[data-state="rest"]:active {
+  background: var(--color-surface-muted);
+}
+
+.option:has(.option__input:focus-visible) {
+  outline: var(--border-strong) solid var(--color-focus);
+  outline-offset: var(--space-1);
+}
+
+.option[data-state="selected"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-quiet);
+}
+
+/* Выбранное различимо в градациях серого: кружок залит, а не подкрашен. */
+.option[data-state="selected"] .option__mark {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.option[data-state="disabled"] {
+  background: var(--color-surface-muted);
+  border-color: var(--color-line);
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+.option[data-state="disabled"] .option__mark {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-muted);
+}

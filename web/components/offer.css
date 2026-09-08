@@ -1,0 +1,114 @@
+/*
+ * Точка оплаты: воздух, одно предложение, одна кнопка с ценой,
+ * отказ — обычной ссылкой-кнопкой, а не мелким серым текстом в углу.
+ */
+
+.payment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-7) 0;
+}
+
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: var(--border-strong) solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-raised);
+}
+
+.offer__title {
+  max-width: var(--measure-block);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+}
+
+.offer__promise {
+  max-width: var(--measure-block);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.offer__buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--size-target);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-strong) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.offer__buy-label {
+  font-weight: var(--weight-strong);
+}
+
+/* Почему цена одна: строка мелкая, но она и есть обещание «без сюрпризов». */
+.offer__one-door {
+  max-width: var(--measure-block);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.offer__legal {
+  max-width: var(--measure-block);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.offer__legal-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-target);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
+@media (hover: hover) {
+  .offer__buy:hover {
+    background: var(--color-text-strong);
+    border-color: var(--color-text-strong);
+  }
+}
+
+.offer__contents {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.offer__decline {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  align-self: flex-start;
+  transition: border-color var(--duration-fast) ease;
+}
+
+@media (hover: hover) {
+  .offer__decline:hover {
+    border-color: var(--color-line-strong);
+    color: var(--color-text);
+  }
+}

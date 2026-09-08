@@ -1,0 +1,24 @@
+# Резервная копия базы и удаление копий старше срока (E10-05).
+# Запускается таймером sdai-backup.timer, сама по себе не включается.
+#
+# Копия снимается с живой базы: останавливать службу не нужно.
+
+[Unit]
+Description=Резервная копия базы сервиса самопознания
+Documentation=https://github.com/7151104/self-discovery-ai
+
+[Service]
+Type=oneshot
+User=sdai
+Group=sdai
+WorkingDirectory=/srv/sdai/current
+EnvironmentFile=/etc/sdai/production.env
+
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning /srv/sdai/current/server/dist/db/backup.js create
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning /srv/sdai/current/server/dist/db/backup.js prune
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sdai /var/backups/sdai

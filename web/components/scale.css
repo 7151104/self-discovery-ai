@@ -1,0 +1,110 @@
+/*
+ * Шкала: пять отметок, подписи полюсов по краям, ни одной цифры.
+ * Цель нажатия — квадрат 44 px вокруг точки, сама точка меньше.
+ */
+
+.scale {
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+}
+
+.scale__question {
+  padding: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.scale__hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.scale__marks {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-3);
+  /* Желоб под отметками: одна линия вместо пяти изолированных точек. */
+  background-image: linear-gradient(var(--color-surface-inset), var(--color-surface-inset));
+  background-size: 100% var(--border-strong);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.scale__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-target);
+  height: var(--size-target);
+  cursor: pointer;
+}
+
+.scale__input {
+  position: absolute;
+  width: var(--border-hair);
+  height: var(--border-hair);
+  margin: 0;
+  opacity: 0;
+}
+
+.scale__dot {
+  width: var(--size-mark);
+  height: var(--size-mark);
+  border: var(--border-strong) solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-card);
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+@media (hover: hover) {
+  .scale__mark[data-state="rest"]:hover .scale__dot {
+    border-color: var(--color-text-soft);
+  }
+}
+
+.scale__mark:has(.scale__input:focus-visible) {
+  outline: var(--border-strong) solid var(--color-focus);
+  outline-offset: 0;
+  border-radius: var(--radius-sm);
+}
+
+/* Выбранная отметка залита: в градациях серого она темнее пустых. */
+.scale__mark[data-state="selected"] .scale__dot {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.scale__mark[data-state="disabled"] {
+  cursor: not-allowed;
+}
+
+.scale__mark[data-state="disabled"] .scale__dot {
+  border-color: var(--color-line);
+  background: var(--color-surface-muted);
+}
+
+.scale[data-state="disabled"] .scale__question {
+  color: var(--color-text-faint);
+}
+
+.scale__poles {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.scale__pole:last-child {
+  text-align: right;
+}

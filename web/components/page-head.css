@@ -1,0 +1,39 @@
+/*
+ * Шапка и крючок. Крупный текст на странице ровно два: имя и крючок.
+ * Больше ничего не претендует на размер — тон спокойный, не праздничный.
+ */
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.head__name {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.head__theme {
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.head__metaphor {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.hook {
+  max-width: var(--measure-hook);
+  padding: var(--space-5) 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}

@@ -8,6 +8,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
 import { assertNoCoordinates, assertNoPrivateBlocks } from "./guard.js";
+import { log } from "../log.js";
 import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
 import { matchApi, matchPage, matchPublicPage } from "./router.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
@@ -223,10 +224,8 @@ export function createHttpServer(options: CreateOptions): Server {
 
   return createServer((request, response) => {
     dispatch(runtime, request, response).catch((error: unknown) => {
-      // В журнал уходит только машинный код: ни имён, ни ответов (docs/12, слой 7).
-      process.stderr.write(
-        `${JSON.stringify({ event: "request.failed", reason: error instanceof Error ? error.name : "unknown" })}\n`,
-      );
+      // Имя ошибки, а не её сообщение: в сообщении бывает содержимое запроса.
+      log("request.failed", { reason: error instanceof Error ? error.name : "unknown" });
       if (!response.headersSent) sendJson(response, handlers.fail(500, "internal_error"));
       else response.end();
     });

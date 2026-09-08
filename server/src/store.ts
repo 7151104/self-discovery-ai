@@ -11,6 +11,7 @@ import type { BlockSlot, DisagreementKind, OrderStatus, PortionKey, QuestionKind
 import type { Db } from "./db/driver.js";
 import { seal, unseal, unsealOptional, PLAINTEXT } from "./db/stored-text.js";
 import { newRecordId } from "./ids.js";
+import { scrub } from "./log.js";
 
 const now = (): string => new Date().toISOString();
 
@@ -580,19 +581,20 @@ export function insertDisagreement(
 // ── События ───────────────────────────────────────────────────────────────────
 
 /**
- * Событие воронки. В `payload` кладутся только машинные коды и идентификаторы:
- * ни имён, ни дат рождения, ни открытых ответов (`docs/12-target-state.md`, слой 7).
+ * Событие воронки. Таблица `events` — тот же журнал, только в базе, поэтому
+ * `payload` проходит ту же чистку, что и строки вывода (E9-04): наружу
+ * попадают машинные коды и идентификаторы, человеческий текст скрывается.
  */
 export function recordEvent(
   db: Db,
   type: string,
-  input: { profileId?: string | null; payload?: Record<string, string | number> } = {},
+  input: { profileId?: string | null; payload?: Record<string, unknown> } = {},
 ): void {
   db.run("INSERT INTO events (event_id, profile_id, type, payload, created_at) VALUES (?, ?, ?, ?, ?)", [
     newRecordId(),
     input.profileId ?? null,
     type,
-    JSON.stringify(input.payload ?? {}),
+    JSON.stringify(scrub(input.payload ?? {})),
     now(),
   ]);
 }

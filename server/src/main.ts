@@ -10,10 +10,7 @@ import { ConfigError, loadConfig, type ServerConfig } from "./config.js";
 import { openDatabase } from "./db/sqlite.js";
 import { up } from "./db/migrate.js";
 import { createHttpServer } from "./http/server.js";
-
-const log = (event: string, fields: Record<string, string | number | boolean> = {}): void => {
-  process.stdout.write(`${JSON.stringify({ event, ...fields })}\n`);
-};
+import { log } from "./log.js";
 
 function packageVersion(): string {
   try {

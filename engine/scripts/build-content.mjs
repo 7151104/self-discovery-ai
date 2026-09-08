@@ -644,14 +644,38 @@ function parseDoorLabels() {
   return { nodes, slices, applied };
 }
 
+/**
+ * Дисклеймеры внутри продукта (E5-08): строка с идентификатором, текстом и списком
+ * мест показа. Интерфейс берёт текст отсюда — зашитых русских строк в коде нет.
+ */
+function parseDisclaimers() {
+  const file = "content/legal/disclaimers.md";
+  const src = lines(read(file));
+  const out = [];
+  for (const cells of tableUnder(src, "## Реестр дисклеймеров", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^DISCLAIMER_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у ${id} нет текста`);
+    const where = (cells[2] ?? "")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!where.length) throw new Error(`${file}: у ${id} не указано, где он показывается`);
+    out.push({ id, text: cells[1], where });
+  }
+  if (!out.length) throw new Error(`${file}: реестр дисклеймеров пуст`);
+  return out;
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
+  disclaimers: parseDisclaimers(),
 };
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md и content/doors.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md и content/legal/ — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -662,5 +686,5 @@ console.log(
   `content-extra.ts собран: ${extra.interludes.length} промежуточных блоков ` +
     `(${extra.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар), ` +
     `${Object.keys(extra.doors.nodes).length} подписей дверей по узлам, ` +
-    `${Object.keys(extra.doors.slices).length} по срезам`,
+    `${Object.keys(extra.doors.slices).length} по срезам, ${extra.disclaimers.length} дисклеймеров`,
 );

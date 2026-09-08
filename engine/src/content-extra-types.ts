@@ -45,7 +45,15 @@ export interface RawDoorLabels {
   applied: Record<string, Record<string, string | null>>;
 }
 
+/** Дисклеймер продукта: текст и места показа внутри потока (content/legal/disclaimers.md). */
+export interface RawDisclaimer {
+  id: string;
+  text: string;
+  where: string[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
+  disclaimers: RawDisclaimer[];
 }

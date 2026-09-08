@@ -206,6 +206,7 @@ export function pageFromPublic(view: PublicPageDto): PageStateDto {
 export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, options: PageViewOptions = {}): VNode {
   const now = options.now ?? Date.parse(page.updatedAt);
   const wait = waitFromPage(page, { now, reopened: options.reopened === true });
+  const waiting = wait !== null;
   const theme = page.card.theme === null ? null : labels.head.period(page.card.theme);
   const publicTitle = options.publicView === true ? labels.public?.title : undefined;
   const card = {
@@ -248,7 +249,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
             longNote: labels.wait.longNote(wait),
             resumedNote: labels.wait.resumedNote(wait),
             kind: wait.kind,
-            entering: enterFlag(block.id, seenBlocks) === "on",
+            entering: options.reopened === true ? false : enterFlag(block.id, seenBlocks) === "on",
           }),
         );
       }
@@ -316,7 +317,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         onSubmit: options.onSubmit,
       }),
     );
-  } else if (page.offer !== null && options.publicView !== true) {
+  } else if (!waiting && page.offer !== null && options.publicView !== true) {
     children.push(
       renderOffer({
         offer: page.offer,

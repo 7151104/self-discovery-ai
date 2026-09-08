@@ -21,6 +21,7 @@ export type {
   DoorDto,
   ErrorCode,
   ErrorDto,
+  GenerationDto,
   GenerationStatus,
   MapBarDto,
   OfferDto,

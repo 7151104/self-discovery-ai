@@ -212,4 +212,5 @@ export const errorTexts = {
   load: (): string => copy("UI_ERROR_LOAD"),
   offline: (): string => copy("UI_ERROR_OFFLINE"),
   unknown: (): string => copy("UI_ERROR_UNKNOWN"),
+  tooShort: (): string => copy("UI_ERROR_TOO_SHORT"),
 };

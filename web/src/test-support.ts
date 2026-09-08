@@ -106,3 +106,30 @@ export function lineHeightPx(fontSizeToken: string, leadingToken: string): numbe
   if (leading === undefined) throw new Error(`нет токена --${leadingToken}`);
   return tokenPixels(fontSizeToken) * Number(leading);
 }
+
+/** Таймер, который сам не тикает: тесты запускают отложенные колбэки вручную. */
+export function createManualTimer(): {
+  setTimeout: (handler: () => void, ms: number) => number;
+  clearTimeout: (id: number) => void;
+  count: () => number;
+  flush: () => void;
+} {
+  let seq = 0;
+  const items: { id: number; fn: () => void }[] = [];
+  return {
+    setTimeout(fn) {
+      const id = ++seq;
+      items.push({ id, fn });
+      return id;
+    },
+    clearTimeout(id) {
+      const index = items.findIndex((item) => item.id === id);
+      if (index >= 0) items.splice(index, 1);
+    },
+    count: () => items.length,
+    flush() {
+      const batch = items.splice(0);
+      for (const item of batch) item.fn();
+    },
+  };
+}

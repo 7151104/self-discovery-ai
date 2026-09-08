@@ -78,6 +78,12 @@ test("возврат на порцию с сохранёнными ответа�
   assert.equal(session.questionIndex, 1);
 });
 
+test("перезагрузка во время сборки ставит waitResumed и не считает ожидание увиденным блоком", () => {
+  const session = showPage(emptySession(), pageStates.s4Waiting, "load");
+  assert.equal(session.waitResumed, true);
+  assert.equal(session.seenBlocks.has("step4"), false);
+});
+
 test("несогласие не сбрасывает курсор порции", () => {
   const session = { ...s0(), questionIndex: 2 };
   const next = replacePage(setDisagreeing(session, "step1"), pageStates.s1);

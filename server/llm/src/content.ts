@@ -101,11 +101,23 @@ function parseVolumes(): Map<ReportType, WordRange> {
     const min = Number(range[1]);
     const max = Number(range[2]);
     if (!(min > 0 && max > min)) throw new Error(`${VOLUMES_FILE}: объём «${wordsCell}» бессмыслен`);
+    // Несколько типов в одной ячейке получают один диапазон; у платных срезов
+    // теперь по типу на строку, и диапазоны разные.
     for (const type of types) volumes.set(type, { min, max });
   }
 
-  if (!volumes.has("финал_лестницы") || !volumes.has("бесплатный_полный"))
-    throw new Error(`${VOLUMES_FILE}: в таблице объёма нет обоих бесплатных типов отчёта`);
+  const required = [
+    "финал_лестницы",
+    "бесплатный_полный",
+    "срез_узел",
+    "срез_работа",
+    "срез_отношения",
+    "разбор_решения",
+    "полная_карта",
+  ];
+  const missing = required.filter((type) => !volumes.has(type));
+  if (missing.length)
+    throw new Error(`${VOLUMES_FILE}: в таблице объёма нет типов ${missing.join(", ")}`);
   return volumes;
 }
 

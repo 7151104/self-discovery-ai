@@ -29,7 +29,12 @@ test("объём разобран по каждому машинному тип�
   assert.deepEqual(volumeOf("финал_лестницы"), { min: 250, max: 350 });
   assert.deepEqual(volumeOf("бесплатный_полный"), { min: 900, max: 1200 });
   assert.deepEqual(volumeOf("срез_узел"), { min: 800, max: 1200 });
+  assert.deepEqual(volumeOf("срез_работа"), { min: 1200, max: 1500 });
+  assert.deepEqual(volumeOf("срез_отношения"), { min: 1200, max: 1500 });
+  assert.deepEqual(volumeOf("разбор_решения"), { min: 1200, max: 1800 });
   assert.deepEqual(volumeOf("полная_карта"), { min: 1500, max: 2500 });
+  assert.notDeepEqual(volumeOf("срез_работа"), volumeOf("срез_узел"));
+  assert.notDeepEqual(volumeOf("разбор_решения"), volumeOf("срез_узел"));
   assert.throws(() => volumeOf("отчёт_которого_нет"), /не описан/);
 });
 
@@ -52,14 +57,26 @@ test("в надстройке каждого среза есть блок, ас�
   const assembler = assemblerPrompt();
   assert.ok(assembler.includes("РОЛЬ"));
   assert.ok(assembler.includes("РЕГИСТРЫ"));
+  assert.match(assembler, /docs\/06-report-structure\.md/);
+  assert.equal(/срез:\s*800/.test(assembler), false, "ассемблер не должен дублировать объём среза одним числом");
   for (const slice of overlaySlices()) {
     const overlay = sliceOverlay(slice);
     assert.ok(overlay.length > 80, `${slice}: надстройка слишком короткая`);
   }
   assert.equal(reportTypeOfSlice("slice_node_finish"), "срез_узел");
   assert.equal(reportTypeOfSlice("slice_work"), "срез_работа");
+  assert.equal(reportTypeOfSlice("slice_relationships"), "срез_отношения");
+  assert.equal(reportTypeOfSlice("slice_decision_moment"), "разбор_решения");
   assert.equal(reportTypeOfSlice("slice_full_map"), "полная_карта");
   assert.throws(() => reportTypeOfSlice("slice_compatibility"), /нет машинного типа/);
+
+  const overlays = readRepoFile("prompts/paid-slice-templates.md");
+  assert.equal(
+    /\*\*Объём:\*\*/.test(overlays),
+    false,
+    "объём в надстройках — мёртвая дубликация: его подставляет сборщик из docs/06",
+  );
+  assert.match(overlays, /docs\/06-report-structure\.md/);
 });
 
 test("потолок confidence координаты 15 — из правил скоринга", () => {

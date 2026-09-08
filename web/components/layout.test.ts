@@ -116,7 +116,7 @@ test("размеры текста заданы в rem: масштаб 200% не 
 
 test("текстовые блоки не заперты в фиксированную высоту", () => {
   const lookup = componentLookup();
-  for (const selector of [".block", ".block__paragraph", ".block__highlight", ".map", ".offer"]) {
+  for (const selector of [".block", ".block__paragraph", ".block__highlight", ".map", ".map__bars", ".offer"]) {
     assert.equal(declared(lookup, selector, "height"), null, `${selector}: фиксированная высота`);
     assert.equal(declared(lookup, selector, "max-height"), null, `${selector}: потолок высоты`);
     const overflow = declared(lookup, selector, "overflow");

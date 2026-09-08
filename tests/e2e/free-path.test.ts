@@ -152,7 +152,6 @@ test("бесплатный путь: ступени 0–4, полосы, бло�
     assert.deepEqual(
       slots,
       expectedSlots({
-        hook: state !== "s0",
         blocks: specBlocks[state] ?? [],
         waiting,
         offer,

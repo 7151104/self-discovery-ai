@@ -97,6 +97,29 @@ test("маршрут виден с первого экрана до первог
   assert.ok(doors.some((door) => door.attrs["data-state"] === "opens_with_answers"));
 });
 
+test("на s0 страница читается разделами, а не стопкой полей", () => {
+  const node = draw("s0");
+  const text = visibleText(node);
+  assert.ok(byClass(node, "hook")[0]?.attrs["data-empty"] === "true");
+  assert.ok(text.includes(copy("UI_HOOK_EMPTY")));
+  assert.ok(text.includes(copy("UI_MAP_TITLE")));
+  assert.ok(text.includes(copy("UI_MAP_CLOSED_NOTE")));
+  assert.ok(text.includes(copy("UI_READING_TITLE")));
+  assert.ok(text.includes(copy("UI_READING_EMPTY")));
+  assert.ok(text.includes(copy("UI_PORTION_TITLE")));
+  assert.ok(text.includes(copy("UI_ROUTE_TITLE")));
+  assert.ok(text.includes(copy("UI_ROUTE_NOTE")));
+  assert.equal(text.includes(copy("UI_HEAD_LINK_HINT", { ссылка: pageStates.s0.url })), false);
+});
+
+test("после первой порции шапка показывает ссылку на страницу", () => {
+  const node = draw("s1");
+  assert.ok(visibleText(node).includes(copy("UI_HEAD_LINK_HINT", { ссылка: pageStates.s1.url })));
+  assert.equal(byClass(node, "hook")[0]?.attrs["data-empty"], "false");
+  assert.equal(visibleText(node).includes(copy("UI_READING_EMPTY")), false);
+  assert.ok(visibleText(node).includes(copy("UI_READING_TITLE")));
+});
+
 test("после ступени 3 подписи дверей становятся профильными", () => {
   const before = draw("s2");
   const after = draw("s3");

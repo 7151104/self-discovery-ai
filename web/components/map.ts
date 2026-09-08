@@ -33,8 +33,10 @@ export function zoneOf(position: number): Zone {
 
 export interface MapProps {
   bars: MapBarDto[];
-  /** Имя карты для скринридера. Приходит из контента. */
+  /** Имя карты. Видно заголовком и дублируется для скринридера. */
   label: string;
+  /** Почему семь полос, а не шестнадцать. Из реестра, можно не передавать. */
+  note?: string | null;
   /**
    * Ключи полос, маркер которых уже приезжал. Повторный показ страницы
    * не запускает анимацию заново.
@@ -132,8 +134,14 @@ function renderBar(bar: MapBarDto, props: MapProps): VNode {
 
 export function renderMap(props: MapProps): VNode {
   return h(
-    "ul",
+    "section",
     { class: "map", "aria-label": props.label },
-    props.bars.map((bar) => renderBar(bar, props)),
+    h("p", { class: "section-title" }, props.label),
+    props.note ? h("p", { class: "section-note" }, props.note) : null,
+    h(
+      "ul",
+      { class: "map__bars" },
+      props.bars.map((bar) => renderBar(bar, props)),
+    ),
   );
 }

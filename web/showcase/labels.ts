@@ -15,6 +15,7 @@ import {
   offerTexts,
   portionTexts,
   publicTexts,
+  readingTexts,
   routeTexts,
   waitTexts,
 } from "../src/page-copy.js";
@@ -26,11 +27,13 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
   return {
     map: {
       label: mock.mapLabel,
+      note: mock.mapClosedNote,
       zoneLabel: mock.zoneLabel,
       fillLabels: mock.fillLabels,
     },
     route: {
       label: mock.routeLabel,
+      note: routeTexts.note(),
       formatPrice: mock.formatPrice,
       tag: routeTexts.tag,
     },
@@ -52,6 +55,7 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
       oneDoor: offerTexts.oneDoor(),
     },
     portion: {
+      title: portionTexts.title(),
       back: mock.portionLabels.back,
       scaleMarks: mock.portionLabels.scaleMarks,
       scaleHint: mock.portionLabels.scaleHint,
@@ -69,7 +73,16 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
       resumedNote: waitTexts.resumedNote,
       collecting: waitTexts.collecting(),
     },
-    head: { period: headTexts.period, noPeriod: headTexts.noPeriod() },
+    head: {
+      period: headTexts.period,
+      noPeriod: headTexts.noPeriod(),
+      linkHint: headTexts.linkHint(page.url),
+      emptyHook: headTexts.emptyHook(),
+    },
+    reading: {
+      title: readingTexts.title(),
+      empty: readingTexts.empty(),
+    },
     public: {
       makeOwn: publicTexts.makeOwn(),
       makeOwnHint: publicTexts.makeOwnHint(),

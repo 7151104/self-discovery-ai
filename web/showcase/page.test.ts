@@ -15,11 +15,13 @@ const markup = (key: keyof typeof pageStates): string => {
   return renderToString(renderPersonalPage(page, viewLabels(page)));
 };
 
-test("s0: шапка, пустая карта, маршрут, порция — без крючка и без блоков", () => {
+test("s0: шапка, пустая карта, место крючка, маршрут, порция — без блоков", () => {
   const page = pageStates.s0;
   const node = renderPersonalPage(page, viewLabels(page));
   assert.equal(node.attrs["data-page"], "s0");
-  assert.equal(findAll(node, "p").filter((item) => item.attrs["class"] === "hook").length, 0);
+  const hooks = findAll(node, "p").filter((item) => item.attrs["class"] === "hook");
+  assert.equal(hooks.length, 1);
+  assert.equal(hooks[0]?.attrs["data-empty"], "true");
   assert.equal(findAll(node, "article").length, 0);
   assert.ok(findAll(node, "section").some((item) => item.attrs["class"] === "portion"));
   assert.ok(page.map.every((bar) => bar.fill === "empty"));

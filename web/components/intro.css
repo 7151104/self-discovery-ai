@@ -1,15 +1,22 @@
 /*
- * Карточка входа. Поля во всю ширину, цели не меньше --size-target.
+ * Вход на страницу. Сначала идея и состав, поля — второй блок:
+ * действие «открыть», а не вся карточка целиком.
  * Дата не обязательна: подсказка объясняет, что будет без неё.
  */
 
 .intro {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-7);
   max-width: var(--size-container);
   margin: 0 auto;
   padding: var(--space-7) var(--space-3);
+}
+
+.intro__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
 .intro__mark {
@@ -42,11 +49,63 @@
   letter-spacing: -0.03em;
 }
 
+.intro__lead {
+  max-width: var(--measure-hook);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
 .intro__about {
   max-width: var(--measure-block);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
   color: var(--color-text);
+}
+
+.intro__beats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro__beat {
+  max-width: var(--measure-block);
+  padding-left: var(--space-4);
+  border-left: var(--border-strong) solid var(--color-line-strong);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.intro__start {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+.intro__start-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.intro__legal {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
 }
 
 .intro__field {

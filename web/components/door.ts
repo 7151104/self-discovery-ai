@@ -97,8 +97,10 @@ export interface RouteProps {
   formatPrice: (price: number) => string;
   /** Пометки состояний по ключу двери: тексты приходят из контента. */
   notes?: Record<string, string>;
-  /** Имя списка для скринридера. */
+  /** Имя маршрута. Видно заголовком и дублируется для скринридера. */
   label: string;
+  /** Почему двери видны сразу. На `s0` — из реестра. */
+  note?: string | null;
   onSelect?: (door: DoorDto) => void;
   /**
    * Витрина роняет отрисовку при нарушении правил. Живая страница — нет:
@@ -115,17 +117,23 @@ export function renderRoute(props: RouteProps): VNode {
   }
 
   return h(
-    "ul",
+    "section",
     { class: "route", "aria-label": props.label },
-    props.doors.map((door) => {
-      const visual = doorVisual(door, props.context);
-      return renderDoor({
-        door,
-        visual,
-        priceText: door.price === null ? null : props.formatPrice(door.price),
-        note: props.notes?.[door.id] ?? null,
-        onSelect: props.onSelect === undefined ? undefined : () => props.onSelect?.(door),
-      });
-    }),
+    h("h2", { class: "section-title" }, props.label),
+    props.note ? h("p", { class: "section-note" }, props.note) : null,
+    h(
+      "ul",
+      { class: "route__doors" },
+      props.doors.map((door) => {
+        const visual = doorVisual(door, props.context);
+        return renderDoor({
+          door,
+          visual,
+          priceText: door.price === null ? null : props.formatPrice(door.price),
+          note: props.notes?.[door.id] ?? null,
+          onSelect: props.onSelect === undefined ? undefined : () => props.onSelect?.(door),
+        });
+      }),
+    ),
   );
 }

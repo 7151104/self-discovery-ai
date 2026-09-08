@@ -22,7 +22,7 @@ import { renderScale } from "../components/scale.js";
 import { renderIntro } from "../components/intro.js";
 import { renderMissing } from "../components/missing.js";
 import { renderWait } from "../components/wait.js";
-import { introTexts, missingTexts, portionTexts, waitTexts } from "../src/page-copy.js";
+import { introLabels, missingTexts, portionTexts, waitTexts } from "../src/page-copy.js";
 import { EDGE_CASES } from "./edge-states.js";
 import { viewLabels } from "./labels.js";
 import * as mock from "./mocks.js";
@@ -96,16 +96,7 @@ const entrySection = (): VNode =>
     phone(
       "Карточка входа",
       renderIntro({
-        labels: {
-          title: introTexts.title(),
-          about: introTexts.about(),
-          nameLabel: introTexts.nameLabel(),
-          namePlaceholder: introTexts.namePlaceholder(),
-          nameRequired: introTexts.nameRequired(),
-          dateLabel: introTexts.dateLabel(),
-          dateHint: introTexts.dateHint(),
-          submit: introTexts.submit(),
-        },
+        labels: introLabels(),
       }),
     ),
     phone(
@@ -235,17 +226,30 @@ const mapSection = (): VNode =>
     "Семь полос, три состояния и категориальная полоса. Ни чисел, ни процентов, ни названий координат.",
     phone(
       "Заполняется: точные, предположительные и пустые полосы",
-      renderMap({ bars: mock.mapBars, label: mock.mapLabel, zoneLabel: mock.zoneLabel, fillLabels: mock.fillLabels }),
+      renderMap({
+        bars: mock.mapBars,
+        label: mock.mapLabel,
+        note: mock.mapClosedNote,
+        zoneLabel: mock.zoneLabel,
+        fillLabels: mock.fillLabels,
+      }),
     ),
     phone(
       "Состояние s0: данных ещё нет, каждая полоса объясняет, чем откроется",
-      renderMap({ bars: mock.emptyMapBars, label: mock.mapLabel, zoneLabel: mock.zoneLabel, fillLabels: mock.fillLabels }),
+      renderMap({
+        bars: mock.emptyMapBars,
+        label: mock.mapLabel,
+        note: mock.mapClosedNote,
+        zoneLabel: mock.zoneLabel,
+        fillLabels: mock.fillLabels,
+      }),
     ),
     phone(
       "Маркер уже приезжал: при повторном показе анимации нет",
       renderMap({
         bars: mock.mapBars,
         label: mock.mapLabel,
+        note: mock.mapClosedNote,
         zoneLabel: mock.zoneLabel,
         fillLabels: mock.fillLabels,
         animated: new Set(mock.mapBars.map((bar) => bar.id)),

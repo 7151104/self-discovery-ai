@@ -501,3 +501,116 @@ console.log(
   `content.ts собран: ${content.coordinates.length} координат, ${content.questions.length} вопросов лестницы, ` +
     `${content.bank.length} вопросов банка, ${content.step3.nodes.length} узлов, ${content.slices.length} срезов`,
 );
+
+// ── Тексты этапа E5: промежуточные блоки срезов, подписи дверей, дисклеймеры ───
+//
+// Собираются во второй производный файл engine/src/generated/content-extra.ts.
+// Разбор выше этот блок не трогает: тексты E5 приходят партиями, и каждая партия
+// добавляет свой раздел, не переписывая уже собранное.
+
+/** `A–E` → ["A","B","C","D","E"]. */
+function expandOptionKeys(spec, where) {
+  const range = /^([A-G])[–-]([A-G])$/.exec(spec.trim());
+  if (!range) throw new Error(`${where}: не разобран диапазон вариантов «${spec}»`);
+  const from = range[1].charCodeAt(0);
+  const to = range[2].charCodeAt(0);
+  if (to < from) throw new Error(`${where}: диапазон «${spec}» записан в обратную сторону`);
+  return Array.from({ length: to - from + 1 }, (_, i) => String.fromCharCode(from + i));
+}
+
+/** Ключи вариантов, перечисленных прямо в строке вопроса добора. */
+function sliceQuestionKeys(body, id) {
+  const row = body.find((line) => line.trim().startsWith(`| ${id} |`));
+  if (!row) throw new Error(`не найден вопрос ${id} в таблице порции`);
+  const cells = tableRows([row])[0] ?? [];
+  return [...(cells[1] ?? "").matchAll(/\*\*([A-G])\*\*/g)].map((match) => match[1]);
+}
+
+/** Таблица под заголовком: первая строка с `|` после него и до первой строки без `|`. */
+function tableUnder(src, heading, where) {
+  const start = src.findIndex((line) => line.startsWith(heading));
+  if (start < 0) throw new Error(`${where}: не найден раздел «${heading}»`);
+  const header = src.findIndex((line, i) => i > start && line.trim().startsWith("|"));
+  if (header < 0) throw new Error(`${where}: в разделе «${heading}» нет таблицы`);
+  return tableAt(src, header);
+}
+
+const INTERLUDE_HEADING = "## Промежуточный блок после порции 1";
+
+/**
+ * Промежуточные блоки прикладных срезов (E5-04): пара ответов первой порции →
+ * готовый текст. Срез без такого раздела просто не попадает в список.
+ */
+function parseSliceInterludes(slices) {
+  const out = [];
+
+  for (const slice of slices) {
+    if (!slice.file) continue;
+    const body = lines(read(`content/slices/${slice.file}`));
+    if (!body.some((line) => line.startsWith(INTERLUDE_HEADING))) continue;
+
+    const start = body.findIndex((line) => line.startsWith(INTERLUDE_HEADING));
+    const end = body.findIndex((line, i) => i > start && line.startsWith("## "));
+    const section = body.slice(start, end < 0 ? undefined : end);
+
+    const headingLine = section.find((line) => line.startsWith("**Заголовок блока:**"));
+    if (!headingLine) throw new Error(`${slice.file}: у промежуточного блока нет заголовка`);
+    const axesLine = section.find((line) => line.startsWith("**Оси:**"));
+    if (!axesLine) throw new Error(`${slice.file}: у промежуточного блока не объявлены оси`);
+
+    const axes = axesLine
+      .replace("**Оси:**", "")
+      .split("·")
+      .map((part) => {
+        const m = /^(S\d+)\s*—\s*(.+)$/.exec(part.trim());
+        if (!m) throw new Error(`${slice.file}: не разобрана ось «${part.trim()}»`);
+        return { id: m[1], keys: expandOptionKeys(m[2], `${slice.file}, ось ${m[1]}`) };
+      });
+    if (axes.length !== 2) throw new Error(`${slice.file}: у промежуточного блока ожидались две оси`);
+
+    const pairs = [];
+    const seen = new Set();
+    for (const cells of tableUnder(section, INTERLUDE_HEADING, slice.file)) {
+      if (cells.length !== 3) continue;
+      if (!/^[A-G]$/.test(cells[0]) || !/^[A-G]$/.test(cells[1])) continue;
+      const key = `${cells[0]}${cells[1]}`;
+      if (seen.has(key)) throw new Error(`${slice.file}: пара ${cells[0]}×${cells[1]} записана дважды`);
+      if (!cells[2]) throw new Error(`${slice.file}: у пары ${cells[0]}×${cells[1]} нет текста`);
+      seen.add(key);
+      pairs.push({ first: cells[0], second: cells[1], text: cells[2] });
+    }
+    if (!pairs.length) throw new Error(`${slice.file}: таблица промежуточного блока пуста`);
+
+    out.push({
+      slice: slice.id,
+      file: slice.file,
+      heading: unwrap(headingLine.replace("**Заголовок блока:**", "").trim()),
+      axes,
+      questionKeys: {
+        first: sliceQuestionKeys(body, axes[0].id),
+        second: sliceQuestionKeys(body, axes[1].id),
+      },
+      pairs,
+    });
+  }
+
+  return out;
+}
+
+const extra = {
+  interludes: parseSliceInterludes(content.slices),
+};
+
+writeFileSync(
+  join(outDir, "content-extra.ts"),
+  `// СГЕНЕРИРОВАНО из content/slices/*.md — не редактировать.\n` +
+    `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
+    `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
+    `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
+  "utf8",
+);
+
+console.log(
+  `content-extra.ts собран: ${extra.interludes.length} промежуточных блоков ` +
+    `(${extra.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар)`,
+);

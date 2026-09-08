@@ -86,6 +86,11 @@ export interface AppHost extends Transport {
   now?: () => number;
   title?: (text: string) => void;
   scrollRoot?: { querySelector: (selector: string) => { scrollIntoView: (options: { behavior: "smooth" | "auto"; block: "start" }) => void } | null };
+  /**
+   * Слой живого DOM: после смены вопроса фокус ставится на первый контроль
+   * новой порции, порядок Tab не меняется.
+   */
+  focusRoot?: { querySelector: (selector: string) => { focus: () => void } | null };
 }
 
 export interface PageApp {
@@ -127,6 +132,35 @@ const currentQuestion = (session: Session): QuestionDto | null => {
   if (!portion) return null;
   return portion.questions[session.questionIndex] ?? null;
 };
+
+const escapeAttr = (value: string): string => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+/**
+ * Первый интерактив нового вопроса: радиокнопка варианта, поле шкалы
+ * или текстовое поле. Порядок в дереве не меняется — только точка входа Tab.
+ */
+export function firstQuestionControlSelector(kind: QuestionDto["kind"] | string, questionId: string): string {
+  if (kind === "выбор" || kind === "шкала") {
+    return `input[type="radio"][name="${escapeAttr(questionId)}"]`;
+  }
+  if (kind === "открытый") {
+    return `[id="${escapeAttr(questionId)}"]`;
+  }
+  if (kind === "число") {
+    return ".portion__number-input";
+  }
+  return "";
+}
+
+const questionFocusKey = (session: Session): string => {
+  const question = currentQuestion(session);
+  const portion = session.page?.nextPortion;
+  if (question === null || portion === null || portion === undefined || session.collecting) return "";
+  return `${portion.key}:${question.id}`;
+};
+
+const openSubmitFrom = (session: Session): number =>
+  session.page?.nextPortion?.key.startsWith("slice:") === true ? 1 : SUBMIT_FROM_WORDS;
 
 const ownerPage = (session: Session): PageStateDto | null => {
   if (session.page === null) return null;
@@ -263,9 +297,22 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
   let watchId: string | null = null;
 
   const paint = () => onChange?.();
+  let lastFocusKey = "";
+  const restoreFocus = (current: Session) => {
+    const key = questionFocusKey(current);
+    if (key === "" || key === lastFocusKey) return;
+    lastFocusKey = key;
+    const question = currentQuestion(current);
+    const root = host.focusRoot;
+    if (question === null || root === undefined) return;
+    const selector = firstQuestionControlSelector(question.kind, question.id);
+    if (selector === "") return;
+    root.querySelector(selector)?.focus();
+  };
   const set = (next: Session) => {
     session = next;
     paint();
+    restoreFocus(session);
   };
   const now = (): number => host.now?.() ?? Date.now();
   const timer = (): TimerHost =>
@@ -488,7 +535,7 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       host.title?.(result.page.card.name || missingTexts.title());
     },
     accept: async (input) => {
-      if (input.kind === "открытый" && countWords(input.text) < SUBMIT_FROM_WORDS) {
+      if (input.kind === "открытый" && countWords(input.text) < openSubmitFrom(session)) {
         set(setDraft(session, input.text));
         return;
       }
@@ -570,6 +617,10 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
         set(markPaymentFailed(session));
         return;
       }
+      if (result.page.nextPortion?.key.startsWith("slice:") === true) {
+        revealPage(result.page, "advance");
+        return;
+      }
       set(replacePage(session, result.page));
       watchIfNeeded(result.page);
     },
@@ -597,6 +648,7 @@ if (root !== null) {
     motion: windowHost(),
     timer: windowTimer(),
     scrollRoot: document,
+    focusRoot: document,
     title: (text) => {
       document.title = text;
     },

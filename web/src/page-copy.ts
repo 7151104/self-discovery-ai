@@ -129,6 +129,7 @@ export const offerTexts = {
   decline: (): string => copy("UI_PAY_DECLINE"),
   oneDoor: (): string => copy("UI_PAY_ONE_DOOR"),
   legal: (): string => copy("UI_PAY_LEGAL_LEAD"),
+  questions: (count: number): string => copy("UI_PAY_QUESTIONS", { вопросов: String(count) }),
 };
 
 export const portionTexts = {

@@ -24,7 +24,8 @@ export type WaitKind = "step4" | "slice" | "collecting";
 /** Блоки, у которых бывает сборка. Остальные приходят готовыми. */
 const waitKindOf = (id: BlockSlot): WaitKind | null => {
   if (id === "step4") return "step4";
-  return id.startsWith("slice:") ? "slice" : null;
+  if (id.startsWith("slice:") && !id.includes(":interlude")) return "slice";
+  return null;
 };
 
 /**
@@ -61,6 +62,11 @@ export interface WaitContext {
  * видит то же ожидание. Ни флага во вкладке, ни записи в браузере.
  */
 export function waitFromPage(page: PageStateDto, context: WaitContext): WaitState | null {
+  if ((page.clarifications?.questions.length ?? 0) > 0) return null;
+  // Закон 2: после оплаты на экране вопросы. Ожидание ступени 4 не должно
+  // подменять порцию добора и прятать её за формой «собираю».
+  if (page.nextPortion?.key.startsWith("slice:")) return null;
+
   const pending = page.blocks.find((block: BlockDto) => block.generation?.status === "pending");
   if (pending === undefined) return null;
 

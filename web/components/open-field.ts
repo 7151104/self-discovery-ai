@@ -28,12 +28,12 @@ export interface OpenFieldState {
   submitEnabled: boolean;
 }
 
-export function openFieldState(text: string): OpenFieldState {
+export function openFieldState(text: string, submitFrom: number = SUBMIT_FROM_WORDS): OpenFieldState {
   const words = countWords(text);
   return {
     words,
     counterVisible: words >= COUNTER_FROM_WORDS,
-    submitEnabled: words >= SUBMIT_FROM_WORDS,
+    submitEnabled: words >= submitFrom,
   };
 }
 
@@ -50,10 +50,16 @@ export interface OpenFieldProps {
   disabled?: boolean;
   onInput?: Handler;
   onSubmit?: Handler;
+  /**
+   * С какого числа слов включается кнопка. Лестница — 15, добор среза — 1:
+   * короткий ответ там ведёт к уточняющим, а не к отказу сервера.
+   */
+  submitFromWords?: number;
 }
 
 export function renderOpenField(props: OpenFieldProps): VNode {
-  const state = openFieldState(props.value);
+  const submitFrom = props.submitFromWords ?? SUBMIT_FROM_WORDS;
+  const state = openFieldState(props.value, submitFrom);
   const disabled = props.disabled === true;
   const hintId = `${props.id}-hint`;
   const counterId = `${props.id}-counter`;

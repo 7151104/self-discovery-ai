@@ -178,3 +178,56 @@ test("все девять краевых состояний собираются
     }
   }
 });
+
+test("уточняющие вопросы показываются текстом сервера, без ожидания и без отчёта", () => {
+  const questions = ["follow-up-one", "follow-up-two"];
+  const page = {
+    ...pageStates.paidWaiting,
+    offer: mock.offer,
+    clarifications: { slice: "slice_node_finish", questions },
+  };
+  const node = renderPersonalPage(page, viewLabels(page));
+  assert.equal(byClass(node, "wait").length, 0);
+  assert.equal(byClass(node, "offer").length, 0);
+  const section = findAll(node, "section").find((item) => item.attrs["data-clarifications"] === "slice_node_finish");
+  assert.ok(section);
+  const text = visibleText(node);
+  assert.ok(text.includes(copy("UI_PAY_QUESTIONS", { вопросов: String(questions.length) })));
+  for (const question of questions) assert.ok(text.includes(question));
+});
+
+test("после оплаты порция добора не соседствует с ожиданием ступени 4", () => {
+  const page = {
+    ...pageStates.paidPending,
+    blocks: pageStates.s4Waiting.blocks,
+  };
+  const node = renderPersonalPage(page, viewLabels(page));
+  assert.equal(byClass(node, "wait").length, 0);
+  assert.equal(byClass(node, "portion").length, 1);
+  assert.equal(byClass(node, "offer").length, 0);
+});
+
+test("промежуточный блок без действий несогласия и шеринга", () => {
+  const page = {
+    ...pageStates.paidPending,
+    blocks: [
+      ...pageStates.paidPending.blocks,
+      {
+        id: "slice:slice_work:interlude" as const,
+        heading: "interlude-heading",
+        paragraphs: ["interlude-body"],
+        highlight: null,
+        generation: null,
+        disagreed: false,
+        purchased: false,
+        stale: false,
+      },
+    ],
+  };
+  const node = renderPersonalPage(page, viewLabels(page));
+  const interlude = byClass(node, "block").find((item) => item.attrs["data-block"] === "slice:slice_work:interlude");
+  assert.ok(interlude);
+  assert.equal(findAll(interlude, "button").length, 0);
+  assert.ok(visibleText(interlude).includes("interlude-heading"));
+  assert.ok(visibleText(interlude).includes("interlude-body"));
+});

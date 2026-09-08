@@ -15,6 +15,7 @@ export type {
   BlockDto,
   BlockSlot,
   CardDto,
+  ClarificationsDto,
   CreateProfileRequest,
   DisagreementKind,
   DisagreementRequest,

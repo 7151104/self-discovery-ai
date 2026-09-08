@@ -20,7 +20,7 @@ import {
 } from "./generation.js";
 import { createHttpServer } from "./http/server.js";
 import type { GenerationProvider } from "../llm/dist/index.js";
-import { saveBlockContent } from "./store.js";
+import { findActiveJob, saveBlockContent, saveJobResult } from "./store.js";
 import { fakeWebhook, FAKE_SIGNATURE_HEADER } from "./payments/fake.js";
 import type { WebhookKind } from "./payments/provider.js";
 import type { AnswerInput, OrderDto, PageStateDto, PortionDto, PortionKey } from "./contract/index.js";
@@ -260,8 +260,10 @@ export async function answerSlicePortions(origin: string, profileId: string): Pr
 /**
  * Профиль в платном состоянии.
  *
- * Оплата проходит целиком; текст среза пишет LLM (E4), поэтому в состоянии
- * `delivered` он записывается прямо в хранилище — своей задачи у сервера тут нет.
+ * Оплата проходит целиком. После добора очередь ставит задание среза (E4-08).
+ * Состояние `delivered` подставляет готовый текст в хранилище и закрывает живое
+ * задание тем же содержимым: очередь в тестах контракта не крутится, а страница
+ * должна показать `ready`, а не `pending` поверх уже записанного блока.
  */
 export async function profileAtPaidState(
   origin: string,
@@ -273,14 +275,20 @@ export async function profileAtPaidState(
   await answerSlicePortions(origin, profileId);
 
   if (options.delivered) {
+    const slot = `slice:${paid.slice}` as const;
+    const heading = "Почему ты останавливаешься у финиша";
+    const paragraphs = ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."];
+    const highlight = "Обрыв у финиша — не лень, а способ не проверять результат.";
     saveBlockContent(db, profileId, {
-      slot: `slice:${paid.slice}`,
+      slot,
       profileVersion: 1,
       purchased: true,
-      heading: "Почему ты останавливаешься у финиша",
-      paragraphs: ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."],
-      highlight: "Обрыв у финиша — не лень, а способ не проверять результат.",
+      heading,
+      paragraphs,
+      highlight,
     });
+    const job = findActiveJob(db, profileId, slot);
+    if (job) saveJobResult(db, job, { heading, paragraphs, highlight });
   }
 
   const state = await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`);

@@ -35,6 +35,7 @@ import { rawContent } from "../engine.js";
 import { isValidId, newProfileId, newRecordId, newShareToken } from "../ids.js";
 import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl } from "../page.js";
 import {
+  enqueuePaidSlices,
   enqueueStep4,
   scheduleGenerations,
   toGenerationDto,
@@ -187,12 +188,14 @@ const page = (context: Context, profile: ProfileRecord): PageStateResponse =>
   assemble({ db: context.db, profile, publicOrigin: context.config.publicOrigin }).page;
 
 /**
- * Ставит финал лестницы в очередь, если задание есть, и будит воркер.
+ * Ставит финал лестницы и готовые срезы в очередь и будит воркер.
  * Повтор и гонка не порождают вторую генерацию: это держит уникальный индекс.
  */
-function kickStep4(context: Context, profile: ProfileRecord): void {
-  enqueueStep4({ db: context.db, llm: context.llm }, profile);
-  scheduleGenerations({ db: context.db, llm: context.llm });
+function kickGeneration(context: Context, profile: ProfileRecord): void {
+  const generation = { db: context.db, llm: context.llm };
+  enqueueStep4(generation, profile);
+  enqueuePaidSlices(generation, profile);
+  scheduleGenerations(generation);
 }
 
 // ── Эндпоинты ─────────────────────────────────────────────────────────────────
@@ -246,6 +249,7 @@ export function pageState(context: Context, params: Record<string, string>): Han
   if (!profile) return fail(404, "profile_not_found");
   const body = context.db.transaction(() => {
     enqueueStep4({ db: context.db, llm: context.llm }, profile);
+    enqueuePaidSlices({ db: context.db, llm: context.llm }, profile);
     return page(context, profile);
   });
   scheduleGenerations({ db: context.db, llm: context.llm });
@@ -277,6 +281,7 @@ export function submitPortion(context: Context, params: Record<string, string>, 
     // Повтор той же отправки: ответы уже записаны, профиль уже пересчитан.
     if (findSubmission(context.db, profile.profileId, requestId)) {
       enqueueStep4({ db: context.db, llm: context.llm }, profile);
+      enqueuePaidSlices({ db: context.db, llm: context.llm }, profile);
       return page(context, profile);
     }
 
@@ -303,7 +308,10 @@ export function submitPortion(context: Context, params: Record<string, string>, 
       profileVersion: version,
     });
     const current = findProfile(context.db, profile.profileId);
-    if (current) enqueueStep4({ db: context.db, llm: context.llm }, current);
+    if (current) {
+      enqueueStep4({ db: context.db, llm: context.llm }, current);
+      enqueuePaidSlices({ db: context.db, llm: context.llm }, current);
+    }
     return currentPage(context, profile.profileId);
   });
 
@@ -337,11 +345,14 @@ export function editAnswer(context: Context, params: Record<string, string>, raw
     // Вход генерации изменился: живое задание со старым хешем снимаем со слота,
     // место в уникальном индексе освобождается под новое.
     releaseActiveJob(context.db, profile.profileId, "step4", "superseded");
+    for (const slice of paidSlices(context.db, profile.profileId)) {
+      releaseActiveJob(context.db, profile.profileId, `slice:${slice}`, "superseded");
+    }
     return currentPage(context, profile.profileId);
   });
 
   const fresh = findProfile(context.db, profile.profileId);
-  if (fresh) kickStep4(context, fresh);
+  if (fresh) kickGeneration(context, fresh);
   return { status: 200, body: state };
 }
 

@@ -9,13 +9,15 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { answering, DEMO_ANSWERS, envelope, FakeProvider } from "../llm/dist/index.js";
-import type { AnswerInput, GenerationResponse, PageStateDto } from "./contract/index.js";
-import { rawContent } from "./engine.js";
+import { answering, DEMO_ANSWERS, envelope, FakeProvider, sliceEnvelope, textOfVolume, volumeOf, reportTypeOfSlice } from "../llm/dist/index.js";
+import type { AnswerInput, GenerationResponse, PageStateDto, PortionDto } from "./contract/index.js";
+import { rawContent, rawExtraContent } from "./engine.js";
+import { sliceAnswers } from "../../engine/dist/slice-fixtures.js";
 import { buildKeyring } from "./db/crypto.js";
 import { up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
 import { crisisGate, enqueueStep4 } from "./generation.js";
+import { parseSliceQuestionId } from "./page.js";
 import {
   countJobs,
   findActiveJob,
@@ -29,7 +31,7 @@ import {
   saveCache,
   saveJobResult,
 } from "./store.js";
-import { call, drainServer, startTestServer, TEST_KEY } from "./test-support.js";
+import { call, deliverWebhook, drainServer, startTestServer, TEST_KEY } from "./test-support.js";
 
 const LLM_FAST = {
   SDAI_LLM_ATTEMPTS: "1",
@@ -395,7 +397,217 @@ test("удаление профиля уносит задания, журнал 
   }
 });
 
-test("кризисный крючок не ставит задание сам: место для E4-06", () => {
-  assert.equal(crisisGate("хочу умереть и не вижу смысла"), "enqueue");
+test("кризисный крючок не ставит задание при блокирующей формулировке", () => {
+  assert.equal(crisisGate("хочу умереть и не вижу смысла"), "skip");
   assert.equal(crisisGate("обычный открытый ответ про круг дел"), "enqueue");
+});
+
+test("кризисный открытый ответ не доходит до поддельного провайдера и не предлагает срез", async (t) => {
+  const provider = answering(envelope(), { pricing: PRICE });
+  const server = await startTestServer(LLM_FAST, { provider });
+  t.after(() => server.close());
+
+  const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", {
+    name: "Артём",
+    birthDate: "1994-03-12",
+  });
+  let page = created.body;
+  for (const step of [1, 2, 3] as const) {
+    const reply = await call<PageStateDto>(server.origin, "POST", `/api/p/${page.profileId}/portions`, {
+      portion: `step:${step}`,
+      answers: demoAnswersForStep(step),
+      requestId: `crisis-${step}`,
+    });
+    page = reply.body;
+  }
+
+  const crisisText =
+    "Беру на себя больше, чем могу вынести, тащу всё сам, никого не подключаю, а к концу выдыхаюсь. Хочу умереть и не вижу смысла жить дальше.";
+  const step4 = demoAnswersForStep(4).map((answer) =>
+    answer.questionId === "L12" && answer.kind === "открытый" ? { ...answer, text: crisisText } : answer,
+  );
+  const after = await call<PageStateDto>(server.origin, "POST", `/api/p/${page.profileId}/portions`, {
+    portion: "step:4",
+    answers: step4,
+    requestId: "crisis-4",
+  });
+
+  await drainServer(server);
+  assert.equal(provider.callCount, 0, "кризисный текст не должен уходить в модель");
+  assert.equal(findLatestJob(server.db, page.profileId, "step4"), null);
+
+  assert.equal(after.body.offer, null, "предложения нет в API");
+  assert.ok(after.body.crisis, "кризисное состояние не попало в API");
+  assert.equal(after.body.crisis?.place, "ladder");
+
+  const html = await fetch(`${server.origin}/p/${page.profileId}`);
+  const text = await html.text();
+  assert.equal(html.status, 200);
+  assert.ok(text.includes("data-crisis"), "страница не показывает поддержку");
+  assert.ok(!text.includes("data-offer"), "на экране есть предложение среза");
+  const state = JSON.parse(/<script type="application\/json" data-role="state">([^<]+)<\/script>/.exec(text)?.[1] ?? "{}") as PageStateDto;
+  assert.equal(state.offer, null);
+  assert.ok(state.crisis);
+});
+
+test("похожие, но не кризисные формулировки доходят до провайдера", async (t) => {
+  const provider = answering(envelope(), { pricing: PRICE });
+  const server = await startTestServer(LLM_FAST, { provider });
+  t.after(() => server.close());
+
+  const asWritten = (form: string): string => (form.endsWith("*") ? `${form.slice(0, -1)}ось` : form);
+  assert.ok(rawExtraContent.crisis.safe.length >= 8);
+  for (const phrase of rawExtraContent.crisis.safe) {
+    assert.equal(
+      crisisGate(
+        `Беру на себя больше, чем могу вынести, тащу всё сам, никого не подключаю, а к концу выдыхаюсь и бросаю почти у финиша. ${asWritten(phrase)}.`,
+      ),
+      "enqueue",
+      `крючок срезал «${phrase}»`,
+    );
+  }
+
+  const safe = rawExtraContent.crisis.safe[0]!;
+  const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", {
+    name: "Артём",
+    birthDate: "1994-03-12",
+  });
+  let page = created.body;
+  for (const step of [1, 2, 3] as const) {
+    const reply = await call<PageStateDto>(server.origin, "POST", `/api/p/${page.profileId}/portions`, {
+      portion: `step:${step}`,
+      answers: demoAnswersForStep(step),
+      requestId: `safe-${step}`,
+    });
+    page = reply.body;
+  }
+
+  const answer =
+    "Беру на себя больше, чем могу вынести, тащу всё сам, никого не подключаю, а к концу выдыхаюсь и бросаю почти у финиша, потом злюсь на себя. " +
+    `${asWritten(safe)}.`;
+  const step4 = demoAnswersForStep(4).map((item) =>
+    item.questionId === "L12" && item.kind === "открытый" ? { ...item, text: answer } : item,
+  );
+  await call<PageStateDto>(server.origin, "POST", `/api/p/${page.profileId}/portions`, {
+    portion: "step:4",
+    answers: step4,
+    requestId: "safe-4",
+  });
+  await drainServer(server);
+  assert.equal(provider.callCount, 1, "некризисная похожая фраза не должна резать провайдера");
+  assert.equal(findLatestJob(server.db, page.profileId, "step4")?.status, "ready");
+});
+
+const asSliceInput = (slice: string, portion: PortionDto, answers: ReturnType<typeof sliceAnswers>): AnswerInput[] =>
+  portion.questions.map((question): AnswerInput => {
+    const parsed = parseSliceQuestionId(question.id);
+    const value = parsed ? answers[parsed.questionId] : undefined;
+    if (question.kind === "выбор") {
+      return { questionId: question.id, kind: "выбор", option: String(value ?? question.options[0]?.key) };
+    }
+    if (question.kind === "шкала") {
+      return { questionId: question.id, kind: "шкала", scale: Number(value ?? 4) as 1 | 2 | 3 | 4 | 5 };
+    }
+    if (question.kind === "число") {
+      const numbers = Array.isArray(value) ? value : typeof value === "number" ? [value] : [5, 2];
+      return { questionId: question.id, kind: "число", numbers };
+    }
+    return { questionId: question.id, kind: "открытый", text: String(value ?? "") };
+  });
+
+async function answerSliceWith(
+  origin: string,
+  profileId: string,
+  slice: string,
+  answers: ReturnType<typeof sliceAnswers>,
+): Promise<PageStateDto> {
+  let page = (await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`)).body;
+  for (let guard = 0; guard < 5; guard += 1) {
+    const portion = page.nextPortion;
+    if (!portion || !portion.key.startsWith("slice:")) break;
+    const reply = await call<PageStateDto>(origin, "POST", `/api/p/${profileId}/portions`, {
+      portion: portion.key,
+      answers: asSliceInput(slice, portion, answers),
+      requestId: `slice-${portion.key}`,
+    });
+    page = reply.body;
+  }
+  return page;
+}
+
+test("платный срез: непройденный порог не вызывает провайдера и возвращает уточняющие", async (t) => {
+  const provider = answering(envelope(), { pricing: PRICE });
+  const server = await startTestServer(LLM_FAST, { provider });
+  t.after(() => server.close());
+
+  const page = await profileAtDemoLadder(server.origin);
+  await drainServer(server);
+  const afterLadder = provider.callCount;
+  const slice = "slice_node_finish";
+
+  const order = await call<{ order: { orderId: string; price: number; payment: { url: string } | null } }>(
+    server.origin,
+    "POST",
+    `/api/p/${page.profileId}/orders`,
+    { slice, requestId: `buy-${slice}` },
+  );
+  await deliverWebhook(server.origin, {
+    kind: "payment.succeeded",
+    orderId: order.body.order.orderId,
+    reference: order.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "",
+    amount: order.body.order.price,
+  });
+
+  const weak = { ...sliceAnswers(slice), S8: "мало слов", S9: "D" };
+  const afterAnswers = await answerSliceWith(server.origin, page.profileId, slice, weak);
+  await drainServer(server);
+
+  assert.equal(provider.callCount, afterLadder, "порог не взят, а провайдера вызвали на срез");
+  assert.equal(findLatestJob(server.db, page.profileId, `slice:${slice}`), null);
+  assert.ok(afterAnswers.clarifications, "уточняющих нет");
+  assert.equal(afterAnswers.clarifications?.slice, slice);
+  assert.ok((afterAnswers.clarifications?.questions.length ?? 0) > 0);
+  assert.deepEqual(afterAnswers.blocks.find((block) => block.id === `slice:${slice}`)?.paragraphs, []);
+});
+
+test("платный срез: пройденный порог даёт отчёт", async (t) => {
+  const provider = new FakeProvider({
+    turns: [{ kind: "ответ", text: envelope() }],
+    pricing: PRICE,
+  });
+  const server = await startTestServer(LLM_FAST, { provider });
+  t.after(() => server.close());
+
+  const page = await profileAtDemoLadder(server.origin);
+  await drainServer(server);
+
+  const slice = "slice_node_finish";
+  const order = await call<{ order: { orderId: string; price: number; payment: { url: string } | null } }>(
+    server.origin,
+    "POST",
+    `/api/p/${page.profileId}/orders`,
+    { slice, requestId: `buy-ok-${slice}` },
+  );
+  await deliverWebhook(server.origin, {
+    kind: "payment.succeeded",
+    orderId: order.body.order.orderId,
+    reference: order.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "",
+    amount: order.body.order.price,
+  });
+
+  const type = reportTypeOfSlice(slice);
+  const volume = volumeOf(type);
+  provider.setTurns([{ kind: "ответ", text: sliceEnvelope(textOfVolume(volume.min, volume.max)) }]);
+
+  const afterAnswers = await answerSliceWith(server.origin, page.profileId, slice, sliceAnswers(slice));
+  await drainServer(server);
+
+  assert.equal(afterAnswers.clarifications ?? null, null);
+  const job = findLatestJob(server.db, page.profileId, `slice:${slice}`);
+  assert.equal(job?.status, "ready", job?.failureCode ?? "задания нет");
+  const block = (await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`)).body.blocks.find(
+    (item) => item.id === `slice:${slice}`,
+  );
+  assert.ok(block);
+  assert.ok((block.paragraphs.length ?? 0) > 0);
 });

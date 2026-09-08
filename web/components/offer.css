@@ -80,4 +80,12 @@
   color: var(--color-text-soft);
   font-size: var(--text-sm);
   align-self: flex-start;
+  transition: border-color var(--duration-fast) ease;
+}
+
+@media (hover: hover) {
+  .offer__decline:hover {
+    border-color: var(--color-line-strong);
+    color: var(--color-text);
+  }
 }

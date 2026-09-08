@@ -101,6 +101,12 @@
   cursor: pointer;
 }
 
+@media (hover: hover) {
+  .bar__explain > summary:hover .bar__label {
+    color: var(--color-text);
+  }
+}
+
 .bar__explain > summary::marker {
   content: "";
 }

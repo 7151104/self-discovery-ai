@@ -11,7 +11,17 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { CHAR_WIDTH_RATIO, FONT_SIZES, MEASURE_RANGE, ROOT_FONT_SIZE_PX, BASE_VIEWPORT_PX, TOKENS } from "../tokens/tokens.js";
 import { declared, declaredPx } from "../src/css.js";
-import { boxOf, classesOf, componentLookup, INTERACTIVE_TAGS, lineHeightPx, tokenPixels, walk } from "../src/test-support.js";
+import {
+  boxOf,
+  classesOf,
+  componentCss,
+  componentFiles,
+  componentLookup,
+  INTERACTIVE_TAGS,
+  lineHeightPx,
+  tokenPixels,
+  walk,
+} from "../src/test-support.js";
 import { renderShowcase } from "../showcase/showcase.js";
 
 const MIN_TARGET = 44;
@@ -116,4 +126,30 @@ test("текстовые блоки не заперты в фиксирован�
 
 test("высота строки считается из токенов, а не из подобранных пикселей", () => {
   assert.ok(lineHeightPx("text-md", "leading-normal") > tokenPixels("text-md"));
+});
+
+test("кольцо фокуса объявлено на всю страницу и нигде не выключено", () => {
+  const base = componentCss("base.css");
+  assert.ok(/:focus-visible\s*\{[^}]*outline:/.test(base), "нет общего кольца фокуса");
+
+  for (const name of componentFiles()) {
+    const css = componentCss(name);
+    assert.equal(/outline:\s*none/.test(css), false, `${name} выключает кольцо фокуса`);
+  }
+});
+
+test("компоненты со скрытой радиокнопкой рисуют фокус на подписи", () => {
+  for (const [file, selector] of [["option.css", "option__input"], ["scale.css", "scale__input"]] as const) {
+    const css = componentCss(file);
+    const rule = new RegExp(`:has\\(\\.${selector}:focus-visible\\)\\s*\\{[^}]*outline:`);
+    assert.ok(rule.test(css), `${file}: фокус скрытой радиокнопки негде показать`);
+  }
+});
+
+test("у каждого нажимаемого элемента есть состояние наведения", () => {
+  const css = componentFiles().map((name) => componentCss(name)).join("\n");
+  for (const name of ["option", "scale__mark", "field__submit", "block__action", "door__face", "offer__buy", "offer__decline", "summary"]) {
+    const rule = new RegExp(`\\.?${name}[^{]*:hover`);
+    assert.ok(rule.test(css), `${name}: нет состояния наведения`);
+  }
 });

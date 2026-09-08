@@ -38,7 +38,10 @@ function repositoryRoot(): string {
 
 const ROOT = repositoryRoot();
 
-const read = (relative: string): string[] => readFileSync(join(ROOT, relative), "utf8").split("\n");
+/** Файл репозитория по пути от его корня: от текущего каталога процесса не зависит. */
+export const readRepoFile = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
+
+const read = (relative: string): string[] => readRepoFile(relative).split("\n");
 
 /** Строки таблицы, которая начинается на `from`: ячейки без обрамляющих труб. */
 function tableAfter(lines: string[], from: number, file: string, section: string): string[][] {

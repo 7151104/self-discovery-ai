@@ -118,10 +118,22 @@ export interface RawCrisis {
   contacts: RawCrisisContact[];
 }
 
+/** Строка интерфейса: идентификатор, текст, места показа и подстановки. */
+export interface RawUiCopy {
+  id: string;
+  /** Группа реестра, она же экран или состояние: `INTRO`, `MAP`, `EDGE`… */
+  group: string;
+  text: string;
+  where: string[];
+  /** Имена подстановок вида `{имя}`, которые обязан передать код. */
+  params: string[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
   disclaimers: RawDisclaimer[];
   forbidden: RawForbidden;
   crisis: RawCrisis;
+  uiCopy: RawUiCopy[];
 }

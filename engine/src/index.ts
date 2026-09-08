@@ -9,6 +9,7 @@
  */
 
 import { rawContent } from "./generated/content.js";
+import { uiCopy } from "./ui-copy.js";
 import { buildStep1Block, buildStep2Block, buildStep3Block, buildStep4Task, step4Heading } from "./blocks.js";
 import { buildMap } from "./map.js";
 import { applyNodes } from "./nodes.js";
@@ -27,6 +28,8 @@ export {
 } from "./scoring.js";
 export { applyNodes, NODE_RULES, fallbackNodeText } from "./nodes.js";
 export { buildMap, BAR_DEFINITIONS } from "./map.js";
+export { uiCopy, uiCopyGroup, uiCopyIds, barCopy } from "./ui-copy.js";
+export { scanText, scanTexts, describeHit } from "./forbidden.js";
 export { selectOffer, buildDoors } from "./offers.js";
 export { rawContent } from "./generated/content.js";
 
@@ -42,7 +45,7 @@ const SEASONS: { season: string; months: number[] }[] = [
  * в скоринге: сезон берётся по текущей дате (content/step0-welcome.md).
  */
 export function buildStep0Card(input: Step0Input, now: Date = new Date()): Step0Card {
-  const cta = "Три вопроса — и я скажу, как ты на самом деле работаешь";
+  const cta = uiCopy("UI_INTRO_CTA");
   if (!input.birthDate) {
     return { name: input.name, season: null, theme: null, metaphor: null, cta };
   }

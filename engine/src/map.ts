@@ -7,6 +7,7 @@
  */
 
 import { rawContent } from "./generated/content.js";
+import { barCopy, uiCopy } from "./ui-copy.js";
 import type { Band, LadderAnswers, MapBar, Profile } from "./types.js";
 
 interface BarDefinition {
@@ -19,14 +20,20 @@ interface BarDefinition {
   hint: string;
 }
 
+/** Состав полос — код, подписи — реестр микрокопии (`content/ui-copy.md`). */
+const bar = (coordinate: number, invert = false): BarDefinition => {
+  const copy = barCopy(coordinate);
+  return { coordinate, label: copy.label, poles: copy.poles, invert, hint: copy.empty };
+};
+
 export const BAR_DEFINITIONS: BarDefinition[] = [
-  { coordinate: 2, label: "Темп", poles: { low: "ровный поток", high: "импульсы" }, invert: false, hint: "Откроется на первых трёх вопросах" },
-  { coordinate: 11, label: "Доведение", poles: { low: "до конца", high: "обрыв" }, invert: false, hint: "Откроется на первых трёх вопросах" },
-  { coordinate: 9, label: "Под давлением", poles: { low: "замирание", high: "ускорение" }, invert: false, hint: "Откроется на первых трёх вопросах" },
-  { coordinate: 8, label: "Что задевает", poles: null, invert: false, hint: "Откроется на вопросах про то, что задевает" },
-  { coordinate: 3, label: "Внимание", poles: { low: "конкретика", high: "связи" }, invert: false, hint: "Откроется на вопросах про то, как ты обрабатываешь" },
-  { coordinate: 5, label: "Структура", poles: { low: "определённость", high: "открытый финал" }, invert: true, hint: "Откроется на вопросах про планы и решения" },
-  { coordinate: 7, label: "Удержание", poles: { low: "отпускает", high: "держит долго" }, invert: false, hint: "Откроется на вопросах про то, как тебя задевает" },
+  bar(2),
+  bar(11),
+  bar(9),
+  bar(8),
+  bar(3),
+  bar(5, true),
+  bar(7),
 ];
 
 const POSITION: Record<Band, number> = { low: 0.08, "mid-low": 0.3, mid: 0.5, "mid-high": 0.72, high: 0.92 };
@@ -68,7 +75,7 @@ export function buildMap(profile: Profile, answers: LadderAnswers): MapBar[] {
       state: coordinate.confidence === "high" ? ("precise" as const) : ("approximate" as const),
       position,
       category,
-      hint: coordinate.confidence === "high" ? "Точно" : "Пока предположение",
+      hint: uiCopy(coordinate.confidence === "high" ? "UI_MAP_HINT_PRECISE" : "UI_MAP_HINT_APPROXIMATE"),
     };
   });
 }

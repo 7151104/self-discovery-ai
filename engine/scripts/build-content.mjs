@@ -826,17 +826,75 @@ function parseCrisis() {
   return { triggers, safe, texts, contacts };
 }
 
+/**
+ * Реестр микрокопии (E5-03) и тексты краевых состояний (E5-06). Раздел файла —
+ * группа, строка таблицы — строка интерфейса с идентификатором и местами показа.
+ *
+ * Подстановки вида `{имя}` вынимаются из текста: код обязан передать их значения,
+ * иначе на экран уходит текст с фигурными скобками.
+ */
+function parseUiCopy() {
+  const file = "content/ui-copy.md";
+  const src = lines(read(file));
+  const entries = [];
+  let group = null;
+
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## ([A-Z_]+) · (.+)$/.exec(src[i]);
+    if (heading) {
+      group = { id: heading[1], title: heading[2] };
+      continue;
+    }
+    if (src[i].startsWith("## ")) {
+      group = null;
+      continue;
+    }
+    if (!group || !src[i].trim().startsWith("|")) continue;
+
+    const cells = tableRows([src[i]])[0];
+    if (!cells) continue;
+    const id = unwrap(cells[0] ?? "");
+    if (!/^UI_[A-Z0-9_]+$/.test(id)) continue;
+    const text = (cells[1] ?? "").trim();
+    if (!text) throw new Error(`${file}: у ${id} нет текста`);
+    const where = (cells[2] ?? "")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!where.length) throw new Error(`${file}: у ${id} не указано, где он показывается`);
+    const params = [...text.matchAll(/\{([а-яё]+)\}/g)].map((match) => match[1]);
+    entries.push({ id, group: group.id, text, where, params });
+  }
+
+  if (!entries.length) throw new Error(`${file}: реестр микрокопии пуст`);
+
+  const seenId = new Set();
+  const seenText = new Map();
+  for (const entry of entries) {
+    if (seenId.has(entry.id)) throw new Error(`${file}: идентификатор ${entry.id} встречается дважды`);
+    seenId.add(entry.id);
+    const key = entry.text.toLowerCase();
+    // Один текст двумя идентификаторами — правка пройдёт только в одном месте.
+    // Исключение: подсказки пустых полос карты, у них текст по смыслу общий.
+    if (seenText.has(key) && !entry.id.endsWith("_EMPTY"))
+      throw new Error(`${file}: текст «${entry.text}» уже стоит у ${seenText.get(key)}`);
+    seenText.set(key, entry.id);
+  }
+  return entries;
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
   disclaimers: parseDisclaimers(),
   forbidden: parseForbidden(),
   crisis: parseCrisis(),
+  uiCopy: parseUiCopy(),
 };
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -850,5 +908,6 @@ console.log(
     `${Object.keys(extra.doors.slices).length} по срезам, ${extra.disclaimers.length} дисклеймеров, ` +
     `реестр запретов: ${extra.forbidden.groups.length} групп, ` +
     `${extra.forbidden.groups.reduce((sum, group) => sum + group.entries.flatMap((entry) => entry.forms).length, 0)} форм, ` +
-    `кризис: ${extra.crisis.triggers.length} категорий триггеров, ${extra.crisis.texts.length} текстов`,
+    `кризис: ${extra.crisis.triggers.length} категорий триггеров, ${extra.crisis.texts.length} текстов, ` +
+    `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах`,
 );

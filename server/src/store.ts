@@ -811,7 +811,7 @@ export interface GenerationResultBody {
   heading: string;
   paragraphs: string[];
   highlight: string | null;
-  storyline: { value: string; code: string; confidence: string };
+  storyline: { value: string; code: string; confidence: "low" | "medium" | "high" };
 }
 
 export interface GenerationJobRecord {
@@ -950,12 +950,6 @@ export function insertJob(
     requestId: string | null;
   },
 ): { job: GenerationJobRecord; created: boolean } {
-  const existingRequest = input.requestId ? findJobByRequest(db, profileId, input.requestId) : null;
-  if (existingRequest) return { job: existingRequest, created: false };
-
-  const active = findActiveJob(db, profileId, input.slot);
-  if (active) return { job: active, created: false };
-
   const timestamp = now();
   const generationId = newRecordId();
 

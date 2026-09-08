@@ -26,7 +26,7 @@ export {
 
 export { FakeProvider, answering, type FakeProviderOptions, type FakeTurn } from "./fake-provider.js";
 
-export { envelope, GOOD_TEXT } from "./fixtures.js";
+export { envelope, GOOD_TEXT, DEMO_ANSWERS, DEMO_PERSON } from "./fixtures.js";
 
 export {
   runGeneration,

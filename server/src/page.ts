@@ -262,6 +262,12 @@ export interface AssembleOptions {
   profile: ProfileRecord;
   /** Внешний адрес сервиса; пусто — ссылка относительная. */
   publicOrigin: string;
+  /**
+   * Не подставлять сюжет из готового задания. Нужно хешу входа очереди:
+   * сюжет сам появляется из генерации, и если его включить в промпт, каждый
+   * успешный прогон менял бы ключ кэша и ставил бы новое задание.
+   */
+  omitStoryline?: boolean;
 }
 
 /** Постоянная ссылка на страницу. */
@@ -280,7 +286,9 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   const stored = listAnswers(db, profile.profileId);
   const answered = new Set(stored.map((record) => record.questionId));
   const answers = toLadderAnswers(stored);
-  const storyline = findLatestJob(db, profile.profileId, "step4")?.result?.storyline;
+  const storyline = options.omitStoryline
+    ? undefined
+    : findLatestJob(db, profile.profileId, "step4")?.result?.storyline;
   const enginePage = buildPage(
     { name: profile.name, birthDate: profile.birthDate ?? undefined },
     answers,

@@ -15,6 +15,7 @@ import {
   abortInflightGenerations,
   createLlmRuntime,
   drainGenerations,
+  waitForGenerationWorker,
   type LlmRuntime,
 } from "./generation.js";
 import { createHttpServer } from "./http/server.js";
@@ -99,9 +100,12 @@ export async function startTestServer(
     close: () =>
       new Promise<void>((resolve) => {
         abortInflightGenerations(llm);
+        const worker = waitForGenerationWorker(llm);
         server.close(() => {
-          db.close();
-          resolve();
+          void worker.finally(() => {
+            db.close();
+            resolve();
+          });
         });
       }),
   };

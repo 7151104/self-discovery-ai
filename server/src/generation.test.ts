@@ -9,8 +9,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { answering, envelope, FakeProvider } from "../llm/dist/index.js";
-import type { GenerationResponse, PageStateDto } from "./contract/index.js";
+import { answering, DEMO_ANSWERS, envelope, FakeProvider } from "../llm/dist/index.js";
+import type { AnswerInput, GenerationResponse, PageStateDto } from "./contract/index.js";
+import { rawContent } from "./engine.js";
 import { buildKeyring } from "./db/crypto.js";
 import { up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
@@ -19,6 +20,7 @@ import {
   countJobs,
   findActiveJob,
   findLatestJob,
+  insertCall,
   insertJob,
   insertProfile,
   listAnswers,
@@ -27,15 +29,48 @@ import {
   saveCache,
   saveJobResult,
 } from "./store.js";
-import { call, drainServer, profileAtStep, startTestServer, TEST_KEY } from "./test-support.js";
+import { call, drainServer, startTestServer, TEST_KEY } from "./test-support.js";
 
 const LLM_FAST = {
   SDAI_LLM_ATTEMPTS: "1",
   SDAI_LLM_TIMEOUT_MS: "80",
   SDAI_LLM_BACKOFF_MS: "0",
+  SDAI_LLM_PROFILE_COST_LIMIT_KOPECKS: "1000000",
 };
 
-const PRICE = { inputKopecksPerMillion: 1_000_000, outputKopecksPerMillion: 1_000_000 };
+/** Цена такая, чтобы в журнале была ненулевая сумма и потолок её не резал. */
+const PRICE = { inputKopecksPerMillion: 10_000, outputKopecksPerMillion: 10_000 };
+
+function demoAnswersForStep(step: 1 | 2 | 3 | 4): AnswerInput[] {
+  return rawContent.questions
+    .filter((question) => question.step === step)
+    .map((question): AnswerInput => {
+      const value = DEMO_ANSWERS[question.id as keyof typeof DEMO_ANSWERS];
+      if (question.type === "выбор") return { questionId: question.id, kind: "выбор", option: String(value) };
+      if (question.type === "шкала") {
+        return { questionId: question.id, kind: "шкала", scale: Number(value) as 1 | 2 | 3 | 4 | 5 };
+      }
+      return { questionId: question.id, kind: "открытый", text: String(value) };
+    });
+}
+
+/** Профиль демо-человека: эталонный конверт `envelope()` проходит валидатор. */
+async function profileAtDemoLadder(origin: string): Promise<PageStateDto> {
+  const created = await call<PageStateDto>(origin, "POST", "/api/profiles", {
+    name: "Артём",
+    birthDate: "1994-03-12",
+  });
+  let page = created.body;
+  for (const step of [1, 2, 3, 4] as const) {
+    const reply = await call<PageStateDto>(origin, "POST", `/api/p/${page.profileId}/portions`, {
+      portion: `step:${step}`,
+      answers: demoAnswersForStep(step),
+      requestId: `demo-${step}`,
+    });
+    page = reply.body;
+  }
+  return page;
+}
 
 test("уникальный индекс не даёт двум живым заданиям занять один слот", () => {
   const db = openDatabase({ path: ":memory:" });
@@ -72,7 +107,7 @@ test("два одновременных запроса дают одну ген�
   const server = await startTestServer(LLM_FAST, { provider });
   t.after(() => server.close());
 
-  const page = await profileAtStep(server.origin, 4);
+  const page = await profileAtDemoLadder(server.origin);
   assert.equal(countJobs(server.db, page.profileId), 1);
 
   const [first, second] = await Promise.all([
@@ -104,7 +139,7 @@ test("два одновременных запроса дают одну ген�
 
   const profile = {
     profileId: page.profileId,
-    name: "Аня",
+    name: "Артём",
     birthDate: "1990-05-05",
     version: 1,
     createdAt: "",
@@ -124,7 +159,7 @@ test("после перезапуска сервера незавершённо�
 
   const hanging = new FakeProvider({ turns: [{ kind: "зависание" }] });
   const first = await startTestServer({}, { autostart: true, provider: hanging, databasePath });
-  const page = await profileAtStep(first.origin, 4);
+  const page = await profileAtDemoLadder(first.origin);
   const profileId = page.profileId;
   assert.equal(findLatestJob(first.db, profileId, "step4")?.status, "pending");
   await first.close();
@@ -146,7 +181,7 @@ test("повторный запрос при неизменном входе н�
   const server = await startTestServer(LLM_FAST, { provider });
   t.after(() => server.close());
 
-  const page = await profileAtStep(server.origin, 4);
+  const page = await profileAtDemoLadder(server.origin);
   await drainServer(server);
   assert.equal(provider.callCount, 1);
   assert.equal(findLatestJob(server.db, page.profileId, "step4")?.status, "ready");
@@ -175,7 +210,7 @@ test("при временном отказе провайдера ответы �
   const server = await startTestServer(LLM_FAST, { provider });
   t.after(() => server.close());
 
-  const page = await profileAtStep(server.origin, 4);
+  const page = await profileAtDemoLadder(server.origin);
   const open = listAnswers(server.db, page.profileId).find((row) => row.kind === "открытый");
   assert.ok(open && String(open.value).length > 20);
 
@@ -185,7 +220,7 @@ test("при временном отказе провайдера ответы �
 
   const readable = await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`);
   assert.equal(readable.status, 200);
-  assert.equal(readable.body.card.name, "Аня");
+  assert.equal(readable.body.card.name, "Артём");
   assert.equal(readable.body.state, "s4");
   const after = listAnswers(server.db, page.profileId).find((row) => row.kind === "открытый");
   assert.equal(after?.value, open.value);
@@ -202,7 +237,7 @@ test("журнал вызовов хранит токены, стоимость,
   const server = await startTestServer(LLM_FAST, { provider });
   t.after(() => server.close());
 
-  const page = await profileAtStep(server.origin, 4);
+  const page = await profileAtDemoLadder(server.origin);
   await drainServer(server);
 
   const calls = listCalls(server.db, page.profileId);
@@ -220,12 +255,43 @@ test("журнал вызовов хранит токены, стоимость,
   );
 });
 
+test("потолок себестоимости считается по сумме журнала, а не только по оценке", async (t) => {
+  const provider = answering(envelope(), { pricing: PRICE });
+  const server = await startTestServer(
+    { ...LLM_FAST, SDAI_LLM_PROFILE_COST_LIMIT_KOPECKS: "50" },
+    { provider },
+  );
+  t.after(() => server.close());
+
+  const page = await profileAtDemoLadder(server.origin);
+  const job = findLatestJob(server.db, page.profileId, "step4");
+  assert.ok(job);
+  insertCall(server.db, {
+    generationId: job.generationId,
+    profileId: page.profileId,
+    provider: "fake",
+    model: "ledger",
+    attempt: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    costKopecks: 50,
+    durationMs: 0,
+    outcome: "ok",
+  });
+  assert.equal(profileCostKopecks(server.db, page.profileId), 50);
+
+  await drainServer(server);
+  assert.equal(provider.callCount, 0, "журнал уже исчерпал потолок — провайдера не зовут");
+  assert.equal(findLatestJob(server.db, page.profileId, "step4")?.status, "failed");
+  assert.equal(findLatestJob(server.db, page.profileId, "step4")?.failureCode, "cost_limit");
+});
+
 test("ручная регенерация помечает прогон и обходит кэш", async (t) => {
   const provider = answering(envelope(), { pricing: PRICE });
   const server = await startTestServer(LLM_FAST, { provider });
   t.after(() => server.close());
 
-  const page = await profileAtStep(server.origin, 4);
+  const page = await profileAtDemoLadder(server.origin);
   await drainServer(server);
   const afterFirst = provider.callCount;
   assert.ok(afterFirst >= 1);
@@ -254,6 +320,27 @@ test("ручная регенерация помечает прогон и об�
     `/api/p/${page.profileId}/generations/${latest?.generationId}`,
   );
   assert.equal(status.body.generation.regenerated, true);
+});
+
+test("при постоянном отказе провайдера ответы сохранены, страница читаема", async (t) => {
+  const provider = new FakeProvider({ turns: [{ kind: "постоянный отказ", code: "auth" }], pricing: PRICE });
+  const server = await startTestServer(LLM_FAST, { provider });
+  t.after(() => server.close());
+
+  const page = await profileAtDemoLadder(server.origin);
+  const open = listAnswers(server.db, page.profileId).find((row) => row.kind === "открытый");
+  assert.ok(open && String(open.value).length > 20);
+
+  await drainServer(server);
+  assert.equal(findLatestJob(server.db, page.profileId, "step4")?.status, "failed");
+
+  const readable = await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`);
+  assert.equal(readable.status, 200);
+  assert.equal(readable.body.card.name, "Артём");
+  assert.equal(readable.body.state, "s4");
+  const after = listAnswers(server.db, page.profileId).find((row) => row.kind === "открытый");
+  assert.equal(after?.value, open.value);
+  assert.equal(countJobs(server.db, page.profileId), 1, "повторный GET не ставит второе задание на тот же отказ");
 });
 
 test("результат задания и кэш в файле базы не лежат открытым текстом", () => {
@@ -295,7 +382,7 @@ test("удаление профиля уносит задания, журнал 
   const server = await startTestServer(LLM_FAST, { provider });
   t.after(() => server.close());
 
-  const page = await profileAtStep(server.origin, 4);
+  const page = await profileAtDemoLadder(server.origin);
   await drainServer(server);
   assert.ok(countJobs(server.db, page.profileId) > 0);
 

@@ -19,12 +19,11 @@ import {
   type GenerationProvider,
   type GenerationResult,
   type LlmConfig,
-  type LlmTask,
   type Step4Reason,
 } from "../llm/dist/index.js";
 import type { BlockSlot, GenerationDto } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
-import { detectCrisis } from "./engine.js";
+import { detectCrisis, type LlmTask } from "./engine.js";
 import { log } from "./log.js";
 import { assemble } from "./page.js";
 import {
@@ -33,6 +32,7 @@ import {
   findActiveJob,
   findCache,
   findJobById,
+  findJobByRequest,
   findLatestJob,
   findProfile,
   insertCall,
@@ -119,7 +119,12 @@ const nextAttemptAt = (config: LlmConfig, attempts: number): string => {
 };
 
 function currentTask(context: GenerationContext, profile: ProfileRecord): LlmTask | null {
-  return assemble({ db: context.db, profile, publicOrigin: "" }).internal.internal.llmTask;
+  return assemble({
+    db: context.db,
+    profile,
+    publicOrigin: "",
+    omitStoryline: true,
+  }).internal.internal.llmTask;
 }
 
 /**
@@ -141,6 +146,11 @@ export function enqueueStep4(
   const slot: BlockSlot = "step4";
   const regenerate = options.regenerate === true;
 
+  if (options.requestId) {
+    const existing = findJobByRequest(context.db, profile.profileId, options.requestId);
+    if (existing) return existing;
+  }
+
   if (regenerate) {
     releaseActiveJob(context.db, profile.profileId, slot, "superseded");
   } else {
@@ -148,7 +158,9 @@ export function enqueueStep4(
     if (active) return active;
 
     const latest = findLatestJob(context.db, profile.profileId, slot);
-    if (latest?.status === "ready" && latest.inputHash === inputHash) return latest;
+    // Тот же вход: готовое не пересобираем, проваленное не ставим вторым.
+    // Ручная регенерация идёт другой веткой и обходит кэш.
+    if (latest && latest.inputHash === inputHash && latest.status !== "pending") return latest;
   }
 
   const inserted = insertJob(context.db, profile.profileId, {
@@ -172,6 +184,8 @@ export function enqueueStep4(
 }
 
 const running = new WeakSet<Db>();
+const stopped = new WeakSet<LlmRuntime>();
+const workers = new WeakMap<LlmRuntime, Promise<void>>();
 const inflightByRuntime = new WeakMap<LlmRuntime, Map<string, AbortController>>();
 
 function inflightOf(llm: LlmRuntime): Map<string, AbortController> {
@@ -182,17 +196,29 @@ function inflightOf(llm: LlmRuntime): Map<string, AbortController> {
   return created;
 }
 
+/**
+ * Остановка сервера: живые вызовы прерываются, очередь больше не берёт задания.
+ * Сами строки в базе остаются `pending` и доигрываются после следующего старта.
+ */
 export function abortInflightGenerations(llm: LlmRuntime): void {
+  stopped.add(llm);
   const inflight = inflightOf(llm);
   for (const controller of inflight.values()) controller.abort();
   inflight.clear();
 }
 
+/** Дождаться текущего прохода очереди. Нужно закрытию сервера, чтобы не писать в закрытую базу. */
+export function waitForGenerationWorker(llm: LlmRuntime): Promise<void> {
+  return workers.get(llm) ?? Promise.resolve();
+}
+
 export function scheduleGenerations(context: GenerationContext): void {
   if (!context.llm.autostart) return;
+  if (stopped.has(context.llm)) return;
   if (running.has(context.db)) return;
   running.add(context.db);
-  void processDueJobs(context).finally(() => running.delete(context.db));
+  const work = processDueJobs(context).finally(() => running.delete(context.db));
+  workers.set(context.llm, work);
 }
 
 /** После перезапуска: живые задания доигрываются тем же воркером. */
@@ -201,14 +227,17 @@ export function resumeGenerations(context: GenerationContext): void {
 }
 
 async function processDueJobs(context: GenerationContext): Promise<void> {
+  if (stopped.has(context.llm)) return;
   const inflight = inflightOf(context.llm);
   for (const job of listDueJobs(context.db)) {
+    if (stopped.has(context.llm)) return;
     if (inflight.has(job.generationId)) continue;
     await processJob(context, job.generationId);
   }
 }
 
 export async function processJob(context: GenerationContext, generationId: string): Promise<void> {
+  if (stopped.has(context.llm)) return;
   const inflight = inflightOf(context.llm);
   const controller = new AbortController();
   inflight.set(generationId, controller);
@@ -221,13 +250,14 @@ export async function processJob(context: GenerationContext, generationId: strin
 
 /** Дождаться текущего прогона очереди. Нужно тестам, а не обработчикам. */
 export async function drainGenerations(context: GenerationContext): Promise<void> {
+  if (stopped.has(context.llm)) return;
   const previous = context.llm.autostart;
   context.llm.autostart = true;
-  try {
-    await processDueJobs(context);
-  } finally {
+  const work = processDueJobs(context).finally(() => {
     context.llm.autostart = previous;
-  }
+  });
+  workers.set(context.llm, work);
+  await work;
 }
 
 function applyResult(
@@ -337,6 +367,7 @@ const failureOf = (
 };
 
 async function runJob(context: GenerationContext, generationId: string, signal: AbortSignal): Promise<void> {
+  if (stopped.has(context.llm) || signal.aborted) return;
   const listed = findJobById(context.db, generationId);
   if (!listed || listed.status !== "pending") return;
 

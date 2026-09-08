@@ -38,6 +38,7 @@
 | `webhook` | `POST /api/payments/:provider/webhook` | Уведомление провайдера: единственный вход к оплаченному заказу |
 | `blockText` | `GET /api/p/:profileId/blocks/:slot` | Текст блока; платный требует оплаченного заказа |
 | `generationStatus` | `GET /api/p/:profileId/generations/:generationId` | Статус генерации текста |
+| `regenerate` | `POST /api/p/:profileId/generations` | Ручная регенерация финала лестницы: обходит кэш, ключ отправки ловит повтор |
 | `exportProfile` | `GET /api/p/:profileId/export` | Выгрузка данных человека |
 | `deleteProfile` | `DELETE /api/p/:profileId` | Удаление профиля со всем содержимым |
 | `share` | `POST /api/p/:profileId/share` | «Поделиться»: включить публичную ссылку |

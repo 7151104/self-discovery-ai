@@ -8,10 +8,10 @@
  */
 
 import {
-  answering,
   costOf,
   contentVersion,
-  envelope,
+  createGenerationProvider,
+  failureNotesForLog,
   findingsForSlice,
   generateLadderFinal,
   generatePaidSlice,
@@ -80,8 +80,9 @@ export interface LlmRuntime {
 }
 
 /**
- * Рабочий контур слоя: настройки из окружения и поддельный провайдер, пока
- * настоящий не назван. Тесты подменяют провайдера и выключают автозапуск.
+ * Рабочий контур слоя: настройки из окружения и провайдер из реестра слоя.
+ * По умолчанию это заглушка: она собирает валидный выход из самого задания.
+ * Тесты подменяют провайдера и выключают автозапуск.
  */
 export function createLlmRuntime(
   overrides: {
@@ -95,9 +96,10 @@ export function createLlmRuntime(
   const config = overrides.config ?? loadLlmConfig(overrides.env);
   const provider =
     overrides.provider ??
-    answering(envelope(), {
+    createGenerationProvider({
+      provider: config.provider,
       pricing: config.pricing,
-      ...(config.model ? { model: config.model } : {}),
+      model: config.model,
     });
   return {
     provider,
@@ -499,7 +501,7 @@ type JobOutcome =
       costKopecks: number;
       attempts: number;
     }
-  | { ok: false; reason: Step4Reason | SliceReason; attempts: number; costKopecks: number };
+  | { ok: false; reason: Step4Reason | SliceReason; details: string[]; attempts: number; costKopecks: number };
 
 async function runJob(context: GenerationContext, generationId: string, signal: AbortSignal): Promise<void> {
   if (stopped.has(context.llm) || signal.aborted) return;
@@ -657,11 +659,13 @@ async function runJob(context: GenerationContext, generationId: string, signal: 
     }
 
     failJob(context.db, listed, code);
+    const problems = failureNotesForLog(outcome.details);
     log("generation.failed", {
       profileId: listed.profileId,
       generationId: listed.generationId,
       slot: listed.slot,
       reason: code,
+      ...(problems ? { problems } : {}),
     });
   });
 }

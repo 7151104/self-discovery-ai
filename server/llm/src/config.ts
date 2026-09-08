@@ -2,8 +2,8 @@
  * Настройки слоя генерации. Все — из переменных окружения (E4-01).
  *
  * Ключ провайдера в репозитории не лежит и лежать не может: он читается из
- * окружения и в журнал не попадает. Пока провайдер не назван, настройка
- * `SDAI_LLM_PROVIDER` знает единственное значение `fake`.
+ * окружения и в журнал не попадает. Пока основатель не назвал настоящую модель,
+ * настройка `SDAI_LLM_PROVIDER` по умолчанию — `stub`, рабочая заглушка.
  *
  * Предел себестоимости профиля основателем не назван (открытый вопрос 5 в
  * `docs/14-state.md`). Он здесь — настраиваемое число с безопасным значением по
@@ -12,9 +12,10 @@
  */
 
 import type { TokenPricing } from "./provider.js";
+import { knownLlmProviders, type ProviderName } from "./registry.js";
 import type { CostPolicy, RetryPolicy } from "./runner.js";
 
-export type ProviderName = "fake";
+export type { ProviderName };
 
 export interface LlmConfig {
   provider: ProviderName;
@@ -31,7 +32,7 @@ export interface LlmConfig {
 }
 
 export const DEFAULTS = {
-  provider: "fake" as ProviderName,
+  provider: "stub" as ProviderName,
   model: "",
   /**
    * Таймаут и повторы. Финал лестницы человек ждёт на экране, поэтому предел
@@ -69,7 +70,7 @@ function readInteger(env: NodeJS.ProcessEnv, variable: string, fallback: number)
 function readProvider(env: NodeJS.ProcessEnv): ProviderName {
   const raw = env["SDAI_LLM_PROVIDER"];
   if (raw === undefined || raw === "") return DEFAULTS.provider;
-  if (raw === "fake") return raw;
+  if ((knownLlmProviders() as string[]).includes(raw)) return raw as ProviderName;
   throw new LlmConfigError(["SDAI_LLM_PROVIDER"], "unknown-provider");
 }
 

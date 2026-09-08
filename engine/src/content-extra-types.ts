@@ -129,6 +129,143 @@ export interface RawUiCopy {
   params: string[];
 }
 
+/**
+ * Вопрос добора полной карты. Текст, тип и варианты пришли из банка по идентификатору:
+ * в `content/slices/full-map.md` стоят только идентификаторы, чтобы у формулировки
+ * остался один источник правды.
+ */
+export interface RawFullMapQuestion {
+  /** Идентификатор банка: `Q1`–`Q35`, `О1`–`О3`. */
+  id: string;
+  type: string;
+  text: string;
+  coordinates: number[];
+  direction: string;
+  role: string | null;
+  options: { key: string; text: string }[];
+  /** Зачем вопрос стоит в этой порции; человеку не показывается. */
+  why: string;
+}
+
+export interface RawFullMapPortion {
+  number: number;
+  questions: RawFullMapQuestion[];
+}
+
+/**
+ * Ось промежуточного блока полной карты. `полоса` — полоса пары шкальных вопросов
+ * (ключи `низко`, `середина`, `высоко`), `вариант` — вариант категориального вопроса
+ * (ключи из банка).
+ */
+export interface RawFullMapAxis {
+  ids: string[];
+  kind: "полоса" | "вариант";
+  keys: string[];
+  /** Подписи полюсов для того, кто читает файл: ключ → что он означает. */
+  poles: Record<string, string>;
+}
+
+export interface RawFullMapInterlude {
+  number: number;
+  heading: string;
+  axes: RawFullMapAxis[];
+  pairs: { first: string; second: string; text: string }[];
+}
+
+/** Добор самого дорогого среза (content/slices/full-map.md). */
+export interface RawFullMap {
+  slice: string;
+  file: string;
+  title: string;
+  price: number;
+  promise: string;
+  portions: RawFullMapPortion[];
+  interludes: RawFullMapInterlude[];
+  subtypes: { code: string; text: string }[];
+  threshold: { checks: string[]; followUps: string[] };
+  report: string[];
+  /** Границы точности: честный список того, где карта опирается на два ответа. */
+  accuracy: string[];
+  restrictions: string[];
+  /** `slice` пуст, когда предложения после среза нет вовсе. */
+  nextDoors: { condition: string; slice: string | null; note: string }[];
+}
+
+/**
+ * Экран оплаты одного среза (раздел «Экран оплаты» в файле среза).
+ *
+ * `promise` — то же обещание, что в оффере: второй записи у него нет. `contents` — состав,
+ * а не список выгод. Цена на экране одна и живёт полем `price`, в текстах её нет.
+ */
+export interface RawPayScreen {
+  slice: string;
+  file: string;
+  price: number;
+  promise: string;
+  contents: string[];
+  decline: string;
+}
+
+/**
+ * Письмо (content/emails.md). `withoutEmail` — место на странице, которое говорит то же
+ * самое: почта не основной носитель, и её может не быть вовсе (открытый вопрос 6).
+ */
+export interface RawEmail {
+  id: string;
+  title: string;
+  /** Событие, по которому письмо уходит. Писем по расписанию в продукте нет. */
+  when: string;
+  subject: string;
+  withoutEmail: string;
+  body: string[];
+  /** Имена подстановок вида `{имя}` в теме и теле. */
+  params: string[];
+}
+
+/** Общая часть подвала письма: стоит в каждом письме и правится один раз. */
+export interface RawEmailFooter {
+  id: string;
+  text: string;
+  where: string[];
+}
+
+export interface RawEmails {
+  emails: RawEmail[];
+  footer: RawEmailFooter[];
+}
+
+/** Слой шеринговой картинки: что на ней стоит и откуда это берётся. */
+export interface RawShareLayer {
+  name: string;
+  content: string;
+  source: string;
+}
+
+/**
+ * Подпись на картинке. `placeholders` — имена реквизитов основателя в двойных скобках;
+ * пока хотя бы один не заполнен, картинка не собирается (открытый вопрос 4).
+ */
+export interface RawShareCaption {
+  id: string;
+  text: string;
+  where: string;
+  placeholders: string[];
+}
+
+/** Формат картинки: превью ссылки и вертикальная картинка для публикации. */
+export interface RawShareFormat {
+  name: string;
+  width: number;
+  height: number;
+  purpose: string;
+}
+
+export interface RawShare {
+  layers: RawShareLayer[];
+  captions: RawShareCaption[];
+  formats: RawShareFormat[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
@@ -136,4 +273,8 @@ export interface RawExtraContent {
   forbidden: RawForbidden;
   crisis: RawCrisis;
   uiCopy: RawUiCopy[];
+  fullMap: RawFullMap;
+  payScreens: RawPayScreen[];
+  emails: RawEmails;
+  share: RawShare;
 }

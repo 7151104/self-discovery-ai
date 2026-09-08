@@ -679,9 +679,13 @@ writeFileSync(
 );
 
 const sliceFiles = readdirSync(join(root, "content/slices")).filter((f) => f.endsWith(".md") && f !== "README.md");
-const listed = content.slices.filter((s) => s.file).length;
-if (sliceFiles.length !== listed)
-  throw new Error(`content/slices: файлов ${sliceFiles.length}, в таблице ${listed}`);
+// Файл добора обязан быть назван в README — в таблице состава или в таблице добора из
+// банка. Считать файлы против одной таблицы нельзя: у slice_full_map своих формулировок
+// нет, и в таблицу состава он не попадает (content/slices/README.md).
+const sliceIndex = read("content/slices/README.md");
+for (const file of sliceFiles) {
+  if (!sliceIndex.includes(`\`${file}\``)) throw new Error(`content/slices/${file}: файл не назван в README`);
+}
 
 const sliceQuestions = content.slices.reduce((sum, slice) => sum + slice.questions.length, 0);
 
@@ -1072,6 +1076,405 @@ function parseUiCopy() {
   return entries;
 }
 
+/** Полосы промежуточных блоков полной карты: грубая тройка поверх пяти полос скоринга. */
+const FULL_MAP_BANDS = ["низко", "середина", "высоко"];
+
+/**
+ * Добор полной карты (E5-13): `content/slices/full-map.md`.
+ *
+ * Формулировок вопросов в файле нет — только идентификаторы банка в порядке порций.
+ * Текст, тип и варианты каждого вопроса берутся здесь из уже разобранного банка, поэтому
+ * у вопроса остаётся один источник правды и калибровка банка (E5-11) не разъезжается с
+ * файлом среза.
+ *
+ * Ось промежуточного блока — либо полоса пары шкальных вопросов (`Q1+Q2 — полоса`), либо
+ * вариант категориального вопроса (`Q29 — вариант`); ключи варианта приходят из банка.
+ */
+function parseFullMap(bank, slices) {
+  const file = "content/slices/full-map.md";
+  const src = lines(read(file));
+  const byId = new Map(bank.map((question) => [question.id, question]));
+
+  const slice = slices.find((candidate) => candidate.id === "slice_full_map");
+  if (!slice) throw new Error(`${file}: срез slice_full_map не описан в content/slices/README.md`);
+
+  const h1 = src.find((line) => line.startsWith("# "));
+  const title = /—\s*«(.+)»/.exec(h1 ?? "");
+  if (!title) throw new Error(`${file}: в заголовке нет названия среза в «кавычках»`);
+
+  const promiseStart = src.findIndex((line) => line.startsWith("## Что обещаем"));
+  if (promiseStart < 0) throw new Error(`${file}: нет раздела «Что обещаем в оффере»`);
+  const promise = [];
+  for (let i = promiseStart + 1; i < src.length; i += 1) {
+    if (src[i].startsWith("## ") || src[i].startsWith("---")) break;
+    if (src[i].startsWith(">")) promise.push(src[i].replace(/^>\s?/, "").trim());
+  }
+  if (!promise.length) throw new Error(`${file}: обещание оффера не найдено`);
+
+  // Порции: заголовок «## Порция N — M вопросов» и таблица идентификаторов под ним.
+  const portions = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## Порция (\d) — (\d+) вопрос/.exec(src[i]);
+    if (!heading) continue;
+    const number = Number(heading[1]);
+    if (number !== portions.length + 1) throw new Error(`${file}: порции идут не по порядку (${number})`);
+
+    const questions = [];
+    for (const cells of tableAt(src, src.findIndex((line, j) => j > i && line.trim().startsWith("|")))) {
+      const id = unwrap(cells[0] ?? "");
+      if (id === "№" || !id) continue;
+      const question = byId.get(id);
+      if (!question) throw new Error(`${file}: вопроса ${id} нет в content/questions-full-bank.md`);
+      if (!cells[1]) throw new Error(`${file}: у ${id} не сказано, зачем он в этой порции`);
+      questions.push({ ...question, portion: number, why: cells[1] });
+    }
+    if (questions.length !== Number(heading[2]))
+      throw new Error(`${file}: в порции ${number} ${questions.length} вопросов, в заголовке ${heading[2]}`);
+    portions.push({ number, questions });
+  }
+  if (portions.length !== 3) throw new Error(`${file}: ожидались три порции, найдено ${portions.length}`);
+
+  const order = portions.flatMap((portion) => portion.questions.map((question) => question.id));
+  const seen = new Set();
+  for (const id of order) {
+    if (seen.has(id)) throw new Error(`${file}: вопрос ${id} записан дважды`);
+    seen.add(id);
+  }
+
+  // Ни один вопрос лестницы в добор не попадает: это Закон 2, проверяется по mapping.
+  const ladderIds = new Set(ladder.questions.map((question) => question.source));
+  for (const id of order) {
+    if (ladderIds.has(id)) throw new Error(`${file}: ${id} уже задан на лестнице, второй раз он не задаётся`);
+  }
+  const missing = bank.filter((question) => !ladderIds.has(question.id) && !seen.has(question.id));
+  if (missing.length)
+    throw new Error(`${file}: остаток банка неполный, не хватает ${missing.map((q) => q.id).join(", ")}`);
+
+  // Промежуточные блоки: две оси и полная матрица их ключей.
+  const interludes = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## Промежуточный блок (\d)/.exec(src[i]);
+    if (!heading) continue;
+    const number = Number(heading[1]);
+    const end = src.findIndex((line, j) => j > i && line.startsWith("## "));
+    const section = src.slice(i, end < 0 ? undefined : end);
+    const where = `${file}, блок ${number}`;
+
+    const headingLine = section.find((line) => line.startsWith("**Заголовок блока:**"));
+    if (!headingLine) throw new Error(`${where}: нет заголовка блока`);
+
+    const axes = ["A", "B"].map((letter) => {
+      const line = section.find((candidate) => candidate.startsWith(`**Ось ${letter}:**`));
+      if (!line) throw new Error(`${where}: не объявлена ось ${letter}`);
+      const parts = line.replace(`**Ось ${letter}:**`, "").split("·").map((part) => part.trim());
+      const head = /^(Q\d+(?:\+Q\d+)*)\s*—\s*(полоса|вариант)$/.exec(parts[0] ?? "");
+      if (!head) throw new Error(`${where}: не разобрана ось ${letter} — «${parts[0]}»`);
+      const ids = head[1].split("+");
+      for (const id of ids) {
+        if (!seen.has(id)) throw new Error(`${where}: ось ${letter} стоит на ${id}, которого нет в порциях`);
+        const portion = portions.find((item) => item.questions.some((question) => question.id === id));
+        if (portion.number > number)
+          throw new Error(`${where}: ось ${letter} стоит на ${id} из порции ${portion.number} — она ещё не задана`);
+      }
+
+      let keys;
+      if (head[2] === "полоса") {
+        keys = FULL_MAP_BANDS;
+      } else {
+        if (ids.length !== 1) throw new Error(`${where}: ось по варианту строится на одном вопросе`);
+        keys = (byId.get(ids[0]).options ?? []).map((option) => option.key);
+        if (keys.length < 2) throw new Error(`${where}: у ${ids[0]} нет вариантов, оси по ним не быть`);
+      }
+
+      const poles = {};
+      for (const part of parts.slice(1)) {
+        const pole = /^([а-яё]+):\s*(.+)$/.exec(part);
+        if (!pole) throw new Error(`${where}: не разобрана подпись полюса «${part}» оси ${letter}`);
+        if (!keys.includes(pole[1])) throw new Error(`${where}: подпись полюса ${pole[1]} вне ключей оси ${letter}`);
+        poles[pole[1]] = pole[2];
+      }
+
+      return { ids, kind: head[2], keys, poles };
+    });
+
+    const pairs = [];
+    const pairKeys = new Set();
+    for (const cells of tableUnder(section, "## Промежуточный блок", where)) {
+      if (cells.length !== 3 || cells[0] === "Ось A") continue;
+      if (!axes[0].keys.includes(cells[0]) || !axes[1].keys.includes(cells[1])) continue;
+      const key = `${cells[0]}×${cells[1]}`;
+      if (pairKeys.has(key)) throw new Error(`${where}: пара ${key} записана дважды`);
+      if (!cells[2]) throw new Error(`${where}: у пары ${key} нет текста`);
+      pairKeys.add(key);
+      pairs.push({ first: cells[0], second: cells[1], text: cells[2] });
+    }
+    const expected = axes[0].keys.length * axes[1].keys.length;
+    if (pairs.length !== expected)
+      throw new Error(`${where}: пар ${pairs.length}, а ключи осей дают ${expected} — матрица неполная`);
+
+    interludes.push({
+      number,
+      heading: unwrap(headingLine.replace("**Заголовок блока:**", "").trim()),
+      axes,
+      pairs,
+    });
+  }
+  if (interludes.length !== 2) throw new Error(`${file}: ожидались два промежуточных блока`);
+  if (interludes.length !== portions.length - 1)
+    throw new Error(`${file}: блоков должно быть на один меньше, чем порций`);
+
+  const listSection = (heading) => {
+    const start = src.findIndex((line) => line.startsWith(heading));
+    if (start < 0) throw new Error(`${file}: нет раздела «${heading}»`);
+    const end = src.findIndex((line, i) => i > start && line.startsWith("## "));
+    return src.slice(start + 1, end < 0 ? undefined : end);
+  };
+
+  const bullets = (heading) => {
+    const out = [];
+    for (const line of listSection(heading)) {
+      const bullet = /^- (?!\[ \])(.+)$/.exec(line.trim());
+      if (bullet) out.push(bullet[1].trim());
+      else if (out.length && /^\s+\S/.test(line)) out[out.length - 1] += ` ${line.trim()}`;
+    }
+    if (!out.length) throw new Error(`${file}: раздел «${heading}» пуст`);
+    return out;
+  };
+
+  const numbered = (heading) => {
+    const out = [];
+    for (const line of listSection(heading)) {
+      const item = /^(\d+)\.\s+(.+)$/.exec(line.trim());
+      if (item) out.push(item[2].trim());
+      else if (out.length && /^\s+\S/.test(line)) out[out.length - 1] += ` ${line.trim()}`;
+    }
+    if (!out.length) throw new Error(`${file}: в разделе «${heading}» нет нумерованного списка`);
+    return out;
+  };
+
+  const thresholdSection = listSection("## Порог генерации");
+  const checks = thresholdSection
+    .map((line) => /^- \[ \]\s*(.+)$/.exec(line.trim()))
+    .filter(Boolean)
+    .map((match) => match[1].trim());
+  const followUps = thresholdSection
+    .map((line) => /^\d+\.\s*«(.+)»\.?$/.exec(line.trim()))
+    .filter(Boolean)
+    .map((match) => match[1].trim());
+  if (checks.length < 4) throw new Error(`${file}: у порога генерации меньше четырёх пунктов`);
+  if (followUps.length < 3) throw new Error(`${file}: у порога меньше трёх уточняющих вопросов`);
+
+  const subtypes = [];
+  for (const cells of tableUnder(src, "## Скоринг добора", file)) {
+    const code = /^`([a-z_]+)`$/.exec(cells[0] ?? "");
+    if (!code) continue;
+    if (!cells[1]) throw new Error(`${file}: у подтипа ${code[1]} нет формулировки внутрь профиля`);
+    subtypes.push({ code: code[1], text: cells[1] });
+  }
+  if (!subtypes.length) throw new Error(`${file}: в разделе «Скоринг добора» не найдено ни одного подтипа`);
+
+  const nextDoors = [];
+  for (const cells of tableUnder(src, "## Следующие двери", file)) {
+    if (!cells[0] || cells[0] === "Условие в профиле" || !cells[1]) continue;
+    const target = /`(slice_[a-z_]+)`/.exec(cells[1]);
+    nextDoors.push({ condition: cells[0], slice: target ? target[1] : null, note: cells[1] });
+  }
+  if (!nextDoors.length) throw new Error(`${file}: таблица «Следующие двери» пуста`);
+  if (nextDoors[nextDoors.length - 1].condition !== "иначе")
+    throw new Error(`${file}: последняя строка «Следующие двери» обязана быть «иначе»`);
+
+  return {
+    slice: slice.id,
+    file: "full-map.md",
+    title: title[1],
+    price: slice.price,
+    promise: promise.join(" ").replace(/\s+/g, " ").trim(),
+    portions: portions.map((portion) => ({
+      number: portion.number,
+      questions: portion.questions.map((question) => ({
+        id: question.id,
+        type: question.type,
+        text: question.text,
+        coordinates: question.coordinates,
+        direction: question.direction,
+        role: question.role,
+        options: question.options,
+        why: question.why,
+      })),
+    })),
+    interludes,
+    subtypes,
+    threshold: { checks, followUps },
+    report: numbered("## Что обязательно попадает в отчёт"),
+    accuracy: bullets("## Границы точности этого среза"),
+    restrictions: bullets("## Запреты этого среза"),
+    nextDoors,
+  };
+}
+
+/**
+ * Шеринговая картинка (E5-10): `content/share.md`.
+ *
+ * Подписи картинки лежат отдельно от реестра микрокопии: в них нужны имя продукта и домен,
+ * а это реквизиты основателя. Пока подстановка не заполнена, картинка не собирается —
+ * поэтому разбор требует, чтобы имя подстановки было описано в `content/legal/README.md`.
+ */
+function parseShare() {
+  const file = "content/share.md";
+  const src = lines(read(file));
+  const listed = new Set(
+    [...read("content/legal/README.md").matchAll(/`\{\{([А-ЯЁA-Z_]+)\}\}`/g)].map((match) => match[1]),
+  );
+
+  const captions = [];
+  for (const cells of tableUnder(src, "## Подписи картинки", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^SHARE_IMAGE_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у ${id} нет текста`);
+    if (!cells[2]) throw new Error(`${file}: у ${id} не сказано, где он стоит`);
+    const placeholders = [...cells[1].matchAll(/\{\{([^}]*)\}\}/g)].map((match) => match[1]);
+    for (const name of placeholders) {
+      if (!listed.has(name)) throw new Error(`${file}: подстановка {{${name}}} не описана в content/legal/README.md`);
+    }
+    captions.push({ id, text: cells[1], where: cells[2], placeholders });
+  }
+  if (!captions.length) throw new Error(`${file}: реестр подписей картинки пуст`);
+
+  const formats = [];
+  for (const cells of tableUnder(src, "## Форматы", file)) {
+    const size = /^(\d{3,4})×(\d{3,4})$/.exec(cells[1] ?? "");
+    if (!size) continue;
+    formats.push({ name: cells[0], width: Number(size[1]), height: Number(size[2]), purpose: cells[2] ?? "" });
+  }
+  if (formats.length !== 2) throw new Error(`${file}: форматов должно быть два, найдено ${formats.length}`);
+
+  const layers = [];
+  for (const cells of tableUnder(src, "## Что стоит на картинке", file)) {
+    if (!cells[0] || cells[0] === "Слой" || !cells[1]) continue;
+    layers.push({ name: cells[0], content: cells[1], source: cells[2] ?? "" });
+  }
+  if (!layers.length) throw new Error(`${file}: не описано, что стоит на картинке`);
+
+  return { layers, captions, formats };
+}
+
+/**
+ * Письма (E5-07): `content/emails.md`.
+ *
+ * Почта — не основной носитель, и решение о её сборе не принято (открытый вопрос 6). Поэтому
+ * у каждого письма обязательно поле «Без почты»: место на странице, которое говорит то же
+ * самое. Письмо без такого поля — единственный носитель своего содержания, и разбор падает.
+ */
+function parseEmails() {
+  const file = "content/emails.md";
+  const src = lines(read(file));
+
+  const emails = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^## (EMAIL_[A-Z_]+) · (.+)$/.exec(src[i]);
+    if (!heading) continue;
+    const [, id, title] = heading;
+    const end = src.findIndex((line, j) => j > i && line.startsWith("## "));
+    const section = src.slice(i, end < 0 ? undefined : end);
+
+    const field = (label) => {
+      const line = section.find((candidate) => candidate.startsWith(`**${label}:**`));
+      if (!line) throw new Error(`${file}: у ${id} нет поля «${label}»`);
+      const value = line.replace(`**${label}:**`, "").trim();
+      if (!value) throw new Error(`${file}: у ${id} пустое поле «${label}»`);
+      return value;
+    };
+
+    const subject = field("Тема");
+    if (subject.endsWith(".")) throw new Error(`${file}: тема ${id} заканчивается точкой`);
+
+    const body = [];
+    for (const line of section) {
+      if (!line.startsWith(">")) continue;
+      const text = line.replace(/^>\s?/, "").trim();
+      if (text) body.push(text);
+    }
+    if (body.length < 2) throw new Error(`${file}: у ${id} меньше двух абзацев тела`);
+
+    emails.push({ id, title, when: field("Когда"), subject, withoutEmail: field("Без почты"), body });
+  }
+  if (!emails.length) throw new Error(`${file}: не найдено ни одного письма`);
+
+  const footer = [];
+  for (const cells of tableUnder(src, "## Общие части подвала", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^EMAIL_FOOTER_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у ${id} нет текста`);
+    const where = (cells[2] ?? "")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!where.length) throw new Error(`${file}: у ${id} не указано, где он показывается`);
+    footer.push({ id, text: cells[1], where });
+  }
+  if (!footer.length) throw new Error(`${file}: реестр общих частей подвала пуст`);
+
+  const params = (text) => [...text.matchAll(/\{([а-яё]+)\}/g)].map((match) => match[1]);
+  for (const email of emails) {
+    email.params = [...new Set([...params(email.subject), ...email.body.flatMap(params)])];
+  }
+
+  const seen = new Set();
+  for (const entry of [...emails, ...footer]) {
+    if (seen.has(entry.id)) throw new Error(`${file}: идентификатор ${entry.id} встречается дважды`);
+    seen.add(entry.id);
+  }
+
+  return { emails, footer };
+}
+
+/**
+ * Экраны оплаты (E5-09): раздел «Экран оплаты» в каждом файле среза.
+ *
+ * Обещание на экране — то же, что в оффере, поэтому здесь оно не переписывается: в разделе
+ * живёт только состав и отказ. Цены в разделе нет намеренно — на экране она одна и приходит
+ * из шапки файла, второй записи ей быть негде (`docs/11-ui-page-spec.md`).
+ */
+function parsePayScreens(slices, fullMap) {
+  const HEADING = "## Экран оплаты";
+  const known = [
+    ...slices.filter((slice) => slice.file).map((slice) => ({ id: slice.id, file: slice.file, promise: slice.promise, price: slice.price })),
+    { id: fullMap.slice, file: fullMap.file, promise: fullMap.promise, price: fullMap.price },
+  ];
+
+  const out = [];
+  for (const slice of known) {
+    const path = `content/slices/${slice.file}`;
+    const src = lines(read(path));
+    const start = src.findIndex((line) => line.startsWith(HEADING));
+    if (start < 0) throw new Error(`${path}: нет раздела «Экран оплаты» — срез нельзя показать на оплате`);
+    const end = src.findIndex((line, i) => i > start && line.startsWith("## "));
+    const section = src.slice(start, end < 0 ? undefined : end);
+
+    const field = (label) => {
+      const line = section.find((candidate) => candidate.startsWith(`**${label}:**`));
+      if (!line) throw new Error(`${path}: в разделе «Экран оплаты» нет строки «${label}»`);
+      return line.replace(`**${label}:**`, "").trim();
+    };
+
+    const contents = field("Что внутри")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (contents.length < 3) throw new Error(`${path}: в составе меньше трёх частей — это уже не состав`);
+    const decline = field("Отказ");
+
+    for (const text of [...contents, decline]) {
+      if (/₽|\bруб/.test(text)) throw new Error(`${path}: цена записана в тексте экрана, а на экране она одна`);
+    }
+
+    out.push({ slice: slice.id, file: slice.file, price: slice.price, promise: slice.promise, contents, decline });
+  }
+
+  if (!out.length) throw new Error("content/slices: ни одного экрана оплаты");
+  return out;
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
@@ -1079,11 +1482,15 @@ const extra = {
   forbidden: parseForbidden(),
   crisis: parseCrisis(),
   uiCopy: parseUiCopy(),
+  fullMap: parseFullMap(content.bank, content.slices),
 };
+extra.payScreens = parsePayScreens(content.slices, extra.fullMap);
+extra.emails = parseEmails();
+extra.share = parseShare();
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md, content/emails.md, content/share.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -1098,5 +1505,10 @@ console.log(
     `реестр запретов: ${extra.forbidden.groups.length} групп, ` +
     `${extra.forbidden.groups.reduce((sum, group) => sum + group.entries.flatMap((entry) => entry.forms).length, 0)} форм, ` +
     `кризис: ${extra.crisis.triggers.length} категорий триггеров, ${extra.crisis.texts.length} текстов, ` +
-    `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах`,
+    `микрокопия: ${extra.uiCopy.length} строк в ${new Set(extra.uiCopy.map((item) => item.group)).size} группах, ` +
+    `полная карта: ${extra.fullMap.portions.reduce((sum, portion) => sum + portion.questions.length, 0)} вопросов ` +
+    `в ${extra.fullMap.portions.length} порциях, ${extra.fullMap.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар в блоках, ` +
+    `${extra.payScreens.length} экранов оплаты, ` +
+    `письма: ${extra.emails.emails.length} писем и ${extra.emails.footer.length} общих частей подвала, ` +
+    `шеринг: ${extra.share.captions.length} подписей картинки в ${extra.share.formats.length} форматах`,
 );

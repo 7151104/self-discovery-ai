@@ -262,19 +262,28 @@
         </button>
       </div>
     </article>
-    <section aria-busy="true" aria-live="polite" class="wait" data-enter="off" data-wait="step4">
-      <p class="wait__title">
-        Собираю сюжет по твоим словам
+    <article class="block" data-block="step4" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Что у тебя сейчас происходит
+      </h2>
+      <p class="block__paragraph">
+        Ты описал остановку перед сдачей.
       </p>
-      <p class="wait__topics">
-        Что уточняется: Темп · Внимание · Структура
+      <p class="block__paragraph">
+        Это тот же механизм, что виден в ответах про темп.
       </p>
-      <div aria-hidden="true" class="wait__shape">
-        <span class="wait__line" data-line="full"></span>
-        <span class="wait__line" data-line="full"></span>
-        <span class="wait__line" data-line="last"></span>
+      <p class="block__highlight">
+        Незакрытое держит внимание сильнее закрытого.
+      </p>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+        <button class="block__action" data-action="share" type="button">
+          Поделиться
+        </button>
       </div>
-    </section>
+    </article>
     <article class="block" data-block="slice:slice_decisions" data-enter="off" data-state="purchased">
       <h2 class="block__heading">
         Почему ты останавливаешься у финиша
@@ -310,10 +319,10 @@
         </span>
       </button>
       <p class="offer__contents">
-        Что внутри
+        Что внутри · механизм, по которому ты выбираешь · место, где он ломается · чем ты занят, пока решение стоит · как выглядит решение, которое ты не пересматриваешь
       </p>
       <button class="offer__decline" type="button">
-        Не сейчас — страница останется
+        Не сейчас — страница остаётся полной, а это решение от срока не зависит.
       </button>
       <p class="offer__one-door">
         Остальные двери сейчас без цен: на этом шаге открывается одна
@@ -1080,45 +1089,6 @@
   position: absolute;
   white-space: nowrap;
   width: 1px;
-}
-
-.wait {
-  background: #ffffff;
-  border: 1px dashed #b4b5b1;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-}
-
-.wait__line {
-  background: #e8e8e5;
-  border-radius: 999px;
-  height: 12px;
-}
-
-.wait__line[data-line="last"] {
-  width: 60%;
-}
-
-.wait__shape {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.wait__title {
-  color: #0b0d10;
-  font-size: 20px;
-  font-weight: 640;
-  line-height: 1.25;
-}
-
-.wait__topics {
-  color: #4f5563;
-  font-size: 14px;
-  line-height: 1.4;
 }
 
 body {

@@ -269,43 +269,14 @@
       <p class="wait__topics">
         Что уточняется: Темп · Внимание · Структура
       </p>
+      <p class="wait__note">
+        Сборка продолжилась с того же места
+      </p>
       <div aria-hidden="true" class="wait__shape">
         <span class="wait__line" data-line="full"></span>
         <span class="wait__line" data-line="full"></span>
         <span class="wait__line" data-line="last"></span>
       </div>
-    </section>
-    <section class="offer" data-slice="slice_decisions">
-      <h2 class="offer__title">
-        Как тебе принимать решения
-      </h2>
-      <p class="offer__promise">
-        Тебе тяжело от незакрытого, и ты сам его создаёшь. Десять вопросов, и разберём, по какому механизму ты на самом деле выбираешь, где он ломается и как выглядит решение, которое ты не будешь пересматривать полгода.
-      </p>
-      <button class="offer__buy" type="button">
-        <span class="offer__buy-label">
-          Открыть — 590 ₽
-        </span>
-      </button>
-      <p class="offer__contents">
-        Что внутри
-      </p>
-      <button class="offer__decline" type="button">
-        Не сейчас — страница останется
-      </button>
-      <p class="offer__one-door">
-        Остальные двери сейчас без цен: на этом шаге открывается одна
-      </p>
-      <p class="offer__legal">
-        Оплата означает согласие с офертой
-        <a class="offer__legal-link" href="/legal/privacy">
-          Политика обработки персональных данных
-        </a>
-        ·
-        <a class="offer__legal-link" href="/legal/offer">
-          Оферта на оказание информационных услуг
-        </a>
-      </p>
     </section>
     <ul aria-label="Маршрут" class="route">
       <li class="door" data-door="block_1" data-state="open">
@@ -875,104 +846,6 @@
   padding: 16px;
 }
 
-.offer {
-  background: #ffffff;
-  border: 2px solid #b4b5b1;
-  border-radius: 14px;
-  box-shadow: 0 2px 4px rgba(11, 13, 16, 0.06), 0 12px 32px rgba(11, 13, 16, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-}
-
-.offer__buy {
-  align-items: center;
-  background: #1d4ed8;
-  border: 2px solid #1d4ed8;
-  border-radius: 8px;
-  color: #ffffff;
-  display: flex;
-  font-size: 16px;
-  font-weight: 500;
-  gap: 12px;
-  justify-content: space-between;
-  min-height: 44px;
-  padding: 12px 24px;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.offer__buy-label {
-  font-weight: 640;
-}
-
-.offer__buy:hover {
-  background: #0b0d10;
-  border-color: #0b0d10;
-}
-
-.offer__contents {
-  color: #4f5563;
-  font-size: 14px;
-  line-height: 1.4;
-  max-width: 36ch;
-}
-
-.offer__decline {
-  align-self: flex-start;
-  background: #ffffff;
-  border: 1px solid #dcdcd8;
-  border-radius: 8px;
-  color: #4f5563;
-  font-size: 14px;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 8px 12px;
-  transition: border-color 120ms ease;
-}
-
-.offer__decline:hover {
-  border-color: #b4b5b1;
-  color: #14161a;
-}
-
-.offer__legal {
-  color: #4f5563;
-  font-size: 13px;
-  line-height: 1.4;
-  max-width: 36ch;
-}
-
-.offer__legal-link {
-  align-items: center;
-  color: #14161a;
-  display: inline-flex;
-  min-height: 44px;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.offer__one-door {
-  color: #4f5563;
-  font-size: 13px;
-  line-height: 1.4;
-  max-width: 36ch;
-}
-
-.offer__promise {
-  color: #14161a;
-  font-size: 16px;
-  line-height: 1.55;
-  max-width: 36ch;
-}
-
-.offer__title {
-  font-size: 20px;
-  font-weight: 640;
-  line-height: 1.25;
-  max-width: 36ch;
-}
-
 .page {
   display: flex;
   flex-direction: column;
@@ -1078,6 +951,15 @@
 
 .wait__line[data-line="last"] {
   width: 60%;
+}
+
+.wait__note {
+  background: #f1f1ef;
+  border-radius: 8px;
+  color: #14161a;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 8px 12px;
 }
 
 .wait__shape {

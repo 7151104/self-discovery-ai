@@ -102,6 +102,15 @@ async function pay(support: TestSupport, origin: string, page: PageStateDto): Pr
   return (await support.call<PageStateDto>(origin, "GET", `/api/p/${page.profileId}`)).body;
 }
 
+type Written = { heading: string; paragraphs: string[]; highlight: string };
+
+/** Кладёт готовый текст в место блока так же, как это сделала бы очередь. */
+function deliverBlock(store: Store, db: unknown, profileId: string, slot: string, purchased: boolean, text: Written) {
+  store.saveBlockContent(db, profileId, { slot, profileVersion: 1, purchased, ...text });
+  const job = store.findActiveJob(db, profileId, slot);
+  if (job) store.saveJobResult(db, job, text);
+}
+
 async function deliverSlice(
   support: TestSupport,
   store: Store,
@@ -112,20 +121,18 @@ async function deliverSlice(
   const paid = await pay(support, origin, page);
   const slice = paid.offer?.slice ?? page.offer?.slice ?? "slice_node_finish";
   await support.answerSlicePortions(origin, paid.profileId);
-  const heading = "Почему ты останавливаешься у финиша";
-  const paragraphs = ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."];
-  const highlight = "Обрыв у финиша — не лень, а способ не проверять результат.";
-  const slot = `slice:${slice}`;
-  store.saveBlockContent(db, paid.profileId, {
-    slot,
-    profileVersion: 1,
-    purchased: true,
-    heading,
-    paragraphs,
-    highlight,
+  // Ступень 4 тоже доводится до готовой: пока она в очереди, предложение скрыто,
+  // и `paid_done` снимал бы не полную страницу, а ожидание.
+  deliverBlock(store, db, paid.profileId, "step4", false, {
+    heading: "Что у тебя сейчас происходит",
+    paragraphs: ["Ты описал остановку перед сдачей.", "Это тот же механизм, что виден в ответах про темп."],
+    highlight: "Незакрытое держит внимание сильнее закрытого.",
   });
-  const job = store.findActiveJob(db, paid.profileId, slot);
-  if (job) store.saveJobResult(db, job, { heading, paragraphs, highlight });
+  deliverBlock(store, db, paid.profileId, `slice:${slice}`, true, {
+    heading: "Почему ты останавливаешься у финиша",
+    paragraphs: ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."],
+    highlight: "Обрыв у финиша — не лень, а способ не проверять результат.",
+  });
   return (await support.call<PageStateDto>(origin, "GET", `/api/p/${paid.profileId}`)).body;
 }
 

@@ -269,6 +269,9 @@
       <p class="wait__topics">
         Что уточняется: Темп · Внимание · Структура
       </p>
+      <p class="wait__note">
+        Сборка продолжилась с того же места
+      </p>
       <div aria-hidden="true" class="wait__shape">
         <span class="wait__line" data-line="full"></span>
         <span class="wait__line" data-line="full"></span>
@@ -1120,6 +1123,15 @@
 
 .wait__line[data-line="last"] {
   width: 60%;
+}
+
+.wait__note {
+  background: #f1f1ef;
+  border-radius: 8px;
+  color: #14161a;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 8px 12px;
 }
 
 .wait__shape {

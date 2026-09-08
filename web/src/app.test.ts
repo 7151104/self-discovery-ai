@@ -222,3 +222,34 @@ test("отметка согласия не стирает набранное и�
   assert.equal(name?.attrs["value"], "Кирилл", "имя стёрлось отметкой согласия");
   assert.equal(birth?.attrs["value"], "1990-05-05", "дата стёрлась отметкой согласия");
 });
+
+test("окружение живого клиента зовёт fetch так, как разрешает браузер", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  // Браузер проверяет получателя: `fetch`, вызванный как поле чужого объекта,
+  // отвечает «Illegal invocation». Node такой вызов разрешает, поэтому подмена
+  // повторяет правило браузера — иначе ошибку видно только в живом окне.
+  const real = globalThis.fetch;
+  const strict = function (this: unknown, input: string | URL, init?: RequestInit): Promise<Response> {
+    if (this !== globalThis && this !== undefined) throw new TypeError("Illegal invocation");
+    return real(input, init);
+  };
+  const before = { fetch: real, location: globalThis.location, document: globalThis.document, history: globalThis.history };
+  Object.assign(globalThis, {
+    fetch: strict,
+    location: { pathname: "/" },
+    document: { querySelector: () => null, title: "" },
+    history: { pushState: () => undefined },
+  });
+  t.after(() => Object.assign(globalThis, before));
+
+  const { browserHost } = await import("./app.js");
+  const app = createPageApp({ ...browserHost(), origin: server.origin });
+  t.after(() => app.stop());
+  await app.start();
+  app.consent(true);
+  await app.intro("Кирилл", null);
+
+  assert.ok(app.session().page, "живой клиент не смог создать профиль: запрос не ушёл");
+});

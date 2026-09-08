@@ -650,12 +650,18 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
   return app;
 }
 
-const root = typeof document === "undefined" ? null : document.querySelector("#app");
-if (root !== null) {
-  const host: AppHost = {
+/**
+ * Окружение живого клиента. Собирается отдельной функцией, потому что одну
+ * строку в нём проверить нельзя иначе: `fetch` вызывается как поле объекта, и
+ * браузер такой вызов запрещает («Illegal invocation»), а Node — разрешает.
+ * Поэтому все обращения к окну идут обёрткой с явным получателем, как в
+ * `windowTimer()` и `windowHost()`.
+ */
+export function browserHost(): AppHost {
+  return {
     location,
     history,
-    fetch,
+    fetch: (input, init) => globalThis.fetch(input, init),
     motion: windowHost(),
     timer: windowTimer(),
     scrollRoot: document,
@@ -664,6 +670,11 @@ if (root !== null) {
       document.title = text;
     },
   };
+}
+
+const root = typeof document === "undefined" ? null : document.querySelector("#app");
+if (root !== null) {
+  const host: AppHost = browserHost();
   const app = createPageApp(host, () => {
     root.replaceChildren();
     mount(app.tree(), root);

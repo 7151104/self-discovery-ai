@@ -128,6 +128,7 @@ test("ступень 4 отдаёт блок с идентификатором �
   assert.equal(generation.status, 200);
   assert.equal(generation.body.generation.blockId, "step4");
   assert.equal(generation.body.generation.status, "pending");
+  assert.equal(generation.body.generation.regenerated, false);
 
   const missing = await call<ErrorDto>(
     server.origin,

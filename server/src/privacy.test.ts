@@ -96,7 +96,16 @@ test("удаление профиля уносит ответы, блоки, з�
   assert.equal(listOrders(server.db, profileId).length, 0);
   assert.equal(listEvents(server.db, profileId).length, 0);
 
-  for (const table of ["profile_versions", "portion_submissions", "share_tokens", "order_events", "disagreements"]) {
+  for (const table of [
+    "profile_versions",
+    "portion_submissions",
+    "share_tokens",
+    "order_events",
+    "disagreements",
+    "generation_jobs",
+    "generation_calls",
+    "generation_cache",
+  ]) {
     const left = server.db.get<{ total: number }>(
       `SELECT COUNT(*) AS total FROM ${table} WHERE profile_id = ?`,
       [profileId],

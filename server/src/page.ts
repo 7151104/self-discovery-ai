@@ -29,12 +29,14 @@ import type { LadderAnswers, MapBar, PageState, PageView } from "./engine.js";
 import {
   ensureBlock,
   findActiveShareToken,
+  findLatestJob,
   listAnswers,
   listBlocks,
   listDisagreements,
   paidSlices,
   type AnswerRecord,
   type BlockRecord,
+  type GenerationJobRecord,
   type ProfileRecord,
 } from "./store.js";
 
@@ -176,7 +178,12 @@ function projectSlicePortion(slice: string, answered: Set<string>): PortionDto |
   return null;
 }
 
-function projectBlocks(page: PageView, stored: BlockRecord[], disagreed: Set<string>): BlockDto[] {
+function projectBlocks(
+  page: PageView,
+  stored: BlockRecord[],
+  jobs: Map<string, GenerationJobRecord>,
+  disagreed: Set<string>,
+): BlockDto[] {
   const bySlot = new Map(stored.map((block) => [block.slot, block]));
   const blocks: BlockDto[] = [];
 
@@ -184,9 +191,10 @@ function projectBlocks(page: PageView, stored: BlockRecord[], disagreed: Set<str
     const slot = `step${block.step}` as BlockSlot;
     const saved = bySlot.get(slot);
     bySlot.delete(slot);
+    const job = jobs.get(slot);
 
     // Ступени 1–3 движок собирает из контента заново, хранить их нечего.
-    if (block.source === "lookup" || saved === undefined) {
+    if (block.source === "lookup") {
       blocks.push({
         id: slot,
         heading: block.heading,
@@ -200,28 +208,36 @@ function projectBlocks(page: PageView, stored: BlockRecord[], disagreed: Set<str
       continue;
     }
 
-    const ready = saved.status === "ready";
+    const fromJob = job?.status === "ready" ? job.result : null;
     blocks.push({
       id: slot,
-      heading: ready ? saved.heading : block.heading,
-      paragraphs: ready ? saved.paragraphs : [],
-      highlight: ready ? saved.highlight : null,
-      generation: { id: saved.blockId, status: saved.status },
+      heading: fromJob?.heading ?? (saved?.status === "ready" ? saved.heading : block.heading),
+      paragraphs: fromJob?.paragraphs ?? (saved?.status === "ready" ? saved.paragraphs : []),
+      highlight: fromJob?.highlight ?? (saved?.status === "ready" ? saved.highlight : null),
+      generation: job
+        ? { id: job.generationId, status: job.status }
+        : saved
+          ? { id: saved.blockId, status: saved.status }
+          : null,
       disagreed: disagreed.has(slot),
-      purchased: saved.purchased,
-      stale: saved.stale,
+      purchased: saved?.purchased ?? false,
+      stale: saved?.stale ?? false,
     });
   }
 
   // Блоки платных срезов движок пока не собирает: они приходят из базы (E4).
   for (const saved of bySlot.values()) {
-    const ready = saved.status === "ready";
+    const job = jobs.get(saved.slot);
+    const ready = saved.status === "ready" || job?.status === "ready";
+    const fromJob = job?.status === "ready" ? job.result : null;
     blocks.push({
       id: saved.slot,
-      heading: saved.heading,
-      paragraphs: ready ? saved.paragraphs : [],
-      highlight: ready ? saved.highlight : null,
-      generation: { id: saved.blockId, status: saved.status },
+      heading: fromJob?.heading ?? saved.heading,
+      paragraphs: ready ? (fromJob?.paragraphs ?? saved.paragraphs) : [],
+      highlight: ready ? (fromJob?.highlight ?? saved.highlight) : null,
+      generation: job
+        ? { id: job.generationId, status: job.status }
+        : { id: saved.blockId, status: saved.status },
       disagreed: disagreed.has(saved.slot),
       purchased: saved.purchased,
       stale: saved.stale,
@@ -264,10 +280,11 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   const stored = listAnswers(db, profile.profileId);
   const answered = new Set(stored.map((record) => record.questionId));
   const answers = toLadderAnswers(stored);
+  const storyline = findLatestJob(db, profile.profileId, "step4")?.result?.storyline;
   const enginePage = buildPage(
     { name: profile.name, birthDate: profile.birthDate ?? undefined },
     answers,
-    { profileId: profile.profileId },
+    { profileId: profile.profileId, ...(storyline ? { storyline } : {}) },
   );
   const view = enginePage.view;
 
@@ -322,6 +339,11 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   }
 
   const blocks = listBlocks(db, profile.profileId);
+  const latestJobs = new Map<string, GenerationJobRecord>();
+  for (const slot of new Set(["step4" as BlockSlot, ...blocks.map((block) => block.slot)])) {
+    const job = findLatestJob(db, profile.profileId, slot);
+    if (job) latestJobs.set(slot, job);
+  }
   const disagreed = new Set(listDisagreements(db, profile.profileId).map((record) => record.slot));
   const share = findActiveShareToken(db, profile.profileId);
 
@@ -338,7 +360,7 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     },
     hook: view.hook,
     map: projectMap(view.map),
-    blocks: projectBlocks(view, blocks, disagreed),
+    blocks: projectBlocks(view, blocks, latestJobs, disagreed),
     doors: projectDoors(view),
     offer: projectOffer(view),
     // Порция добора идёт первой: после оплаты человек видит вопросы.

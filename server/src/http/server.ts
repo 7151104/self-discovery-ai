@@ -10,6 +10,12 @@ import type { Db } from "../db/driver.js";
 import { assertNoCoordinates, assertNoPrivateBlocks } from "./guard.js";
 import { log } from "../log.js";
 import { createProvider } from "../payments/registry.js";
+import {
+  abortInflightGenerations,
+  createLlmRuntime,
+  resumeGenerations,
+  type LlmRuntime,
+} from "../generation.js";
 import { renderPage, renderMissingPage, renderPublicPage } from "./page-shell.js";
 import { matchApi, matchPage, matchPublicPage } from "./router.js";
 import { RateLimiter, type Bucket } from "./rate-limit.js";
@@ -20,6 +26,8 @@ import type { OperationName } from "../contract/index.js";
 export interface CreateOptions {
   db: Db;
   config: ServerConfig;
+  /** Подмена контура генерации. В тестах — свой провайдер и выключенный автозапуск. */
+  llm?: LlmRuntime;
 }
 
 /** Какой корзиной лимита считается операция. Остальные попадают в общую. */
@@ -27,6 +35,7 @@ const BUCKETS: Partial<Record<OperationName, Bucket>> = {
   createProfile: "createProfile",
   submitPortion: "portion",
   editAnswer: "portion",
+  regenerate: "portion",
   pageState: "state",
   publicPage: "state",
 };
@@ -229,6 +238,8 @@ function run(
       return handlers.deleteProfileHandler(context, params);
     case "generationStatus":
       return handlers.generationStatus(context, params);
+    case "regenerate":
+      return handlers.regenerate(context, params, body.value);
     case "share":
       return handlers.share(context, params);
     case "revokeShare":
@@ -239,17 +250,21 @@ function run(
 }
 
 export function createHttpServer(options: CreateOptions): Server {
+  const llm = options.llm ?? createLlmRuntime();
   const context: Context = {
     db: options.db,
     config: options.config,
     // Незнакомое имя провайдера — отказ при запуске, а не при первой оплате.
     payments: createProvider({ payments: options.config.payments, publicOrigin: options.config.publicOrigin }),
+    llm,
     startedAt: Date.now(),
   };
   const limiter = new RateLimiter(options.config.rateLimit.rules, options.config.rateLimit.enabled);
   const runtime: Runtime = { context, limiter };
 
-  return createServer((request, response) => {
+  if (llm.autostart) resumeGenerations({ db: options.db, llm });
+
+  const server = createServer((request, response) => {
     dispatch(runtime, request, response).catch((error: unknown) => {
       // Имя ошибки, а не её сообщение: в сообщении бывает содержимое запроса.
       log("request.failed", { reason: error instanceof Error ? error.name : "unknown" });
@@ -257,4 +272,7 @@ export function createHttpServer(options: CreateOptions): Server {
       else response.end();
     });
   });
+
+  server.on("close", () => abortInflightGenerations(llm));
+  return server;
 }

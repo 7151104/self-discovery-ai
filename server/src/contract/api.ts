@@ -270,6 +270,11 @@ export interface PurchaseRequest {
   requestId: string;
 }
 
+/** Ручная регенерация блока. Ключ отправки ловит повтор того же нажатия. */
+export interface RegenerateRequest {
+  requestId: string;
+}
+
 // ── Ответы ────────────────────────────────────────────────────────────────────
 
 /**
@@ -297,6 +302,8 @@ export interface GenerationDto {
   id: string;
   blockId: BlockSlot;
   status: GenerationStatus;
+  /** Ручная регенерация: этот прогон обошёл кэш и помечен. */
+  regenerated: boolean;
 }
 
 export interface DisagreementDto {
@@ -494,6 +501,17 @@ export interface ApiEndpoints {
     body: null;
     response: GenerationResponse;
   };
+  /**
+   * Ручная регенерация финала лестницы: обходит кэш, помечает прогон.
+   * Повтор с тем же ключом отправки возвращает то же задание.
+   */
+  regenerate: {
+    method: "POST";
+    path: "/api/p/:profileId/generations";
+    params: { profileId: string };
+    body: RegenerateRequest;
+    response: GenerationResponse;
+  };
   /** «Поделиться»: включает публичную ссылку. Повторный вызов отдаёт ту же. */
   share: {
     method: "POST";
@@ -548,6 +566,7 @@ export const API: {
   exportProfile: { method: "GET", path: "/api/p/:profileId/export" },
   deleteProfile: { method: "DELETE", path: "/api/p/:profileId" },
   generationStatus: { method: "GET", path: "/api/p/:profileId/generations/:generationId" },
+  regenerate: { method: "POST", path: "/api/p/:profileId/generations" },
   share: { method: "POST", path: "/api/p/:profileId/share" },
   revokeShare: { method: "DELETE", path: "/api/p/:profileId/share" },
   publicPage: { method: "GET", path: "/api/s/:token" },

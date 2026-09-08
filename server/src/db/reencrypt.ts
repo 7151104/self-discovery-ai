@@ -50,6 +50,16 @@ const TARGETS: Target[] = [
       { payload: "body_payload", enc: "body_enc" },
     ],
   },
+  {
+    table: "generation_jobs",
+    keyColumns: ["generation_id"],
+    fields: [{ payload: "result_payload", enc: "result_enc", optional: true }],
+  },
+  {
+    table: "generation_cache",
+    keyColumns: ["profile_id", "input_hash"],
+    fields: [{ payload: "result_payload", enc: "result_enc" }],
+  },
 ];
 
 export interface Progress {

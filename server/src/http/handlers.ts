@@ -34,6 +34,12 @@ import { schemaVersion } from "../db/migrate.js";
 import { rawContent } from "../engine.js";
 import { isValidId, newProfileId, newRecordId, newShareToken } from "../ids.js";
 import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl } from "../page.js";
+import {
+  enqueueStep4,
+  scheduleGenerations,
+  toGenerationDto,
+  type LlmRuntime,
+} from "../generation.js";
 import { canTransition } from "../payments/order-state.js";
 import type { PaymentProvider, WebhookEvent, WebhookHeaders } from "../payments/provider.js";
 import {
@@ -43,6 +49,7 @@ import {
   findActiveShareToken,
   findBlockById,
   findDelivery,
+  findJob,
   findOrder,
   findOrderById,
   findOrderByRequest,
@@ -63,6 +70,7 @@ import {
   paidSlices,
   recordEvent,
   recordProfileVersion,
+  releaseActiveJob,
   revokeShareTokens,
   saveAnswers,
   transitionOrder,
@@ -75,6 +83,8 @@ export interface Context {
   config: ServerConfig;
   /** Платёжный провайдер: поднимается из настроек один раз на запуск сервера. */
   payments: PaymentProvider;
+  /** Контур генерации: очередь крутится отсюда, слой LLM его не знает. */
+  llm: LlmRuntime;
   startedAt: number;
 }
 
@@ -176,6 +186,15 @@ function loadProfile(context: Context, profileId: string | undefined): ProfileRe
 const page = (context: Context, profile: ProfileRecord): PageStateResponse =>
   assemble({ db: context.db, profile, publicOrigin: context.config.publicOrigin }).page;
 
+/**
+ * Ставит финал лестницы в очередь, если задание есть, и будит воркер.
+ * Повтор и гонка не порождают вторую генерацию: это держит уникальный индекс.
+ */
+function kickStep4(context: Context, profile: ProfileRecord): void {
+  enqueueStep4({ db: context.db, llm: context.llm }, profile);
+  scheduleGenerations({ db: context.db, llm: context.llm });
+}
+
 // ── Эндпоинты ─────────────────────────────────────────────────────────────────
 
 export function health(context: Context): HandlerResult {
@@ -225,7 +244,12 @@ export function createProfile(context: Context, raw: unknown): HandlerResult {
 export function pageState(context: Context, params: Record<string, string>): HandlerResult {
   const profile = loadProfile(context, params["profileId"]);
   if (!profile) return fail(404, "profile_not_found");
-  return { status: 200, body: context.db.transaction(() => page(context, profile)) };
+  const body = context.db.transaction(() => {
+    enqueueStep4({ db: context.db, llm: context.llm }, profile);
+    return page(context, profile);
+  });
+  scheduleGenerations({ db: context.db, llm: context.llm });
+  return { status: 200, body };
 }
 
 /**
@@ -252,6 +276,7 @@ export function submitPortion(context: Context, params: Record<string, string>, 
   const state = context.db.transaction(() => {
     // Повтор той же отправки: ответы уже записаны, профиль уже пересчитан.
     if (findSubmission(context.db, profile.profileId, requestId)) {
+      enqueueStep4({ db: context.db, llm: context.llm }, profile);
       return page(context, profile);
     }
 
@@ -277,9 +302,12 @@ export function submitPortion(context: Context, params: Record<string, string>, 
       answerCount: parsed.length,
       profileVersion: version,
     });
+    const current = findProfile(context.db, profile.profileId);
+    if (current) enqueueStep4({ db: context.db, llm: context.llm }, current);
     return currentPage(context, profile.profileId);
   });
 
+  scheduleGenerations({ db: context.db, llm: context.llm });
   return { status: 200, body: state };
 }
 
@@ -306,9 +334,14 @@ export function editAnswer(context: Context, params: Record<string, string>, raw
     markBlocksStale(context.db, profile.profileId);
     recordEvent(context.db, "answer.edited", { profileId: profile.profileId, payload: { portion } });
     revise(context, profile, "answer_edit");
+    // Вход генерации изменился: живое задание со старым хешем снимаем со слота,
+    // место в уникальном индексе освобождается под новое.
+    releaseActiveJob(context.db, profile.profileId, "step4", "superseded");
     return currentPage(context, profile.profileId);
   });
 
+  const fresh = findProfile(context.db, profile.profileId);
+  if (fresh) kickStep4(context, fresh);
   return { status: 200, body: state };
 }
 
@@ -576,13 +609,41 @@ export function generationStatus(context: Context, params: Record<string, string
   const generationId = params["generationId"];
   if (!generationId || !isValidId(generationId)) return fail(404, "not_found");
 
+  const job = findJob(context.db, profile.profileId, generationId);
+  if (job) {
+    const body: GenerationResponse = { generation: toGenerationDto(job) };
+    return { status: 200, body };
+  }
+
   const block = findBlockById(context.db, profile.profileId, generationId);
   if (!block) return fail(404, "not_found");
 
   const body: GenerationResponse = {
-    generation: { id: block.blockId, blockId: block.slot, status: block.status },
+    generation: { id: block.blockId, blockId: block.slot, status: block.status, regenerated: false },
   };
   return { status: 200, body };
+}
+
+/**
+ * Ручная регенерация финала лестницы. Обходит кэш, помечает прогон.
+ * Повтор с тем же ключом отправки возвращает то же задание.
+ */
+export function regenerate(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
+  const profile = loadProfile(context, params["profileId"]);
+  if (!profile) return fail(404, "profile_not_found");
+
+  const body = asObject(raw);
+  const requestId = body ? asString(body["requestId"]) : null;
+  if (!requestId) return fail(400, "bad_request");
+
+  const job = context.db.transaction(() =>
+    enqueueStep4({ db: context.db, llm: context.llm }, profile, { regenerate: true, requestId }),
+  );
+  scheduleGenerations({ db: context.db, llm: context.llm });
+  if (!job) return fail(404, "not_found");
+
+  const response: GenerationResponse = { generation: toGenerationDto(job) };
+  return { status: 200, body: response };
 }
 
 /** Пересчёт профиля: новая версия и снимок. Возвращает номер версии. */

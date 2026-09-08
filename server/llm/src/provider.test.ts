@@ -123,6 +123,28 @@ test("зависший вызов прекращается таймаутом, �
   assert.equal(provider.callCount, 2);
 });
 
+test("внешняя отмена не запускает повтор: задание доиграется после старта", async () => {
+  const provider = new FakeProvider({ turns: [{ kind: "зависание" }] });
+  const clock = recorder();
+  const controller = new AbortController();
+  const pending = runGeneration({
+    provider,
+    request: REQUEST,
+    retry: retry({ attempts: 3, timeoutMs: 5_000 }),
+    cost: cost(),
+    spentKopecks: 0,
+    sleep: clock.sleep,
+    signal: controller.signal,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  controller.abort();
+  const outcome = await pending;
+
+  assert.equal(outcome.ok, false);
+  assert.equal(provider.callCount, 1, "остановку нельзя чинить повтором");
+  assert.deepEqual(clock.pauses, []);
+});
+
 test("предел стоимости профиля останавливает вызов до провайдера", async () => {
   const pricing = { inputKopecksPerMillion: 1_000_000, outputKopecksPerMillion: 1_000_000 };
   const provider = answering("не должно быть вызвано", { pricing });

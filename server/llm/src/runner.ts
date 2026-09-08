@@ -125,6 +125,9 @@ export async function runGeneration(options: RunOptions): Promise<RunOutcome> {
       const failure = error instanceof GenerationError ? error : new GenerationError("постоянный отказ", "исключение");
       lastCode = failure.code;
       lastFailure = failure.code === "таймаут" ? "таймаут" : "отказ провайдера";
+      // Остановка сервера — не отказ провайдера: повторять бессмысленно, задание
+      // останется живым и доиграется после старта.
+      if (options.signal?.aborted) break;
       if (!failure.retryable || attempt === retry.attempts) break;
       await sleep(pause);
       pause *= retry.backoffFactor;

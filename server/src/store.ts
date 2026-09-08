@@ -7,7 +7,14 @@
  * несогласия и события.
  */
 
-import type { BlockSlot, DisagreementKind, OrderStatus, PortionKey, QuestionKind } from "./contract/index.js";
+import type {
+  BlockSlot,
+  DisagreementKind,
+  GenerationStatus,
+  OrderStatus,
+  PortionKey,
+  QuestionKind,
+} from "./contract/index.js";
 import type { Db } from "./db/driver.js";
 import { seal, unseal, unsealOptional, PLAINTEXT } from "./db/stored-text.js";
 import { newRecordId } from "./ids.js";
@@ -772,5 +779,441 @@ export function listEvents(db: Db, profileId: string): { type: string; payload: 
   return db.all<{ type: string; payload: string }>(
     "SELECT type, payload FROM events WHERE profile_id = ? ORDER BY created_at",
     [profileId],
+  );
+}
+
+// ── Генерация: очередь, журнал вызовов, кэш (E4-03, E4-10, E4-11) ─────────────
+
+/**
+ * Отказ уникального индекса. Сообщение у SQLite своё, у других баз — другое;
+ * ловим оба семейства, чтобы переезд порта не заставил переписывать очередь.
+ */
+export function isUniqueConstraint(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /UNIQUE constraint failed|unique constraint|duplicate key/i.test(message);
+}
+
+export type GenerationFailureCode =
+  | "provider"
+  | "timeout"
+  | "cost_limit"
+  | "validation"
+  | "hijack"
+  | "output"
+  | "storyline"
+  | "superseded"
+  | "crisis";
+
+export type CallOutcome = "ok" | "temporary" | "permanent" | "timeout" | "cached";
+
+/** Готовый результат задания: текст блока и сюжет координаты 15. */
+export interface GenerationResultBody {
+  heading: string;
+  paragraphs: string[];
+  highlight: string | null;
+  storyline: { value: string; code: string; confidence: string };
+}
+
+export interface GenerationJobRecord {
+  generationId: string;
+  profileId: string;
+  slot: BlockSlot;
+  status: GenerationStatus;
+  inputHash: string;
+  contentVersion: string;
+  regenerated: boolean;
+  requestId: string | null;
+  result: GenerationResultBody | null;
+  failureCode: string | null;
+  attemptCount: number;
+  nextAttemptAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface JobRow {
+  generation_id: string;
+  profile_id: string;
+  slot: BlockSlot;
+  status: GenerationStatus;
+  input_hash: string;
+  content_version: string;
+  regenerated: number;
+  request_id: string | null;
+  result_payload: string | null;
+  result_enc: string;
+  failure_code: string | null;
+  attempt_count: number;
+  next_attempt_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const JOB_COLUMNS = `generation_id, profile_id, slot, status, input_hash, content_version,
+  regenerated, request_id, result_payload, result_enc, failure_code, attempt_count,
+  next_attempt_at, created_at, updated_at`;
+
+const toJob = (db: Db, row: JobRow): GenerationJobRecord => {
+  const result =
+    row.result_payload === null
+      ? null
+      : (JSON.parse(unseal(db.keys, { payload: row.result_payload, enc: row.result_enc })) as GenerationResultBody);
+  return {
+    generationId: row.generation_id,
+    profileId: row.profile_id,
+    slot: row.slot,
+    status: row.status,
+    inputHash: row.input_hash,
+    contentVersion: row.content_version,
+    regenerated: row.regenerated === 1,
+    requestId: row.request_id,
+    result,
+    failureCode: row.failure_code,
+    attemptCount: row.attempt_count,
+    nextAttemptAt: row.next_attempt_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
+
+export function findJob(db: Db, profileId: string, generationId: string): GenerationJobRecord | null {
+  const row = db.get<JobRow>(`SELECT ${JOB_COLUMNS} FROM generation_jobs WHERE profile_id = ? AND generation_id = ?`, [
+    profileId,
+    generationId,
+  ]);
+  return row ? toJob(db, row) : null;
+}
+
+/** Задание по идентификатору без профиля: так его находит воркер очереди. */
+export function findJobById(db: Db, generationId: string): GenerationJobRecord | null {
+  const row = db.get<JobRow>(`SELECT ${JOB_COLUMNS} FROM generation_jobs WHERE generation_id = ?`, [generationId]);
+  return row ? toJob(db, row) : null;
+}
+
+/** Живое задание слота: оно же занимает место в уникальном индексе. */
+export function findActiveJob(db: Db, profileId: string, slot: BlockSlot): GenerationJobRecord | null {
+  const row = db.get<JobRow>(`SELECT ${JOB_COLUMNS} FROM generation_jobs WHERE profile_id = ? AND active_slot = ?`, [
+    profileId,
+    slot,
+  ]);
+  return row ? toJob(db, row) : null;
+}
+
+export function findJobByRequest(db: Db, profileId: string, requestId: string): GenerationJobRecord | null {
+  const row = db.get<JobRow>(`SELECT ${JOB_COLUMNS} FROM generation_jobs WHERE profile_id = ? AND request_id = ?`, [
+    profileId,
+    requestId,
+  ]);
+  return row ? toJob(db, row) : null;
+}
+
+/** Последнее задание слота: страница показывает его статус. */
+export function findLatestJob(db: Db, profileId: string, slot: BlockSlot): GenerationJobRecord | null {
+  const row = db.get<JobRow>(
+    `SELECT ${JOB_COLUMNS} FROM generation_jobs
+      WHERE profile_id = ? AND slot = ? ORDER BY created_at DESC`,
+    [profileId, slot],
+  );
+  return row ? toJob(db, row) : null;
+}
+
+export function listJobs(db: Db, profileId: string): GenerationJobRecord[] {
+  return db
+    .all<JobRow>(
+      `SELECT ${JOB_COLUMNS} FROM generation_jobs WHERE profile_id = ? ORDER BY created_at`,
+      [profileId],
+    )
+    .map((row) => toJob(db, row));
+}
+
+export const countJobs = (db: Db, profileId?: string): number => {
+  if (!profileId) return db.get<{ total: number }>("SELECT COUNT(*) AS total FROM generation_jobs")?.total ?? 0;
+  return (
+    db.get<{ total: number }>("SELECT COUNT(*) AS total FROM generation_jobs WHERE profile_id = ?", [profileId])
+      ?.total ?? 0
+  );
+};
+
+/**
+ * Ставит задание в очередь. При гонке двух одновременных постановок вторую
+ * отбивает уникальный индекс, а не проверка в коде: вызывающий получает
+ * уже существующее живое задание.
+ */
+export function insertJob(
+  db: Db,
+  profileId: string,
+  input: {
+    slot: BlockSlot;
+    inputHash: string;
+    contentVersion: string;
+    regenerated: boolean;
+    requestId: string | null;
+  },
+): { job: GenerationJobRecord; created: boolean } {
+  const existingRequest = input.requestId ? findJobByRequest(db, profileId, input.requestId) : null;
+  if (existingRequest) return { job: existingRequest, created: false };
+
+  const active = findActiveJob(db, profileId, input.slot);
+  if (active) return { job: active, created: false };
+
+  const timestamp = now();
+  const generationId = newRecordId();
+
+  try {
+    db.run(
+      `INSERT INTO generation_jobs
+         (generation_id, profile_id, slot, status, active_slot, input_hash, content_version,
+          regenerated, request_id, result_payload, result_enc, failure_code, attempt_count,
+          next_attempt_at, created_at, updated_at, started_at, finished_at)
+       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, NULL, ?, NULL, 0, NULL, ?, ?, NULL, NULL)`,
+      [
+        generationId,
+        profileId,
+        input.slot,
+        input.slot,
+        input.inputHash,
+        input.contentVersion,
+        input.regenerated ? 1 : 0,
+        input.requestId,
+        PLAINTEXT,
+        timestamp,
+        timestamp,
+      ],
+    );
+  } catch (error) {
+    if (!isUniqueConstraint(error)) throw error;
+    const raced =
+      (input.requestId ? findJobByRequest(db, profileId, input.requestId) : null) ??
+      findActiveJob(db, profileId, input.slot);
+    if (!raced) throw error;
+    return { job: raced, created: false };
+  }
+
+  const saved = findJob(db, profileId, generationId);
+  if (!saved) throw new Error(`job-not-saved:${generationId}`);
+  return { job: saved, created: true };
+}
+
+/** Снимает живое задание со слота: место в уникальном индексе освобождается. */
+export function releaseActiveJob(db: Db, profileId: string, slot: BlockSlot, failure: GenerationFailureCode): void {
+  const timestamp = now();
+  db.run(
+    `UPDATE generation_jobs
+        SET active_slot = NULL,
+            status = CASE WHEN status = 'pending' THEN 'failed' ELSE status END,
+            failure_code = CASE WHEN status = 'pending' THEN ? ELSE failure_code END,
+            finished_at = CASE WHEN status = 'pending' THEN ? ELSE finished_at END,
+            updated_at = ?
+      WHERE profile_id = ? AND active_slot = ?`,
+    [failure, timestamp, timestamp, profileId, slot],
+  );
+}
+
+export function saveJobResult(
+  db: Db,
+  job: GenerationJobRecord,
+  result: GenerationResultBody,
+): GenerationJobRecord {
+  const timestamp = now();
+  const stored = seal(db.keys, JSON.stringify(result));
+  db.run(
+    `UPDATE generation_jobs
+        SET status = 'ready', active_slot = NULL, result_payload = ?, result_enc = ?,
+            failure_code = NULL, finished_at = ?, updated_at = ?
+      WHERE generation_id = ?`,
+    [stored.payload, stored.enc, timestamp, timestamp, job.generationId],
+  );
+  const saved = findJob(db, job.profileId, job.generationId);
+  if (!saved) throw new Error(`job-not-saved:${job.generationId}`);
+  return saved;
+}
+
+export function failJob(
+  db: Db,
+  job: GenerationJobRecord,
+  failure: GenerationFailureCode,
+): GenerationJobRecord {
+  const timestamp = now();
+  db.run(
+    `UPDATE generation_jobs
+        SET status = 'failed', active_slot = NULL, failure_code = ?, finished_at = ?, updated_at = ?
+      WHERE generation_id = ?`,
+    [failure, timestamp, timestamp, job.generationId],
+  );
+  const saved = findJob(db, job.profileId, job.generationId);
+  if (!saved) throw new Error(`job-not-saved:${job.generationId}`);
+  return saved;
+}
+
+/**
+ * Временный отказ провайдера: задание остаётся живым, чтобы доиграться после
+ * восстановления, и не занимает второе место в уникальном индексе.
+ */
+export function deferJob(
+  db: Db,
+  job: GenerationJobRecord,
+  nextAttemptAt: string,
+): GenerationJobRecord {
+  const timestamp = now();
+  db.run(
+    `UPDATE generation_jobs
+        SET attempt_count = attempt_count + 1, next_attempt_at = ?,
+            failure_code = 'provider', updated_at = ?
+      WHERE generation_id = ?`,
+    [nextAttemptAt, timestamp, job.generationId],
+  );
+  const saved = findJob(db, job.profileId, job.generationId);
+  if (!saved) throw new Error(`job-not-saved:${job.generationId}`);
+  return saved;
+}
+
+export function markJobStarted(db: Db, job: GenerationJobRecord): void {
+  const timestamp = now();
+  db.run(
+    `UPDATE generation_jobs
+        SET started_at = COALESCE(started_at, ?), next_attempt_at = NULL, updated_at = ?
+      WHERE generation_id = ?`,
+    [timestamp, timestamp, job.generationId],
+  );
+}
+
+/** Задания, которые пора доигрывать: живые и без отложенной попытки в будущем. */
+export function listDueJobs(db: Db, nowIso: string = now()): GenerationJobRecord[] {
+  return db
+    .all<JobRow>(
+      `SELECT ${JOB_COLUMNS} FROM generation_jobs
+        WHERE status = 'pending' AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+        ORDER BY created_at`,
+      [nowIso],
+    )
+    .map((row) => toJob(db, row));
+}
+
+export interface GenerationCallRecord {
+  callId: string;
+  generationId: string | null;
+  profileId: string;
+  provider: string;
+  model: string;
+  attempt: number;
+  inputTokens: number;
+  outputTokens: number;
+  costKopecks: number;
+  durationMs: number;
+  outcome: CallOutcome;
+  createdAt: string;
+}
+
+export function insertCall(
+  db: Db,
+  input: {
+    generationId: string | null;
+    profileId: string;
+    provider: string;
+    model: string;
+    attempt: number;
+    inputTokens: number;
+    outputTokens: number;
+    costKopecks: number;
+    durationMs: number;
+    outcome: CallOutcome;
+  },
+): GenerationCallRecord {
+  const timestamp = now();
+  const callId = newRecordId();
+  db.run(
+    `INSERT INTO generation_calls
+       (call_id, generation_id, profile_id, provider, model, attempt,
+        input_tokens, output_tokens, cost_kopecks, duration_ms, outcome, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      callId,
+      input.generationId,
+      input.profileId,
+      input.provider,
+      input.model,
+      input.attempt,
+      input.inputTokens,
+      input.outputTokens,
+      input.costKopecks,
+      input.durationMs,
+      input.outcome,
+      timestamp,
+    ],
+  );
+  return { callId, ...input, createdAt: timestamp };
+}
+
+export function listCalls(db: Db, profileId: string): GenerationCallRecord[] {
+  return db
+    .all<{
+      call_id: string;
+      generation_id: string | null;
+      profile_id: string;
+      provider: string;
+      model: string;
+      attempt: number;
+      input_tokens: number;
+      output_tokens: number;
+      cost_kopecks: number;
+      duration_ms: number;
+      outcome: CallOutcome;
+      created_at: string;
+    }>(
+      `SELECT call_id, generation_id, profile_id, provider, model, attempt,
+              input_tokens, output_tokens, cost_kopecks, duration_ms, outcome, created_at
+         FROM generation_calls WHERE profile_id = ? ORDER BY created_at`,
+      [profileId],
+    )
+    .map((row) => ({
+      callId: row.call_id,
+      generationId: row.generation_id,
+      profileId: row.profile_id,
+      provider: row.provider,
+      model: row.model,
+      attempt: row.attempt,
+      inputTokens: row.input_tokens,
+      outputTokens: row.output_tokens,
+      costKopecks: row.cost_kopecks,
+      durationMs: row.duration_ms,
+      outcome: row.outcome,
+      createdAt: row.created_at,
+    }));
+}
+
+/** Фактически потраченное на профиль: сумма журнала вызовов, не оценка. */
+export function profileCostKopecks(db: Db, profileId: string): number {
+  return (
+    db.get<{ total: number | null }>(
+      "SELECT SUM(cost_kopecks) AS total FROM generation_calls WHERE profile_id = ?",
+      [profileId],
+    )?.total ?? 0
+  );
+}
+
+export function findCache(db: Db, profileId: string, inputHash: string): GenerationResultBody | null {
+  const row = db.get<{ result_payload: string; result_enc: string }>(
+    "SELECT result_payload, result_enc FROM generation_cache WHERE profile_id = ? AND input_hash = ?",
+    [profileId, inputHash],
+  );
+  if (!row) return null;
+  return JSON.parse(unseal(db.keys, { payload: row.result_payload, enc: row.result_enc })) as GenerationResultBody;
+}
+
+export function saveCache(
+  db: Db,
+  profileId: string,
+  input: { inputHash: string; contentVersion: string; result: GenerationResultBody },
+): void {
+  const stored = seal(db.keys, JSON.stringify(input.result));
+  db.run(
+    `INSERT INTO generation_cache (profile_id, input_hash, content_version, result_payload, result_enc, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (profile_id, input_hash) DO UPDATE SET
+       content_version = excluded.content_version,
+       result_payload  = excluded.result_payload,
+       result_enc      = excluded.result_enc,
+       created_at      = excluded.created_at`,
+    [profileId, input.inputHash, input.contentVersion, stored.payload, stored.enc, now()],
   );
 }

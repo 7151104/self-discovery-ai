@@ -13,10 +13,11 @@ npm run serve   # прототип на localhost:5173
 ## Для нового агента — начни здесь
 
 1. **Прочитай полностью:** [`AGENT-BOOTSTRAP.md`](./AGENT-BOOTSTRAP.md) — главный документ входа, правила работы, что не ломать.
-2. **Пойми систему:** [`docs/01-architecture.md`](./docs/01-architecture.md) → [`docs/02-coordinates.md`](./docs/02-coordinates.md) → [`docs/04-alignment-rules.md`](./docs/04-alignment-rules.md)
-3. **Пойми продукт:** [`docs/05-user-journey.md`](./docs/05-user-journey.md) → [`docs/07-monetization-route.md`](./docs/07-monetization-route.md)
-4. **Контент и логика:** папка [`content/`](./content/) + [`prompts/`](./prompts/)
-5. **Пример качества:** [`examples/demo-person-answers.md`](./examples/demo-person-answers.md) + [`examples/demo-report-output.md`](./examples/demo-report-output.md)
+2. **Пойми, где мы и что дальше:** [`docs/14-state.md`](./docs/14-state.md) → [`docs/13-roadmap.md`](./docs/13-roadmap.md) → [`docs/12-target-state.md`](./docs/12-target-state.md)
+3. **Пойми систему:** [`docs/01-architecture.md`](./docs/01-architecture.md) → [`docs/02-coordinates.md`](./docs/02-coordinates.md) → [`docs/04-alignment-rules.md`](./docs/04-alignment-rules.md)
+4. **Пойми продукт:** [`docs/05-user-journey.md`](./docs/05-user-journey.md) → [`docs/07-monetization-route.md`](./docs/07-monetization-route.md)
+5. **Контент и логика:** папка [`content/`](./content/) + [`prompts/`](./prompts/)
+6. **Пример качества:** [`examples/demo-person-answers.md`](./examples/demo-person-answers.md) + [`examples/demo-report-output.md`](./examples/demo-report-output.md)
 
 ## Структура репозитория
 
@@ -35,7 +36,10 @@ npm run serve   # прототип на localhost:5173
 │   ├── 08-legal-safety.md
 │   ├── 09-validation.md
 │   ├── 10-business-context.md
-│   └── 11-ui-page-spec.md
+│   ├── 11-ui-page-spec.md
+│   ├── 12-target-state.md  ← что значит «готово на 100%»
+│   ├── 13-roadmap.md       ← ЕДИНСТВЕННЫЙ список задач
+│   └── 14-state.md         ← где мы сейчас, решения, вопросы
 ├── content/                ← вопросы, ветви, скоринг (продуктовое ядро)
 │   ├── questions-full-bank.md
 │   ├── questions-ladder.md
@@ -75,13 +79,20 @@ npm run serve   # прототип на localhost:5173
 
 ## Следующие задачи разработки
 
-1. ~~Вопросы-доборы под платные срезы~~ → `content/slices/`
-2. ~~Сценарий UI личной страницы по ступеням~~ → `docs/11-ui-page-spec.md`
-3. ~~Кликабельный прототип~~ → `prototype/`
-4. **Ручной прогон 30 живых людей** — форма по `content/questions-ladder.md`, скоринг
-   движком, ступень 4 и срезы руками через LLM. Метрики в `docs/09-validation.md`
-5. Калибровка: переписать 10–15% текстов ветвей по реакциям
-6. MVP-остаток: серверное хранение профилей, вызов LLM на ступени 4 и срезах, оплата
+Единственный список задач — [`docs/13-roadmap.md`](./docs/13-roadmap.md). Второго списка
+в репозитории нет: конкурирующие перечни расходятся.
+
+- Где мы сейчас: [`docs/14-state.md`](./docs/14-state.md)
+- Что делать дальше: [`docs/13-roadmap.md`](./docs/13-roadmap.md)
+- Куда идём и что значит «готово»: [`docs/12-target-state.md`](./docs/12-target-state.md)
+
+Закрыты этапы E0 (карта работы) и E1 (ядро бесплатной лестницы: контент, движок,
+прототип). Следующий — E2: движок до полного контура данных (полный банк 35+3, доборы
+срезов, пороги генерации, кризисный детектор, пересчёт при правке ответа).
+
+**Прогон на живых людях — последний этап маршрута (E12)**, после стопроцентной готовности
+технической и визуальной части. Условие запуска — раздел «Условие перехода к живым людям»
+в `docs/12-target-state.md`.
 
 ## История
 

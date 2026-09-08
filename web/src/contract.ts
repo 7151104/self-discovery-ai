@@ -15,8 +15,11 @@ export type {
   BlockDto,
   BlockSlot,
   CardDto,
+  CreateProfileRequest,
   DisagreementKind,
   DoorDto,
+  ErrorCode,
+  ErrorDto,
   GenerationStatus,
   MapBarDto,
   OfferDto,
@@ -25,4 +28,5 @@ export type {
   PortionDto,
   QuestionDto,
   QuestionKind,
+  SubmitPortionRequest,
 } from "../../server/dist/contract/index.js";

@@ -41,7 +41,7 @@ const bar = (id: string, fill: MapBarDto["fill"]): MapBarDto => {
   return { ...source, fill, position: source.position ?? OPENED_POSITIONS[id] ?? null };
 };
 
-/** Полосы карты по ступеням: 0 → 2 → 5 → 7 заполненных (`docs/11`). */
+/** Полосы карты по ступеням: 0 → 3 → 5 → 7 заполненных (движок и E7-05). */
 const mapAt = (filled: number): MapBarDto[] =>
   mock.mapBars.map((source, index) =>
     index < filled ? bar(source.id, index < filled - 1 ? "precise" : "approximate") : bar(source.id, "empty"),
@@ -191,15 +191,15 @@ export const pageStates = {
   /** Шапка, пустая карта, маршрут заглушкой. Ждать нечего: ждать ещё не начали. */
   s0: page("s0", { nextPortion: portion1 }),
 
-  /** Первый блок и две полосы. */
-  s1: page("s1", { hook: mock.hook, map: mapAt(2), blocks: [step1], doors: doorsOpened(), nextPortion: portion2 }),
+  /** Первый блок и три полосы. */
+  s1: page("s1", { hook: mock.hook, map: mapAt(3), blocks: [step1], doors: doorsOpened(), nextPortion: portion2 }),
 
   /** Второй блок и пять полос. */
   s2: page("s2", { hook: mock.hook, map: mapAt(5), blocks: [step1, step2], doors: doorsOpened(), nextPortion: portion3 }),
 
-  /** Третий блок, семь полос, двери подписаны под профиль. */
+  /** Третий блок, семь полос, двери подписаны под профиль. Крючок обновлён. */
   s3: page("s3", {
-    hook: mock.hook,
+    hook: mock.hookAfterStep3,
     map: mapAt(7),
     blocks: [step1, step2, step3],
     doors: doorsOpened(),
@@ -208,15 +208,15 @@ export const pageStates = {
 
   /** Тот же `s4` в момент сборки: единственное ожидание бесплатной лестницы. */
   s4Waiting: page("s4", {
-    hook: mock.hook,
+    hook: mock.hookAfterStep3,
     map: mapAt(7),
     blocks: [step1, step2, step3, pending(step4)],
     doors: doorsOpened(),
   }),
 
-  /** Сюжет собран, предложение показано. */
+  /** Сюжет собран, предложение показано. Крючок обновлён снова. */
   s4: page("s4", {
-    hook: mock.hook,
+    hook: mock.hookAfterStep4,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4],
     doors: doorsOffered(),
@@ -225,7 +225,7 @@ export const pageStates = {
 
   /** Оплачено: сначала вопросы добора, а не отчёт. */
   paidPending: page("paid_pending", {
-    hook: mock.hook,
+    hook: mock.hookAfterStep4,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4],
     doors: doorsAfterPay(),
@@ -234,7 +234,7 @@ export const pageStates = {
 
   /** Доборы отвечены, срез собирается. */
   paidWaiting: page("paid_pending", {
-    hook: mock.hook,
+    hook: mock.hookAfterStep4,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4, pending(sliceBlock)],
     doors: doorsAfterPay(),
@@ -242,7 +242,7 @@ export const pageStates = {
 
   /** Срез на месте, маршрут показывает следующие двери. */
   paidDone: page("paid_done", {
-    hook: mock.hook,
+    hook: mock.hookAfterStep4,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4, sliceBlock],
     doors: doorsDone(),
@@ -256,7 +256,7 @@ export type PageStateKey = keyof typeof pageStates;
 /** Порядок показа в витрине. `spec` — строка таблицы «Состояния страницы» в docs/11. */
 export const PAGE_STATE_CASES: { key: PageStateKey; id: string; caption: string; spec: boolean }[] = [
   { key: "s0", id: "s0", caption: "s0 · шапка, пустая карта, маршрут заглушкой", spec: true },
-  { key: "s1", id: "s1", caption: "s1 · первый блок и две полосы", spec: true },
+  { key: "s1", id: "s1", caption: "s1 · первый блок и три полосы", spec: true },
   { key: "s2", id: "s2", caption: "s2 · второй блок и пять полос", spec: true },
   { key: "s3", id: "s3", caption: "s3 · третий блок, семь полос, двери под профиль", spec: true },
   { key: "s4Waiting", id: "s4-waiting", caption: "s4 · сюжет собирается: единственное ожидание бесплатной лестницы", spec: false },

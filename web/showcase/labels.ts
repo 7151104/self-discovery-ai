@@ -57,7 +57,8 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
       topics: waitTexts.topics,
       longNote: waitTexts.longNote,
       resumedNote: waitTexts.resumedNote,
+      collecting: waitTexts.collecting(),
     },
-    head: { noPeriod: headTexts.period(null) },
+    head: { period: headTexts.period, noPeriod: headTexts.noPeriod() },
   };
 }

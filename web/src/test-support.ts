@@ -62,6 +62,28 @@ export function walk(node: Child, visit: (found: FoundElement) => void, ancestor
 /** Теги, которые человек нажимает или в которые он пишет. */
 export const INTERACTIVE_TAGS = new Set(["button", "a", "summary", "textarea", "select", "input"]);
 
+/** Фокусируемые узлы в порядке дерева: клавиатурный путь без браузера. */
+export function focusable(node: Child): VNode[] {
+  const found: VNode[] = [];
+  walk(node, ({ node: current }) => {
+    if (!INTERACTIVE_TAGS.has(current.tag)) return;
+    if (current.attrs["disabled"] === true) return;
+    if (current.attrs["tabindex"] === "-1" || current.attrs["tabIndex"] === -1) return;
+    if (current.attrs["hidden"] === true) return;
+    found.push(current);
+  });
+  return found;
+}
+
+/** Узлы с данным классом, в порядке дерева. */
+export function byClass(node: Child, className: string): VNode[] {
+  const found: VNode[] = [];
+  walk(node, ({ node: current }) => {
+    if (classesOf(current).includes(className)) found.push(current);
+  });
+  return found;
+}
+
 export interface Box {
   height: number | null;
   width: number | null;

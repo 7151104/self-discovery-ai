@@ -19,7 +19,7 @@ import { h, type VNode } from "../src/dom.js";
 import type { BlockDto, BlockSlot, MapBarDto, PageStateDto } from "../src/contract.js";
 
 /** Что именно собирается. Определяет, какой текст покажет вызывающий код. */
-export type WaitKind = "step4" | "slice";
+export type WaitKind = "step4" | "slice" | "collecting";
 
 /** Блоки, у которых бывает сборка. Остальные приходят готовыми. */
 const waitKindOf = (id: BlockSlot): WaitKind | null => {

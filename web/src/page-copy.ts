@@ -55,10 +55,31 @@ export const mapTexts = {
 };
 
 export const headTexts = {
-  period: (theme: string | null): string =>
-    theme === null ? copy("UI_HEAD_NO_PERIOD") : copy("UI_HEAD_PERIOD", { тема: theme }),
+  period: (theme: string): string => copy("UI_HEAD_PERIOD", { тема: theme }),
+  noPeriod: (): string => copy("UI_HEAD_NO_PERIOD"),
   linkHint: (): string => copy("UI_HEAD_LINK_HINT"),
   emptyHook: (): string => copy("UI_HOOK_EMPTY"),
+};
+
+export const introTexts = {
+  title: (): string => copy("UI_INTRO_TITLE"),
+  about: (): string => copy("UI_INTRO_ABOUT"),
+  nameLabel: (): string => copy("UI_INTRO_NAME_LABEL"),
+  namePlaceholder: (): string => copy("UI_INTRO_NAME_PLACEHOLDER"),
+  nameRequired: (): string => copy("UI_INTRO_NAME_REQUIRED"),
+  dateLabel: (): string => copy("UI_INTRO_DATE_LABEL"),
+  dateHint: (): string => copy("UI_INTRO_DATE_HINT"),
+  submit: (): string => copy("UI_INTRO_SUBMIT"),
+};
+
+/**
+ * Несуществующий профиль. Отдельной строки в реестре нет (вопрос 38):
+ * показываем публичный выход «сделать свою», без кодов отказа и без «404».
+ */
+export const missingTexts = {
+  title: (): string => copy("UI_PAGE_TITLE"),
+  text: (): string => copy("UI_PUBLIC_MAKE_OWN_HINT"),
+  action: (): string => copy("UI_PUBLIC_MAKE_OWN"),
 };
 
 export const blockTexts = {
@@ -91,6 +112,8 @@ export const offerTexts = {
    */
   contents: (parts: string[]): string =>
     `${copy("UI_PAY_CONTENTS_LABEL")}${LIST_SEPARATOR}${parts.join(LIST_SEPARATOR)}`,
+  /** Пока в контракте нет поля состава — на экране только подпись. */
+  contentsLabel: (): string => copy("UI_PAY_CONTENTS_LABEL"),
   decline: (): string => copy("UI_PAY_DECLINE"),
   oneDoor: (): string => copy("UI_PAY_ONE_DOOR"),
   legal: (): string => copy("UI_PAY_LEGAL_LEAD"),

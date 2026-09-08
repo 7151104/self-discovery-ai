@@ -494,6 +494,20 @@ test("коды, которыми контент описывает профил�
   assert.ok(checked >= 5, "в таблице профиля не нашлось строк с кодами — разбор сломался");
 });
 
+test("у добора полной карты столько вопросов, сколько банк не спросил лестницей", () => {
+  const fullMap = rawContent.slices.find((slice) => slice.id === "slice_full_map")!;
+  const asked = new Set(rawContent.questions.map((question) => question.source));
+  const left = rawContent.bank.filter((question) => !asked.has(question.id));
+
+  assert.equal(fullMap.plannedFile, "full-map.md", "файл добора полной карты объявлен, но ещё не написан");
+  assert.equal(
+    Number(fullMap.questionCount),
+    left.length,
+    `в README указано ${fullMap.questionCount} вопросов, а банк без лестницы даёт ${left.length}`,
+  );
+  assert.deepEqual(fullMap.coordinates, Array.from({ length: 16 }, (_, index) => index + 1), "полная карта — все 16");
+});
+
 // ── Флаги ─────────────────────────────────────────────────────────────────────
 
 test("каждый флаг, который движок умеет ставить, назван в контенте", () => {

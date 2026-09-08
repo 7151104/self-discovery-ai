@@ -85,8 +85,10 @@ export interface RawNextDoor {
 
 export interface RawSlice {
   id: string;
-  /** null — у среза нет своего файла доборов (полная карта, совместимость). */
+  /** null — файла доборов нет: он либо не нужен, либо ещё не написан. */
   file: string | null;
+  /** Файл объявлен в README, но ещё не написан (пометка «Ещё не написан»). */
+  plannedFile: string | null;
   title: string;
   price: number;
   questionCount: string;

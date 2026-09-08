@@ -14,6 +14,8 @@
     "dev:server": "npm run build && node --disable-warning=ExperimentalWarning server/dist/main.js",
     "migrate": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/migrate.js",
     "migrate:check": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/migrate.js check",
+    "backup": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/backup.js",
+    "restore": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/backup.js restore",
     "keygen": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/keygen.js",
     "pay": "npm run build && node --disable-warning=ExperimentalWarning server/dist/payments/simulate.js",
     "reencrypt": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/reencrypt.js",

@@ -22,6 +22,12 @@ export interface BlockAction {
   onSelect?: Handler;
 }
 
+export interface BlockPicker {
+  title: string;
+  options: BlockAction[];
+  note?: string | null;
+}
+
 export interface BlockProps {
   id: string;
   heading: string;
@@ -40,6 +46,11 @@ export interface BlockProps {
    * человек уже видел, при следующей отрисовке страницы не мигает.
    */
   entering?: boolean;
+  /**
+   * Выбор варианта несогласия. Не модальное окно: открывается в самом блоке,
+   * на пути прохождения модалок нет (`docs/11-ui-page-spec.md`).
+   */
+  picker?: BlockPicker | null;
 }
 
 export function blockState(props: BlockProps): BlockState {
@@ -64,6 +75,31 @@ export function renderBlock(props: BlockProps): VNode {
     props.note ? h("p", { class: "block__note" }, props.note) : null,
     ...props.paragraphs.map((paragraph) => h("p", { class: "block__paragraph" }, paragraph)),
     props.highlight ? h("p", { class: "block__highlight" }, props.highlight) : null,
+    props.picker
+      ? h(
+          "div",
+          { class: "block__picker", "data-picker": "disagree" },
+          h("p", { class: "block__picker-title" }, props.picker.title),
+          h(
+            "div",
+            { class: "block__choices" },
+            props.picker.options.map((option) =>
+              h(
+                "button",
+                {
+                  class: "block__choice",
+                  type: "button",
+                  "data-action": "disagree-kind",
+                  "data-kind": option.id,
+                  onClick: option.onSelect,
+                },
+                option.label,
+              ),
+            ),
+          ),
+          props.picker.note ? h("p", { class: "block__picker-note" }, props.picker.note) : null,
+        )
+      : null,
     props.actions && props.actions.length > 0
       ? h(
           "div",

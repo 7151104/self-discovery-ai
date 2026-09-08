@@ -10,10 +10,12 @@ import { SUBMIT_FROM_WORDS } from "../components/open-field.js";
 import type { PageStateDto } from "./contract.js";
 import {
   blockTexts,
+  disagreeTexts,
   headTexts,
   mapTexts,
   offerTexts,
   portionTexts,
+  publicTexts,
   routeTexts,
   waitTexts,
 } from "./page-copy.js";
@@ -35,6 +37,11 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
       actions: blockTexts.actions(),
       updated: blockTexts.updated(),
       diverged: blockTexts.diverged(),
+      disagreeDone: blockTexts.disagreeDone(),
+      disagreeTitle: disagreeTexts.title(),
+      disagreeEffect: disagreeTexts.effect(),
+      disagreeKinds: disagreeTexts.kinds(),
+      acknowledged: blockTexts.acknowledged(),
     },
     offer: {
       buy: offerTexts.buy(page.offer?.price ?? 0),
@@ -67,6 +74,11 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
     head: {
       period: headTexts.period,
       noPeriod: headTexts.noPeriod(),
+    },
+    public: {
+      makeOwn: publicTexts.makeOwn(),
+      makeOwnHint: publicTexts.makeOwnHint(),
+      title: publicTexts.title(page.card.name),
     },
   };
 }

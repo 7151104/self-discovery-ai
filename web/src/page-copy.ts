@@ -13,7 +13,7 @@
  */
 
 import { copy } from "./copy.js";
-import type { MapBarDto, PageStateDto } from "./contract.js";
+import type { DisagreementKind, MapBarDto, PageStateDto, PublicPageDto } from "./contract.js";
 import { ZONES, type Zone } from "../components/map.js";
 import { waitTopics, type WaitState } from "../components/wait.js";
 
@@ -89,6 +89,18 @@ export const blockTexts = {
   ],
   updated: (): string => copy("UI_BLOCK_UPDATED"),
   diverged: (): string => copy("UI_EDGE_PAID_DIVERGED"),
+  disagreeDone: (): string => copy("UI_BLOCK_DISAGREE_DONE"),
+  acknowledged: (): string => copy("UI_DISAGREE_DONE"),
+};
+
+export const disagreeTexts = {
+  title: (): string => copy("UI_DISAGREE_TITLE"),
+  effect: (): string => copy("UI_DISAGREE_EFFECT"),
+  kinds: (): { id: DisagreementKind; label: string }[] => [
+    { id: "not_about_me", label: copy("UI_DISAGREE_NOT_ME") },
+    { id: "partly", label: copy("UI_DISAGREE_PARTLY") },
+    { id: "too_general", label: copy("UI_DISAGREE_TOO_GENERAL") },
+  ],
 };
 
 export const routeTexts = {
@@ -154,8 +166,32 @@ export const waitTexts = {
 
 export const shareTexts = {
   imageReady: (): string => copy("UI_SHARE_IMAGE_READY"),
+  imageOnly: (): string => copy("UI_SHARE_IMAGE_ONLY"),
+  save: (): string => copy("UI_SHARE_SAVE"),
   privacy: (): string => copy("UI_SHARE_PRIVACY"),
+  live: (): string => copy("UI_SHARE_LIVE"),
+  open: (): string => copy("UI_SHARE_OPEN"),
+  publicOn: (): string => copy("UI_SHARE_PUBLIC_ON"),
+  link: (url: string): string => copy("UI_SHARE_LINK", { ссылка: url }),
+  close: (): string => copy("UI_SHARE_CLOSE"),
+  closed: (): string => copy("UI_SHARE_CLOSED"),
 };
+
+export const publicTexts = {
+  title: (name: string): string => copy("UI_PUBLIC_TITLE", { имя: name }),
+  live: (name: string): string => copy("UI_PUBLIC_LIVE", { имя: name }),
+  hidden: (): string => copy("UI_PUBLIC_HIDDEN"),
+  empty: (): string => copy("UI_PUBLIC_EMPTY"),
+  revoked: (): string => copy("UI_PUBLIC_REVOKED"),
+  makeOwn: (): string => copy("UI_PUBLIC_MAKE_OWN"),
+  makeOwnHint: (): string => copy("UI_PUBLIC_MAKE_OWN_HINT"),
+};
+
+export function publicNotice(page: Pick<PublicPageDto, "name" | "map">): { id: string; texts: string[]; tone: "rest" } {
+  const texts = [publicTexts.live(page.name), publicTexts.hidden()];
+  if (page.map.every((bar) => bar.fill === "empty")) texts.push(publicTexts.empty());
+  return { id: "public", texts, tone: "rest" };
+}
 
 /** Краевые состояния: тексты группы EDGE. Полный кризисный текст — не здесь, а в `content/crisis.md`. */
 export const edgeTexts = {

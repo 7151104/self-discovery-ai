@@ -118,8 +118,51 @@ const slicePortion = portion("slice:node_finish", "Десять вопросов
 ]);
 
 /** Двери маршрута по ступеням: до профиля и после него. */
-const doorsAt = (offered: string | null): DoorDto[] =>
-  (offered === null ? mock.doors : mock.doorsWithOffer).map((door) => ({ ...door }));
+const work = (state: DoorDto["state"]): DoorDto => ({
+  id: "door-work",
+  title: "Как ты работаешь",
+  state,
+  price: null,
+  slice: null,
+});
+
+const decisions = (state: DoorDto["state"] = "opens_with_answers"): DoorDto => ({
+  id: "door-decisions",
+  title: "Как ты принимаешь решения",
+  state,
+  price: null,
+  slice: null,
+});
+
+const finish = (state: DoorDto["state"], price: number | null = null): DoorDto => ({
+  id: "door-finish",
+  title: "Почему ты останавливаешься у финиша",
+  state,
+  price,
+  slice: "slice_node_finish",
+});
+
+const close = (state: DoorDto["state"], price: number | null = null): DoorDto => ({
+  id: "door-close",
+  title: "Как этот механизм работает в близких",
+  state,
+  price,
+  slice: "slice_relations",
+});
+
+const fullMap = (): DoorDto => ({
+  id: "door-map",
+  title: "Полная карта",
+  state: "paid",
+  price: null,
+  slice: "slice_full_map",
+});
+
+const doorsStart = (): DoorDto[] => [work("opens_with_answers"), decisions(), finish("paid"), close("paid"), fullMap()];
+const doorsOpened = (): DoorDto[] => [work("open"), decisions(), finish("paid"), close("paid"), fullMap()];
+const doorsOffered = (): DoorDto[] => [work("open"), decisions(), finish("paid", mock.offer.price), close("paid"), fullMap()];
+const doorsAfterPay = (): DoorDto[] => [work("open"), decisions(), finish("paid"), close("paid"), fullMap()];
+const doorsDone = (): DoorDto[] => [work("open"), decisions(), finish("open"), close("paid", mock.nextOffer.price), fullMap()];
 
 const page = (state: PageStateDto["state"], parts: Partial<PageStateDto>): PageStateDto => ({
   profileId: PROFILE,
@@ -129,7 +172,7 @@ const page = (state: PageStateDto["state"], parts: Partial<PageStateDto>): PageS
   hook: null,
   map: mapAt(0),
   blocks: [],
-  doors: doorsAt(null),
+  doors: doorsStart(),
   offer: null,
   nextPortion: null,
   share: null,
@@ -149,16 +192,17 @@ export const pageStates = {
   s0: page("s0", { nextPortion: portion1 }),
 
   /** Первый блок и две полосы. */
-  s1: page("s1", { hook: mock.hook, map: mapAt(2), blocks: [step1], nextPortion: portion2 }),
+  s1: page("s1", { hook: mock.hook, map: mapAt(2), blocks: [step1], doors: doorsOpened(), nextPortion: portion2 }),
 
   /** Второй блок и пять полос. */
-  s2: page("s2", { hook: mock.hook, map: mapAt(5), blocks: [step1, step2], nextPortion: portion3 }),
+  s2: page("s2", { hook: mock.hook, map: mapAt(5), blocks: [step1, step2], doors: doorsOpened(), nextPortion: portion3 }),
 
   /** Третий блок, семь полос, двери подписаны под профиль. */
   s3: page("s3", {
     hook: mock.hook,
     map: mapAt(7),
     blocks: [step1, step2, step3],
+    doors: doorsOpened(),
     nextPortion: portion4,
   }),
 
@@ -167,6 +211,7 @@ export const pageStates = {
     hook: mock.hook,
     map: mapAt(7),
     blocks: [step1, step2, step3, pending(step4)],
+    doors: doorsOpened(),
   }),
 
   /** Сюжет собран, предложение показано. */
@@ -174,7 +219,7 @@ export const pageStates = {
     hook: mock.hook,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4],
-    doors: doorsAt(mock.offer.slice),
+    doors: doorsOffered(),
     offer: mock.offer,
   }),
 
@@ -183,7 +228,7 @@ export const pageStates = {
     hook: mock.hook,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4],
-    doors: doorsAt(null),
+    doors: doorsAfterPay(),
     nextPortion: slicePortion,
   }),
 
@@ -192,7 +237,7 @@ export const pageStates = {
     hook: mock.hook,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4, pending(sliceBlock)],
-    doors: doorsAt(null),
+    doors: doorsAfterPay(),
   }),
 
   /** Срез на месте, маршрут показывает следующие двери. */
@@ -200,22 +245,23 @@ export const pageStates = {
     hook: mock.hook,
     map: mapAt(7),
     blocks: [step1, step2, step3, step4, sliceBlock],
-    doors: doorsAt(null),
+    doors: doorsDone(),
+    offer: mock.nextOffer,
     share: { url: `${URL_BASE}/s/public-token`, createdAt: UPDATED_AT },
   }),
 } satisfies Record<string, PageStateDto>;
 
 export type PageStateKey = keyof typeof pageStates;
 
-/** Порядок показа в витрине и подпись к каждому случаю. */
-export const PAGE_STATE_CASES: { key: PageStateKey; caption: string }[] = [
-  { key: "s0", caption: "s0 · шапка, пустая карта, маршрут заглушкой" },
-  { key: "s1", caption: "s1 · первый блок и две полосы" },
-  { key: "s2", caption: "s2 · второй блок и пять полос" },
-  { key: "s3", caption: "s3 · третий блок, семь полос, двери под профиль" },
-  { key: "s4Waiting", caption: "s4 · сюжет собирается: единственное ожидание бесплатной лестницы" },
-  { key: "s4", caption: "s4 · сюжет и предложение среза" },
-  { key: "paidPending", caption: "paid_pending · после оплаты сразу вопросы, а не отчёт" },
-  { key: "paidWaiting", caption: "paid_pending · доборы отвечены, срез собирается" },
-  { key: "paidDone", caption: "paid_done · блок среза и следующие двери" },
+/** Порядок показа в витрине. `spec` — строка таблицы «Состояния страницы» в docs/11. */
+export const PAGE_STATE_CASES: { key: PageStateKey; id: string; caption: string; spec: boolean }[] = [
+  { key: "s0", id: "s0", caption: "s0 · шапка, пустая карта, маршрут заглушкой", spec: true },
+  { key: "s1", id: "s1", caption: "s1 · первый блок и две полосы", spec: true },
+  { key: "s2", id: "s2", caption: "s2 · второй блок и пять полос", spec: true },
+  { key: "s3", id: "s3", caption: "s3 · третий блок, семь полос, двери под профиль", spec: true },
+  { key: "s4Waiting", id: "s4-waiting", caption: "s4 · сюжет собирается: единственное ожидание бесплатной лестницы", spec: false },
+  { key: "s4", id: "s4", caption: "s4 · сюжет и предложение среза", spec: true },
+  { key: "paidPending", id: "paid_pending", caption: "paid_pending · после оплаты сразу вопросы, а не отчёт", spec: true },
+  { key: "paidWaiting", id: "paid_waiting", caption: "paid_pending · доборы отвечены, срез собирается", spec: false },
+  { key: "paidDone", id: "paid_done", caption: "paid_done · блок среза и следующие двери", spec: true },
 ];

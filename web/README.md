@@ -23,8 +23,7 @@ npm run serve         # статический сервер на localhost:5173
 ```
 
 Витрина: **http://localhost:5173/web/showcase/**
-Отдельный раздел: `?section=tokens|typography|input|block|map|door|payment|portion` — по разделу
-на снимок для визуальных регрессий E11-04.
+Отдельный раздел: `?section=tokens|typography|input|block|map|door|payment|portion|wait|s0|s1|s2|s3|s4|paid_pending|paid_done` и `?section=edge-…` — по разделу на снимок для визуальных регрессий E11-04.
 
 ## Правила, которые проверяются автоматически
 

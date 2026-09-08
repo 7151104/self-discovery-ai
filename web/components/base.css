@@ -61,6 +61,22 @@ button {
   padding: var(--space-3);
 }
 
+.page__notice {
+  max-width: var(--measure-block);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-hair) solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.page__notice[data-tone="crisis"] {
+  border-style: dashed;
+  border-color: var(--color-alert);
+}
+
 @media (min-width: 30rem) {
   .page {
     padding: var(--space-5);

@@ -133,3 +133,24 @@ export const shareTexts = {
   imageReady: (): string => copy("UI_SHARE_IMAGE_READY"),
   privacy: (): string => copy("UI_SHARE_PRIVACY"),
 };
+
+/** Краевые состояния: тексты группы EDGE. Полный кризисный текст — не здесь, а в `content/crisis.md`. */
+export const edgeTexts = {
+  noDate: (): string => copy("UI_EDGE_NO_DATE"),
+  openTooShort: (): string => copy("UI_EDGE_OPEN_TOO_SHORT"),
+  crisis: (): string => copy("UI_EDGE_CRISIS"),
+  noNode: (): string => copy("UI_EDGE_NO_NODE"),
+  returned: (): string => copy("UI_EDGE_RETURN"),
+  payDeclined: (): string => copy("UI_EDGE_PAY_DECLINED"),
+  answerChanged: (): string => copy("UI_EDGE_ANSWER_CHANGED"),
+  paidDiverged: (): string => copy("UI_EDGE_PAID_DIVERGED"),
+  paymentFailed: (): string => copy("UI_EDGE_PAYMENT_FAILED"),
+  generationFailed: (): string => copy("UI_EDGE_GENERATION_FAILED"),
+};
+
+export const errorTexts = {
+  save: (): string => copy("UI_ERROR_SAVE"),
+  load: (): string => copy("UI_ERROR_LOAD"),
+  offline: (): string => copy("UI_ERROR_OFFLINE"),
+  unknown: (): string => copy("UI_ERROR_UNKNOWN"),
+};

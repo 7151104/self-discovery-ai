@@ -180,6 +180,33 @@ export const offerLabels = {
 
 export const formatPrice = routeTexts.price;
 
+export const nextOffer: OfferDto = {
+  slice: "slice_relations",
+  title: "Как этот механизм работает в близких",
+  price: 1290,
+  promise:
+    "Тот же круг, но уже не в деле, а в близких: где ты отступаешь, чтобы не быть отвергнутым, и что с этим делать.",
+  questionCount: "20",
+};
+
+export const nextOfferLabels = {
+  buy: offerTexts.buy(nextOffer.price),
+  contents: offerTexts.contents([
+    "как механизм включается рядом с человеком",
+    "где ты отступаешь, чтобы сохранить лицо",
+    "три действия под твои близкие, а не «говорите больше»",
+  ]),
+  decline: offerTexts.decline(),
+  oneDoor: offerTexts.oneDoor(),
+};
+
+/** Кризисный текст витрины. Полный текст живёт в `content/crisis.md`; контактов основатель ещё не назвал. */
+export const crisisTexts = {
+  support: "Сейчас важнее живая поддержка, чем разбор. Поэтому разбора здесь не будет.",
+  noOffer: "Ничего платного на этой странице сейчас не предлагается.",
+  stays: "Страница остаётся по этой ссылке. Ответы сохранены, ничего делать не нужно.",
+};
+
 export const choiceQuestion = {
   group: "q-trigger",
   label: "Что задевает тебя сильнее всего?",

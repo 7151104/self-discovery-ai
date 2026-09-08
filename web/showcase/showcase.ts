@@ -1,18 +1,14 @@
 /**
- * Витрина компонентов.
+ * Витрина компонентов и состояний страницы (E6-12).
  *
  * Открывается по адресу `/web/showcase/` статического сервера (`npm run serve`).
- * Показывает каждый компонент во всех состояниях на моковых данных и на ширине
- * базового телефона 360 px — той, от которой проектируется вёрстка.
- *
- * Состояния страницы `s0`–`paid_done` целиком добавит E6-12: для них нужны
- * тексты микрокопии (E5-03) и состояния ожидания (E6-10). Сейчас витрина
- * закрывает приёмку компонентов E6-05…E6-08 и служит источником снимков
- * для визуальных регрессий E11-04.
+ * Показывает каждый компонент во всех состояниях и каждое состояние страницы
+ * `s0`–`paid_done` собранной страницей на моковых данных. Отдельный раздел —
+ * `?section=…`: по разделу на снимок для визуальных регрессий E11-04.
  */
 
 import type { QuestionDto } from "../src/contract.js";
-import { h, mount, type Child, type VNode } from "../src/dom.js";
+import { h, isVNode, mount, type Child, type VNode } from "../src/dom.js";
 import { TOKEN_GROUPS } from "../tokens/tokens.js";
 import { renderBlock, blockFromDto } from "../components/block.js";
 import { renderDoor, doorVisual, renderRoute, type DoorVisual } from "../components/door.js";
@@ -23,8 +19,13 @@ import { renderOptions } from "../components/option.js";
 import { renderHead, renderHook } from "../components/page-head.js";
 import { renderPortion, type PortionLabels } from "../components/portion.js";
 import { renderScale } from "../components/scale.js";
-import { portionTexts } from "../src/page-copy.js";
+import { renderWait } from "../components/wait.js";
+import { portionTexts, waitTexts } from "../src/page-copy.js";
+import { EDGE_CASES } from "./edge-states.js";
+import { viewLabels } from "./labels.js";
 import * as mock from "./mocks.js";
+import { renderPersonalPage } from "./page.js";
+import { PAGE_STATE_CASES, pageStates } from "./page-states.js";
 
 const section = (id: string, title: string, note: string, ...items: Child[]): VNode =>
   h(
@@ -36,13 +37,15 @@ const section = (id: string, title: string, note: string, ...items: Child[]): VN
   );
 
 /** Компонент в рамке телефона 360×640: то, для чего он спроектирован. */
-const phone = (caption: string, node: Child): VNode =>
-  h(
+const phone = (caption: string, node: Child): VNode => {
+  const inner = isVNode(node) && node.attrs["class"] === "page" ? node : h("div", { class: "page" }, node);
+  return h(
     "figure",
     { class: "showcase__case" },
     h("figcaption", { class: "showcase__caption" }, caption),
-    h("div", { class: "showcase__phone" }, h("div", { class: "page" }, node)),
+    h("div", { class: "showcase__phone" }, inner),
   );
+};
 
 const tokensSection = (): VNode =>
   section(
@@ -355,9 +358,82 @@ const portionSection = (): VNode =>
     phone("Число: обе величины введены", portionCard(2, 10, mock.numberQuestion, "4,1")),
   );
 
+const waitSection = (): VNode =>
+  section(
+    "wait",
+    "Ожидание генерации",
+    "Ждать приходится только ступень 4 и платный срез. Ступени 1–3 приходят готовыми, состояния загрузки у них нет.",
+    phone(
+      "Ступень 4: сюжет собирается",
+      renderWait({
+        title: waitTexts.title({ kind: "step4", blockId: "step4", long: false, resumed: false }),
+        topics: waitTexts.topics(pageStates.s4Waiting),
+        kind: "step4",
+      }),
+    ),
+    phone(
+      "Платный срез: что уточняется",
+      renderWait({
+        title: waitTexts.title({ kind: "slice", blockId: "slice:node_finish", long: false, resumed: false }),
+        topics: waitTexts.topics(pageStates.paidWaiting),
+        kind: "slice",
+      }),
+    ),
+    phone(
+      "Сборка идёт дольше обычного",
+      renderWait({
+        title: waitTexts.title({ kind: "step4", blockId: "step4", long: true, resumed: false }),
+        longNote: waitTexts.longNote({ kind: "step4", blockId: "step4", long: true, resumed: false }),
+        kind: "step4",
+      }),
+    ),
+    phone(
+      "Возврат на страницу во время сборки",
+      renderWait({
+        title: waitTexts.title({ kind: "step4", blockId: "step4", long: false, resumed: true }),
+        resumedNote: waitTexts.resumedNote({ kind: "step4", blockId: "step4", long: false, resumed: true }),
+        kind: "step4",
+      }),
+    ),
+    ...PAGE_STATE_CASES.filter((item) => !item.spec).map((item) =>
+      phone(item.caption, renderPersonalPage(pageStates[item.key], viewLabels(pageStates[item.key]))),
+    ),
+  );
+
+const pageSection = (id: string, title: string, note: string, key: keyof typeof pageStates): VNode =>
+  section(
+    id,
+    title,
+    note,
+    phone(note, renderPersonalPage(pageStates[key], viewLabels(pageStates[key]))),
+  );
+
+const specPageSections = (): Array<() => VNode> =>
+  PAGE_STATE_CASES.filter((item) => item.spec).map(
+    (item) => () => pageSection(item.id, `Состояние ${item.id}`, item.caption, item.key),
+  );
+
+const edgeSections = (): Array<() => VNode> =>
+  EDGE_CASES.map((item) => () =>
+    section(
+      `edge-${item.id}`,
+      item.situation,
+      "Краевое состояние из docs/11-ui-page-spec.md. Собрано страницей, а не списком компонентов.",
+      phone(
+        item.situation,
+        renderPersonalPage(item.page, viewLabels(item.page), {
+          notice: item.notice,
+          portionIndex: item.portionIndex,
+          portionValue: item.portionValue,
+        }),
+      ),
+    ),
+  );
+
 /**
  * Разделы витрины. Отдельный раздел открывается как `?section=map` — этим же
  * снимаются картинки для визуальных регрессий E11-04, по разделу за снимок.
+ * Состояния страницы и краевые случаи — каждый своим адресом.
  */
 export const SECTIONS = [
   tokensSection,
@@ -368,6 +444,9 @@ export const SECTIONS = [
   doorSection,
   paymentSection,
   portionSection,
+  waitSection,
+  ...specPageSections(),
+  ...edgeSections(),
 ];
 
 export function renderShowcase(only?: string | null): VNode {
@@ -382,7 +461,7 @@ export function renderShowcase(only?: string | null): VNode {
     h(
       "p",
       { class: "showcase__lead" },
-      "Компоненты дизайн-системы во всех состояниях на моковых данных. Состояния страницы s0–paid_done добавит E6-12.",
+      "Компоненты дизайн-системы во всех состояниях и состояния страницы s0–paid_done собранными страницами на моковых данных. Каждый раздел открывается как ?section=…",
     ),
     ...sections,
   );

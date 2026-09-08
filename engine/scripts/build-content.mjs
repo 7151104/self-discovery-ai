@@ -397,6 +397,7 @@ function parseStep3() {
 // ── Платные срезы ─────────────────────────────────────────────────────────────
 
 const SLICE_TYPES = ["выбор", "шкала", "открытый", "число"];
+const SLICE_TABLE_HEADER = "ID|Вопрос|Тип|Коорд.|Варианты|Зачем в отчёте";
 
 /** Ячейка вариантов добора: `**A** сам нашёл · **B** позвали`, `как в S4` или «—». */
 function parseSliceOptions(cell, id) {
@@ -423,6 +424,7 @@ function parseSliceQuestions(file, body) {
   const out = [];
   let portion = 1;
   let inside = false;
+  let header = false;
 
   for (const line of body) {
     const heading = /^## (.+)$/.exec(line);
@@ -431,6 +433,7 @@ function parseSliceQuestions(file, body) {
       const numbered = /^Порция (\d)/.exec(section);
       inside = Boolean(numbered) || section.startsWith("Вопросы-доборы");
       if (numbered) portion = Number(numbered[1]);
+      header = false;
       continue;
     }
     if (!inside || !line.trim().startsWith("|")) continue;
@@ -438,7 +441,16 @@ function parseSliceQuestions(file, body) {
     const cells = tableRows([line])[0];
     if (!cells || cells.length !== 6) continue;
     const [id, text, type, coordinates, options, purpose] = cells;
+
+    // Шапка таблицы обязательна: без неё колонки читаются по счёту, а не по смыслу.
+    if (id === "ID") {
+      if (cells.join("|") !== SLICE_TABLE_HEADER)
+        throw new Error(`${file}: шапка таблицы вопросов — «${cells.join(" | ")}», ожидалась «${SLICE_TABLE_HEADER.split("|").join(" | ")}»`);
+      header = true;
+      continue;
+    }
     if (!/^S\d+$/.test(id)) continue;
+    if (!header) throw new Error(`${file} ${id}: вопрос записан до шапки таблицы`);
 
     if (!text || /\*\*|\||·/.test(text)) throw new Error(`${file} ${id}: в тексте вопроса осталась разметка`);
     if (!SLICE_TYPES.includes(type)) throw new Error(`${file} ${id}: неизвестный тип «${type}»`);

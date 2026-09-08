@@ -46,6 +46,7 @@ test("варианты несогласия и их потолки совпад�
     .map((line) => line.split("|").map((cell) => cell.trim()).filter(Boolean))
     .filter((cells) => cells[0] !== "Вариант несогласия");
 
+  assert.ok(section.includes("| Вариант несогласия |"), "у таблицы вариантов пропала шапка");
   assert.equal(rows.length, Object.keys(DISAGREEMENT_RULES).length, "вариантов в коде и в контенте разное число");
   for (const cells of rows) {
     const kind = cells[0] as DisagreementKind;

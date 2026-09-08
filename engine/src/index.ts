@@ -27,7 +27,16 @@ export {
 } from "./scoring.js";
 export { applyNodes, NODE_RULES, fallbackNodeText } from "./nodes.js";
 export { buildMap, BAR_DEFINITIONS } from "./map.js";
-export { selectOffer, buildDoors } from "./offers.js";
+export { selectOffer, selectOfferAfterSlice, buildDoors } from "./offers.js";
+export {
+  applySlice,
+  checkThreshold,
+  nextSliceAfter,
+  sameSubtype,
+  sliceOwnedCodes,
+  subtypeRegistry,
+  SCORED_SLICES,
+} from "./slices.js";
 export { rawContent } from "./generated/content.js";
 
 const SEASONS: { season: string; months: number[] }[] = [

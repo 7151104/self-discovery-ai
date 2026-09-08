@@ -538,7 +538,12 @@ function parseSliceThreshold(file, body) {
 
   if (!checks.length) throw new Error(`${file}: у порога генерации нет пунктов`);
   if (!followUps.length) throw new Error(`${file}: у порога генерации нет уточняющих вопросов`);
-  return { checks, followUps };
+
+  // Обязательный вход в свободной форме (пока только у slice_decision_moment).
+  const entry = body.find((l) => /^Минимум \d+ слов/.test(l.trim()));
+  const entryMinWords = entry ? Number(/\d+/.exec(entry)[0]) : null;
+
+  return { checks, followUps, entryMinWords };
 }
 
 /** Таблица «Следующие двери»: условие текстом и один идентификатор среза. */

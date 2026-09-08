@@ -431,6 +431,7 @@ function createProfile(options: ProfileOptions): {
     nodes: [],
     dominantNode: null,
     nextPaidOffer: rawContent.step3.offers["default"] ?? "slice_node_finish",
+    configurations: [],
   };
 
   const assign = (id: number, assignment: Assignment): void => {
@@ -966,6 +967,41 @@ function assignDecisionMode(answers: BankAnswers, assign: (id: number, assignmen
     sources: score.sources,
   });
 }
+
+// ── Словарь кодов ядра: им ветви лестницы и банка называют положение ──────────
+
+/**
+ * Код → формулировка внутрь профиля по каждой координате, которую закрывают
+ * лестница и полный банк. Собирается из тех же таблиц, по которым считает
+ * скоринг: второго списка значений в коде быть не должно.
+ */
+export function codeValues(): Record<number, Record<string, string>> {
+  const out: Record<number, Record<string, string>> = {};
+  const put = (coordinate: number, code: string, value: string): void => {
+    out[coordinate] = { ...(out[coordinate] ?? {}), [code]: value };
+  };
+
+  for (const [id, axis] of Object.entries(AXIS)) {
+    for (const [value, code] of [axis.high, axis.mid, axis.low]) put(Number(id), code, value);
+  }
+  for (const row of Object.values(RHYTHM)) put(2, row.code, row.value);
+  for (const row of Object.values(STRESS)) put(9, row.code, row.value);
+  for (const row of Object.values(COMPLETION)) put(11, row.code, row.value);
+  for (const row of Object.values(ENTRY)) put(13, row.code, row.value);
+  for (const row of Object.values(VULNERABILITY)) put(8, row.code, row.value);
+  for (const [key, code] of Object.entries(MOTIVE_CODES)) put(10, code, optionText("Q35", key));
+  for (const mode of DECISION_MODES) put(14, mode.code, mode.value);
+  return out;
+}
+
+/** Стойка кода координаты 9: по тем же таблицам, что и в обеих ветвях входа. */
+export function stanceOfStressCode(code: string): "active" | "passive" | "other" | null {
+  const key = Object.entries(STRESS).find(([, row]) => row.code === code)?.[0];
+  return key ? (STRESS_STANCE[key] ?? null) : null;
+}
+
+/** Куда смотрит полоса: та же таблица, по которой считается направление. */
+export const pointerOfBand = (band: Band | null): Pointer => (band ? BAND_POINTER[band] : 0);
 
 /** Координаты, по которым вход не даёт ничего: это и есть закрытые двери. */
 export function unknownCoordinates(profile: Profile): CoordinateState[] {

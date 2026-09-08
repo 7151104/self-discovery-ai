@@ -21,6 +21,17 @@ export interface CoordinateState {
   flags: string[];
 }
 
+/**
+ * Конфигурация из платного добора: пара ответов, которая координате не
+ * принадлежит (например S4 × S5 в `slice_work`). Код и формулировка — из файла среза.
+ */
+export interface SliceConfiguration {
+  slice: string;
+  code: string;
+  value: string;
+  sources: string[];
+}
+
 export interface Profile {
   profileId: string;
   coordinates: Record<number, CoordinateState>;
@@ -29,6 +40,8 @@ export interface Profile {
   nodes: TriggeredNode[];
   dominantNode: string | null;
   nextPaidOffer: string;
+  /** Конфигурации купленных доборов. Пусто, пока срез не пройден. */
+  configurations: SliceConfiguration[];
 }
 
 export interface TriggeredNode {
@@ -63,6 +76,38 @@ export interface LadderAnswers {
  * варианты и открытые ответы — строкой.
  */
 export type BankAnswers = Record<string, ScaleAnswer | ChoiceAnswer | undefined>;
+
+/**
+ * Ответ на вопрос-добор среза (`content/slices/*.md`): шкала числом, вариант
+ * буквой, открытый ответ текстом. Тип «число» приходит числом, а если вопрос
+ * спрашивает две величины сразу — массивом из двух чисел в порядке вопроса.
+ */
+export type SliceAnswer = number | number[] | ChoiceAnswer;
+
+/** Ответы одного среза: ключ — идентификатор вопроса внутри среза (S1…Sn). */
+export type SliceAnswers = Record<string, SliceAnswer | undefined>;
+
+/**
+ * Что разбор открытых ответов среза дал в машинном виде. Движок текста не
+ * интерпретирует: коды и флаги приходят от LLM и проверяются по словарю среза.
+ */
+export interface SliceTextFindings {
+  codes?: string[];
+  flags?: string[];
+  /** Развилка проверена и не касается медицины, юридики и безопасности. */
+  safeTopic?: boolean;
+}
+
+/** Итог проверки порога генерации среза. */
+export interface SliceThreshold {
+  passed: boolean;
+  /** Невыполненные пункты чек-листа — дословно из файла среза. */
+  missing: string[];
+  /** Уточняющие вопросы из файла среза. Пусто, если порог взят. */
+  followUps: string[];
+  /** Отчёт не пишем и уточняющих не задаём: нужен кризисный контур. */
+  blocked: string | null;
+}
 
 export interface Step0Input {
   name: string;

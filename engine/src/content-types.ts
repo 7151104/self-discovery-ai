@@ -73,6 +73,8 @@ export interface RawSliceSubtype {
 export interface RawSliceThreshold {
   checks: string[];
   followUps: string[];
+  /** Минимум слов в обязательном входе среза; null — входа в свободной форме нет. */
+  entryMinWords: number | null;
 }
 
 /** Строка таблицы «Следующие двери»: условие текстом и один срез. Последняя — «иначе». */

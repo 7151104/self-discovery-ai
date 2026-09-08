@@ -12,6 +12,7 @@
 import type {
   BlockDto,
   BlockSlot,
+  DisagreementKind,
   DoorDto,
   MapBarDto,
   OfferDto,
@@ -24,8 +25,15 @@ import type {
   PublicSlot,
 } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
-import { BAR_DEFINITIONS, buildPage, rawContent } from "./engine.js";
-import type { LadderAnswers, MapBar, PageState, PageView } from "./engine.js";
+import { buildPage, rawContent } from "./engine.js";
+import type {
+  Disagreement as EngineDisagreement,
+  DisagreementKind as EngineDisagreementKind,
+  LadderAnswers,
+  MapBar,
+  PageState,
+  PageView,
+} from "./engine.js";
 import {
   ensureBlock,
   findActiveShareToken,
@@ -36,6 +44,7 @@ import {
   paidSlices,
   type AnswerRecord,
   type BlockRecord,
+  type DisagreementRecord,
   type GenerationJobRecord,
   type ProfileRecord,
 } from "./store.js";
@@ -88,6 +97,34 @@ const sliceContent = (slice: string) => rawContent.slices.find((candidate) => ca
 
 const sliceQuestion = (slice: string, questionId: string) =>
   sliceContent(slice)?.questions.find((candidate) => candidate.id === questionId) ?? null;
+
+/**
+ * Контракт говорит машинными кодами, движок — формулировками из
+ * `content/scoring-rules.md`. Словарь один: три варианта, потолки те же.
+ */
+const ENGINE_DISAGREEMENT_KIND: Record<DisagreementKind, EngineDisagreementKind> = {
+  not_about_me: "это не про меня",
+  partly: "частично",
+  too_general: "слишком общо",
+};
+
+const STEP_OF_SLOT: Partial<Record<BlockSlot, 1 | 2 | 3 | 4>> = {
+  step1: 1,
+  step2: 2,
+  step3: 3,
+  step4: 4,
+};
+
+/** Несогласия для движка: купленный срез в карту лестницы не входит. */
+function engineDisagreements(records: DisagreementRecord[]): EngineDisagreement[] {
+  const result: EngineDisagreement[] = [];
+  for (const record of records) {
+    const step = STEP_OF_SLOT[record.slot];
+    if (step === undefined) continue;
+    result.push({ step, kind: ENGINE_DISAGREEMENT_KIND[record.kind] });
+  }
+  return result;
+}
 
 const projectMap = (bars: MapBar[]): MapBarDto[] =>
   bars.map((bar) => ({
@@ -286,13 +323,18 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   const stored = listAnswers(db, profile.profileId);
   const answered = new Set(stored.map((record) => record.questionId));
   const answers = toLadderAnswers(stored);
+  const disagreementRecords = listDisagreements(db, profile.profileId);
   const storyline = options.omitStoryline
     ? undefined
     : findLatestJob(db, profile.profileId, "step4")?.result?.storyline;
   const enginePage = buildPage(
     { name: profile.name, birthDate: profile.birthDate ?? undefined },
     answers,
-    { profileId: profile.profileId, ...(storyline ? { storyline } : {}) },
+    {
+      profileId: profile.profileId,
+      disagreements: engineDisagreements(disagreementRecords),
+      ...(storyline ? { storyline } : {}),
+    },
   );
   const view = enginePage.view;
 
@@ -352,7 +394,7 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     const job = findLatestJob(db, profile.profileId, slot);
     if (job) latestJobs.set(slot, job);
   }
-  const disagreed = new Set(listDisagreements(db, profile.profileId).map((record) => record.slot));
+  const disagreed = new Set(disagreementRecords.map((record) => record.slot));
   const share = findActiveShareToken(db, profile.profileId);
 
   const page: PageStateDto = {

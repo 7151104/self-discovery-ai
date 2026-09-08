@@ -57,6 +57,13 @@ export interface LadderAnswers {
   L12?: string;
 }
 
+/**
+ * Ответы полного банка 35+3: ключ — идентификатор вопроса из
+ * `content/questions-full-bank.md` (Q1–Q35, О1–О3). Шкалы приходят числом,
+ * варианты и открытые ответы — строкой.
+ */
+export type BankAnswers = Record<string, ScaleAnswer | ChoiceAnswer | undefined>;
+
 export interface Step0Input {
   name: string;
   /** ISO-дата. Можно не указывать: тогда карточки периода не будет. */

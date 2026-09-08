@@ -17,7 +17,14 @@ import { buildProfile, type ProfileOptions } from "./scoring.js";
 import type { Block, LadderAnswers, PageState, Portion, Question, Step0Card, Step0Input } from "./types.js";
 
 export * from "./types.js";
-export { buildProfile, bandFromMean, unknownCoordinates } from "./scoring.js";
+export {
+  buildProfile,
+  buildProfileFromBank,
+  bandFromMean,
+  reverseScale,
+  scoreCoordinate,
+  unknownCoordinates,
+} from "./scoring.js";
 export { applyNodes, NODE_RULES, fallbackNodeText } from "./nodes.js";
 export { buildMap, BAR_DEFINITIONS } from "./map.js";
 export { selectOffer, buildDoors } from "./offers.js";

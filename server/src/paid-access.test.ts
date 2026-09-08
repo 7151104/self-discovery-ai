@@ -9,6 +9,7 @@ import {
   answersForPortion,
   call,
   deliverWebhook,
+  profileAtPaidState,
   profileAtStep,
   purchaseSlice,
   startTestServer,
@@ -72,6 +73,10 @@ test("блок среза появляется только после прой�
   });
   assert.equal(afterFirst.body.nextPortion?.key, "slice:slice_work:2");
   assert.equal(afterFirst.body.blocks.some((block) => block.id === "slice:slice_work"), false);
+  const interlude = afterFirst.body.blocks.find((block) => block.id === "slice:slice_work:interlude");
+  assert.ok(interlude, "после первой порции нет промежуточного блока");
+  assert.ok(interlude.paragraphs.length > 0);
+  assert.equal(interlude.generation, null);
 
   const done = await answerSlicePortions(server.origin, profileId);
   assert.equal(done.nextPortion, null);
@@ -83,6 +88,17 @@ test("блок среза появляется только после прой�
   // Текста ещё нет: его пишет LLM (E4). Отчёт не подменяется старым текстом.
   assert.deepEqual(block.paragraphs, []);
   assert.equal(done.state, "paid_pending");
+});
+
+test("после готового среза следующее предложение одно и из таблицы этого среза", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const page = await profileAtPaidState(server.origin, server.db, { delivered: true });
+  assert.equal(page.state, "paid_done");
+  assert.ok(page.offer, "предложения после закрытого среза нет");
+  const priced = page.doors.filter((door) => door.price !== null);
+  assert.equal(priced.length, 1, "на экране должна быть одна цена следующего предложения");
+  assert.equal(priced[0]?.slice, page.offer.slice);
 });
 
 test("прямой запрос платного блока без оплаченного заказа отклоняется", async (t) => {

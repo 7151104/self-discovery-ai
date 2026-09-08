@@ -29,12 +29,16 @@ import type {
 import type { Db } from "./db/driver.js";
 import {
   applySlice,
+  buildDoors,
+  buildMap,
   buildPage,
+  buildSliceInterludeBlock,
   checkThreshold,
   crisisNotice,
   detectCrisis,
   payScreen,
   rawContent,
+  selectOfferAfterSlice,
   SCORED_SLICES,
 } from "./engine.js";
 import type {
@@ -42,8 +46,10 @@ import type {
   CrisisNotice,
   Disagreement as EngineDisagreement,
   DisagreementKind as EngineDisagreementKind,
+  Door as EngineDoor,
   LadderAnswers,
   MapBar,
+  Offer as EngineOffer,
   PageState,
   PageView,
   SliceAnswers,
@@ -174,28 +180,42 @@ const projectMap = (bars: MapBar[]): MapBarDto[] =>
     hint: bar.hint,
   }));
 
-const projectDoors = (page: PageView): DoorDto[] =>
-  page.doors.map((door) => ({
-    id: door.id,
-    title: door.title,
-    state: door.state,
-    price: door.price,
-    slice: door.slice,
-  }));
-
-const projectOffer = (page: PageView): OfferDto | null => {
-  if (!page.offer) return null;
-  const screen = payScreen(page.offer.slice);
+const toOfferDto = (offer: EngineOffer): OfferDto => {
+  const screen = payScreen(offer.slice);
   return {
-    slice: page.offer.slice,
-    title: page.offer.title,
-    price: page.offer.price,
-    promise: page.offer.promise,
-    questionCount: page.offer.questionCount,
+    slice: offer.slice,
+    title: offer.title,
+    price: offer.price,
+    promise: offer.promise,
+    questionCount: offer.questionCount,
     contents: screen.contents,
     decline: screen.decline,
   };
 };
+
+const toDoorDto = (door: EngineDoor): DoorDto => ({
+  id: door.id,
+  title: door.title,
+  state: door.state,
+  price: door.price,
+  slice: door.slice,
+});
+
+const projectDoors = (page: PageView): DoorDto[] => page.doors.map(toDoorDto);
+
+const sliceBlockReady = (stored: BlockRecord[], slice: string): boolean =>
+  stored.some((block) => block.slot === `slice:${slice}` && block.status === "ready");
+
+const interludeDto = (block: { slice: string; heading: string; paragraphs: string[] }): BlockDto => ({
+  id: `slice:${block.slice}:interlude`,
+  heading: block.heading,
+  paragraphs: block.paragraphs,
+  highlight: null,
+  generation: null,
+  disagreed: false,
+  purchased: false,
+  stale: false,
+});
 
 /**
  * Контакты помощи: в движке поле `value`, в контракте — `line`.
@@ -435,6 +455,8 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   let slicePortion: PortionDto | null = null;
   let sliceCrisis: CrisisNotice | null = null;
   let clarifications: ClarificationsDto | null = null;
+  const interludeBlocks: BlockDto[] = [];
+  let workingProfile = enginePage.internal.profile;
 
   for (const slice of paid) {
     const remaining = projectSlicePortion(slice, answered);
@@ -449,6 +471,8 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
 
     if (remaining) {
       slicePortion ??= remaining;
+      const interlude = buildSliceInterludeBlock(slice, sliceAnswers);
+      if (interlude) interludeBlocks.push(interludeDto(interlude));
       continue;
     }
 
@@ -467,9 +491,8 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     }
 
     const findings = findingsForSlice(slice, sliceAnswers);
-    const before = enginePage.internal.profile;
-    const after = applySlice(slice, before, sliceAnswers, findings);
-    const threshold = checkThreshold(slice, after, sliceAnswers, findings, before);
+    const after = applySlice(slice, workingProfile, sliceAnswers, findings);
+    const threshold = checkThreshold(slice, after, sliceAnswers, findings, workingProfile);
 
     if (threshold.blocked) {
       sliceCrisis ??= crisisNotice("paid_slice", blockedDecision(threshold.blocked));
@@ -478,6 +501,8 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
 
     if (!threshold.passed) {
       clarifications ??= { slice, questions: threshold.followUps };
+    } else {
+      workingProfile = after;
     }
 
     ensureBlock(db, profile.profileId, {
@@ -505,6 +530,25 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   const disagreed = new Set(disagreementRecords.map((record) => record.slot));
   const share = findActiveShareToken(db, profile.profileId);
 
+  const allPaidReady = paid.length > 0 && paid.every((slice) => sliceBlockReady(blocks, slice));
+  const lastReady = paid.filter((slice) => sliceBlockReady(blocks, slice)).at(-1) ?? null;
+
+  let nextOffer: EngineOffer | null = null;
+  if (!hidePaid && paid.length === 0) {
+    nextOffer = view.offer;
+  } else if (!hidePaid && !slicePortion && !clarifications && allPaidReady && lastReady) {
+    nextOffer = selectOfferAfterSlice(lastReady, workingProfile, toSliceAnswers(stored, lastReady), paid);
+  }
+
+  const sliceDoors = (): DoorDto[] =>
+    buildDoors(workingProfile, view.blocks, nextOffer, view.step).map((door) => {
+      const dto = toDoorDto(door);
+      if (dto.slice && sliceBlockReady(blocks, dto.slice)) {
+        return { ...dto, state: "open" as const, price: null };
+      }
+      return dto;
+    });
+
   const page: PageStateDto = {
     profileId: profile.profileId,
     url: pageUrl(options.publicOrigin, profile.profileId),
@@ -517,10 +561,10 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
       cta: view.card?.cta ?? "",
     },
     hook: view.hook,
-    map: projectMap(view.map),
-    blocks: projectBlocks(view, blocks, latestJobs, disagreed),
-    doors: hidePaid ? withoutPaidDoors(projectDoors(view)) : projectDoors(view),
-    offer: hidePaid ? null : projectOffer(view),
+    map: projectMap(paid.length > 0 ? buildMap(workingProfile, answers) : view.map),
+    blocks: [...projectBlocks(view, blocks, latestJobs, disagreed), ...interludeBlocks],
+    doors: hidePaid ? withoutPaidDoors(projectDoors(view)) : paid.length > 0 ? sliceDoors() : projectDoors(view),
+    offer: hidePaid ? null : nextOffer ? toOfferDto(nextOffer) : null,
     // Порция добора идёт первой: после оплаты человек видит вопросы.
     // Кризис вопросов больше не задаёт: ответ уже дан, разбор не пишется.
     nextPortion: sliceCrisis ? null : (slicePortion ?? projectPortion(view, answered)),

@@ -29,20 +29,34 @@ const notice = (id: string, texts: string[], tone: PageNotice["tone"] = "rest"):
   tone,
 });
 
+const crisisNoticeFromPage = (page: PageStateDto): PageNotice | null => {
+  const crisis = page.crisis;
+  if (crisis !== null && crisis !== undefined) {
+    const texts =
+      crisis.publishable && crisis.texts.length > 0
+        ? crisis.texts.map((entry) => entry.text)
+        : [edgeTexts.crisis()];
+    return notice("crisis", texts, "crisis");
+  }
+  /**
+   * Моки витрины и старые ответы без поля `crisis`: ступень 4 закрыта, блока
+   * сюжета нет, предложения нет — показываем краевую строку из реестра.
+   */
+  const hasStep4 = page.blocks.some((block) => block.id === "step4");
+  if (page.state === "s4" && !hasStep4 && page.offer === null && page.nextPortion === null) {
+    return notice("crisis", [edgeTexts.crisis()], "crisis");
+  }
+  return null;
+};
+
 export function edgeNotice(page: PageStateDto, context: EdgeContext = {}): PageNotice | null {
   const hasStep4 = page.blocks.some((block) => block.id === "step4");
   const hasStep3 = page.blocks.some((block) => block.id === "step3");
   const failed = page.blocks.some((block) => block.generation?.status === "failed");
   const stale = page.blocks.some((block) => block.stale);
 
-  /**
-   * Кризис и слишком короткий открытый ответ на сервере выглядят одинаково:
-   * ступень 4 закрыта, блока сюжета нет, предложения нет. Отдельного поля
-   * в контракте нет — клиент честно говорит, что разбор не собирается.
-   */
-  if (page.state === "s4" && !hasStep4 && page.offer === null && page.nextPortion === null) {
-    return notice("crisis", [edgeTexts.crisis()], "crisis");
-  }
+  const crisisEdge = crisisNoticeFromPage(page);
+  if (crisisEdge) return crisisEdge;
   if (failed) return notice("generation-failed", [edgeTexts.generationFailed()]);
   if (context.paymentFailed === true) return notice("payment-failed", [edgeTexts.paymentFailed()]);
   if (context.offerDeclined === true) return notice("pay-declined", [edgeTexts.payDeclined()]);

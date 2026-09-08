@@ -99,6 +99,8 @@ test("кризисные признаки в L12: нет блока 4 и пре�
   const app = await openPage(t, server.origin, page.profileId);
   const state = app.session().page;
   assert.ok(state);
+  assert.ok(state.crisis, "поле crisis не пришло с сервера");
+  assert.equal(state.crisis?.place, "ladder");
   assert.equal(state.state, "s4");
   assert.equal(
     state.blocks.some((item) => item.id === "step4"),

@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { email, emailFooter, emailIds, emails, renderEmail } from "./emails.js";
+import { email, emailFooter, emailIds, emails, emailsAfterEvent, renderEmail } from "./emails.js";
 import { uiCopyIds } from "./ui-copy.js";
 import { scanTexts, describeHit } from "./forbidden.js";
 
@@ -19,6 +19,15 @@ const repoFile = (path: string): string => readFileSync(new URL(`../../${path}`,
 
 const all = emails();
 const bodies = all.flatMap((item) => item.body);
+
+test("в кризисном состоянии письма не отправляются", () => {
+  const crisisPage = { crisis: { place: "ladder", publishable: false, texts: [], contacts: [] } };
+  assert.deepEqual(emailsAfterEvent("slice_ready", crisisPage), []);
+  assert.deepEqual(emailsAfterEvent("page_link", crisisPage), []);
+  assert.deepEqual(emailsAfterEvent("receipt", crisisPage), []);
+  assert.deepEqual(emailsAfterEvent("refund", crisisPage), []);
+  assert.deepEqual(emailsAfterEvent("slice_ready", { crisis: null }), ["EMAIL_SLICE_READY"]);
+});
 
 test("написаны четыре письма маршрута", () => {
   assert.deepEqual(emailIds(), ["EMAIL_PAGE_LINK", "EMAIL_SLICE_READY", "EMAIL_RECEIPT", "EMAIL_REFUND"]);

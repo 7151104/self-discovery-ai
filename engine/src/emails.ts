@@ -37,6 +37,24 @@ const substitute = (text: string, id: string, params: EmailParams): string =>
     return String(params[name]);
   });
 
+/**
+ * Письма после события, если профиль не в кризисе. В кризисе — пусто: ни одно
+ * письмо не уходит, продающее в том числе (`content/crisis.md`, E9-06).
+ */
+export function emailsAfterEvent(
+  event: "slice_ready" | "page_link" | "receipt" | "refund",
+  page: { crisis?: unknown | null },
+): string[] {
+  if (page.crisis) return [];
+  const byEvent: Record<typeof event, string> = {
+    slice_ready: "EMAIL_SLICE_READY",
+    page_link: "EMAIL_PAGE_LINK",
+    receipt: "EMAIL_RECEIPT",
+    refund: "EMAIL_REFUND",
+  };
+  return [byEvent[event]];
+}
+
 /** Тема и абзацы тела с подставленными значениями. Подвал прибавляет отправитель. */
 export function renderEmail(id: string, params: EmailParams = {}): { subject: string; body: string[] } {
   const found = email(id);

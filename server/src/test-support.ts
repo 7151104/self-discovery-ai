@@ -10,7 +10,7 @@ import { loadConfig, type ServerConfig } from "./config.js";
 import type { Db } from "./db/driver.js";
 import { readMigrations, up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
-import { consentVersion as documentConsentVersion, rawContent } from "./engine.js";
+import { consentVersion as documentConsentVersion, rawContent, type SliceAnswers } from "./engine.js";
 import {
   abortInflightGenerations,
   createLlmRuntime,
@@ -160,6 +160,39 @@ export function answersForStep(step: 1 | 2 | 3 | 4): AnswerInput[] {
     });
 }
 
+/**
+ * Лестница демо-человека из `examples/demo-person-answers.md`.
+ * На первых вариантах вопросов карта после добора часто не меняется:
+ * полосы уже точные. У демо уточнение среза видно на карте.
+ */
+const DEMO_LADDER: Record<string, string | number> = {
+  L1: "B",
+  L2: "C",
+  L3: "A",
+  L4: "B",
+  L5: "D",
+  L6: 5,
+  L7: 2,
+  L8: "A",
+  L9: 5,
+  L10: 4,
+  L11: 4,
+};
+
+export function answersForDemoStep(step: 1 | 2 | 3 | 4): AnswerInput[] {
+  return rawContent.questions
+    .filter((question) => question.step === step)
+    .map((question): AnswerInput => {
+      if (question.type === "открытый") return { questionId: question.id, kind: "открытый", text: OPEN_ANSWER };
+      const value = DEMO_LADDER[question.id];
+      if (question.type === "шкала") {
+        const scale = Number(value ?? 4);
+        return { questionId: question.id, kind: "шкала", scale: scale as 1 | 2 | 3 | 4 | 5 };
+      }
+      return { questionId: question.id, kind: "выбор", option: String(value ?? question.options[0]?.key ?? "A") };
+    });
+}
+
 export const portionKey = (step: 1 | 2 | 3 | 4): PortionKey => `step:${step}`;
 
 /** Отпечаток текущего полного текста согласия — тот же, что запишет сервер. */
@@ -177,6 +210,19 @@ export const profileBody = (
 
 /** Профиль, доведённый до указанной ступени. */
 export async function profileAtStep(origin: string, step: 0 | 1 | 2 | 3 | 4): Promise<PageStateDto> {
+  return climbToStep(origin, step, answersForStep);
+}
+
+/** Профиль демо-человека на указанной ступени. */
+export async function profileAtDemo(origin: string, step: 0 | 1 | 2 | 3 | 4 = 4): Promise<PageStateDto> {
+  return climbToStep(origin, step, answersForDemoStep);
+}
+
+async function climbToStep(
+  origin: string,
+  step: 0 | 1 | 2 | 3 | 4,
+  answersOf: (step: 1 | 2 | 3 | 4) => AnswerInput[],
+): Promise<PageStateDto> {
   const created = await call<PageStateDto>(origin, "POST", "/api/profiles", profileBody());
   let page = created.body;
 
@@ -184,7 +230,7 @@ export async function profileAtStep(origin: string, step: 0 | 1 | 2 | 3 | 4): Pr
     const level = current as 1 | 2 | 3 | 4;
     const reply = await call<PageStateDto>(origin, "POST", `/api/p/${page.profileId}/portions`, {
       portion: portionKey(level),
-      answers: answersForStep(level),
+      answers: answersOf(level),
       requestId: `test-${level}`,
     });
     page = reply.body;
@@ -220,8 +266,12 @@ export interface PaidProfile {
  * Профиль с оплаченным срезом. Оплата идёт настоящим маршрутом: заказ,
  * уведомление провайдера, подпись — без денег, но и без обходных путей.
  */
-export async function purchaseSlice(origin: string, sliceId?: string): Promise<PaidProfile> {
-  const page = await profileAtStep(origin, 4);
+export async function purchaseSlice(
+  origin: string,
+  sliceId?: string,
+  from?: PageStateDto,
+): Promise<PaidProfile> {
+  const page = from ?? (await profileAtStep(origin, 4));
   const slice = sliceId ?? page.offer?.slice ?? "slice_node_finish";
 
   const order = await call<{ order: OrderDto }>(origin, "POST", `/api/p/${page.profileId}/orders`, {
@@ -246,6 +296,9 @@ export async function purchaseSlice(origin: string, sliceId?: string): Promise<P
 const referenceOf = (order: OrderDto): string =>
   order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "";
 
+const localSliceQuestionId = (slice: string, questionId: string): string =>
+  questionId.startsWith(`${slice}:`) ? questionId.slice(slice.length + 1) : questionId;
+
 /** Ответы одной порции добора: состав вопросов берётся из состояния страницы. */
 export const answersForPortion = (portion: PortionDto): AnswerInput[] =>
   portion.questions.map((question): AnswerInput => {
@@ -256,6 +309,29 @@ export const answersForPortion = (portion: PortionDto): AnswerInput[] =>
     if (question.kind === "число") return { questionId: question.id, kind: "число", numbers: [5, 2] };
     return { questionId: question.id, kind: "открытый", text: OPEN_ANSWER };
   });
+
+/** Ответы порции из эталона среза: порог проходится, следующее предложение берётся из таблицы. */
+export const answersForSliceFixture = (slice: string, portion: PortionDto, fixtures: SliceAnswers): AnswerInput[] =>
+  portion.questions.map((question): AnswerInput => {
+    const value = fixtures[localSliceQuestionId(slice, question.id)];
+    if (question.kind === "выбор") {
+      return { questionId: question.id, kind: "выбор", option: String(value ?? question.options[0]?.key ?? "A") };
+    }
+    if (question.kind === "шкала") {
+      const scale = Number(value ?? 4);
+      return { questionId: question.id, kind: "шкала", scale: scale as 1 | 2 | 3 | 4 | 5 };
+    }
+    if (question.kind === "число") {
+      const numbers = Array.isArray(value) ? value.map(Number) : typeof value === "number" ? [value] : [5, 2];
+      return { questionId: question.id, kind: "число", numbers };
+    }
+    return { questionId: question.id, kind: "открытый", text: String(value ?? OPEN_ANSWER) };
+  });
+
+const sliceOfPortion = (key: string): string | null => {
+  const match = /^slice:([^:]+):\d+$/.exec(key);
+  return match?.[1] ?? null;
+};
 
 /** Проходит все порции добора до конца. Возвращает состояние страницы после последней. */
 export async function answerSlicePortions(origin: string, profileId: string): Promise<PageStateDto> {
@@ -276,6 +352,32 @@ export async function answerSlicePortions(origin: string, profileId: string): Pr
 }
 
 /**
+ * Добор эталонными ответами среза: порог проходится, следующее предложение
+ * считается таблицей «Следующие двери», а не первыми вариантами вопроса.
+ */
+export async function answerSliceFixtures(origin: string, profileId: string, slice: string): Promise<PageStateDto> {
+  const { sliceAnswers } = (await import("../../engine/dist/slice-fixtures.js")) as {
+    sliceAnswers: (id: string) => SliceAnswers;
+  };
+  const fixtures = sliceAnswers(slice);
+  let page = (await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`)).body;
+
+  for (let guard = 0; guard < 5; guard += 1) {
+    const portion = page.nextPortion;
+    if (!portion || !portion.key.startsWith("slice:")) break;
+    const id = sliceOfPortion(portion.key) ?? slice;
+    const reply = await call<PageStateDto>(origin, "POST", `/api/p/${profileId}/portions`, {
+      portion: portion.key,
+      answers: answersForSliceFixture(id, portion, fixtures),
+      requestId: `portion-fixture-${portion.key}`,
+    });
+    page = reply.body;
+  }
+
+  return page;
+}
+
+/**
  * Профиль в платном состоянии.
  *
  * Оплата проходит целиком. После добора очередь ставит задание среза (E4-08).
@@ -283,6 +385,36 @@ export async function answerSlicePortions(origin: string, profileId: string): Pr
  * задание тем же содержимым: очередь в тестах контракта не крутится, а страница
  * должна показать `ready`, а не `pending` поверх уже записанного блока.
  */
+const STEP4_READY = {
+  heading: "Что у тебя сейчас происходит",
+  paragraphs: ["Ты описал остановку перед сдачей.", "Это тот же механизм, что виден в ответах про темп."],
+  highlight: "Незакрытое держит внимание сильнее закрытого.",
+};
+
+const SLICE_READY = {
+  heading: "Почему ты останавливаешься у финиша",
+  paragraphs: ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."],
+  highlight: "Обрыв у финиша — не лень, а способ не проверять результат.",
+};
+
+function deliverSlot(
+  db: Db,
+  profileId: string,
+  slot: "step4" | `slice:${string}`,
+  purchased: boolean,
+  text: { heading: string; paragraphs: string[]; highlight: string },
+): void {
+  saveBlockContent(db, profileId, { slot, profileVersion: 1, purchased, ...text });
+  const job = findActiveJob(db, profileId, slot);
+  if (job) saveJobResult(db, job, text);
+}
+
+/** Подставляет готовые тексты ступени 4 и среза: очередь в таких тестах не крутится. */
+export function deliverPaidReady(db: Db, profileId: string, slice: string): void {
+  deliverSlot(db, profileId, `slice:${slice}`, true, SLICE_READY);
+  deliverSlot(db, profileId, "step4", false, STEP4_READY);
+}
+
 export async function profileAtPaidState(
   origin: string,
   db: Db,
@@ -290,24 +422,9 @@ export async function profileAtPaidState(
 ): Promise<PageStateDto> {
   const paid = await purchaseSlice(origin);
   const profileId = paid.page.profileId;
-  await answerSlicePortions(origin, profileId);
+  await answerSliceFixtures(origin, profileId, paid.slice);
 
-  if (options.delivered) {
-    const slot = `slice:${paid.slice}` as const;
-    const heading = "Почему ты останавливаешься у финиша";
-    const paragraphs = ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."];
-    const highlight = "Обрыв у финиша — не лень, а способ не проверять результат.";
-    saveBlockContent(db, profileId, {
-      slot,
-      profileVersion: 1,
-      purchased: true,
-      heading,
-      paragraphs,
-      highlight,
-    });
-    const job = findActiveJob(db, profileId, slot);
-    if (job) saveJobResult(db, job, { heading, paragraphs, highlight });
-  }
+  if (options.delivered) deliverPaidReady(db, profileId, paid.slice);
 
   const state = await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`);
   return state.body;

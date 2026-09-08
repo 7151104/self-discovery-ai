@@ -20,14 +20,16 @@ test("лестница проходится с клавиатуры: Tab, стр
     startTestServer: () => Promise<{ origin: string; close: () => Promise<void> }>;
     answersForStep: (step: 1 | 2 | 3 | 4) => { questionId: string; kind: string; text?: string }[];
   }>("test-support.js");
-  const { createPageApp } = await web<{
+  const { createPageApp, firstQuestionControlSelector } = await web<{
     createPageApp: (host: ReturnType<typeof hostOf>) => PageApp;
+    firstQuestionControlSelector: (kind: string, questionId: string) => string;
   }>("src/app.js");
   const kit = await loadKit();
   const testServer = await support.startTestServer();
   t.after(() => testServer.close());
 
-  const app = createPageApp(hostOf(testServer.origin, "/"));
+  const host = hostOf(testServer.origin, "/");
+  const app = createPageApp(host);
   await app.start();
   app.consent(true);
   await app.intro("Аня", null);
@@ -41,7 +43,10 @@ test("лестница проходится с клавиатуры: Tab, стр
   const open = support.answersForStep(4).find((item) => item.kind === "открытый")?.text;
   assert.ok(open, "нет эталонного открытого ответа");
 
-  const walked = await walkLadder(app, kit, open);
+  const walked = await walkLadder(app, kit, open, {
+    selector: () => host.focus.selector,
+    expected: (question) => firstQuestionControlSelector(question.kind, question.id),
+  });
   assert.equal(walked.questions, 12, `отвечено ${walked.questions}, ждали 12`);
   assert.ok(walked.keys.includes("Tab"), "лестница пройдена без Tab");
   assert.ok(walked.keys.includes("ArrowRight"), "шкала не отвечена стрелкой");

@@ -74,6 +74,8 @@ export interface PageViewLabels {
     counterText: (state: { words: number }) => string;
     progress: (index: number, total: number) => string;
   };
+  /** Заголовок уточняющих: строка `UI_PAY_QUESTIONS` с числом вопросов. */
+  clarificationsTitle: (count: number) => string;
   wait: {
     title: (state: WaitState) => string;
     topics: (page: PageStateDto) => string | null;
@@ -130,6 +132,8 @@ const blockNote = (block: BlockDto, labels: PageViewLabels): string | null => {
   return block.purchased ? labels.block.diverged : labels.block.updated;
 };
 
+const isInterlude = (block: BlockDto): boolean => block.id.includes(":interlude");
+
 const blockActions = (page: PageStateDto, labels: PageViewLabels): BlockAction[] =>
   SHARE_FROM.has(page.state) ? labels.block.actions : labels.block.actions.filter((action) => action.id !== "share");
 
@@ -162,6 +166,7 @@ const portionLabels = (page: PageStateDto, labels: PageViewLabels, index: number
   openHint: labels.portion.openHint,
   openSubmit: labels.portion.openSubmit,
   counterText: (state) => labels.portion.counterText(state),
+  submitFromWords: page.nextPortion?.key.startsWith("slice:") ? 1 : undefined,
 });
 
 const renderNotices = (notice: PageNotice): VNode[] =>
@@ -270,7 +275,11 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       }
       return action;
     });
-    const visibleActions = picking ? blockActionsFor.filter((action) => action.id !== "disagree") : blockActionsFor;
+    const visibleActions = isInterlude(block)
+      ? []
+      : picking
+        ? blockActionsFor.filter((action) => action.id !== "disagree")
+        : blockActionsFor;
     const staleNote = blockNote(block, labels);
     const note = staleNote ?? (block.disagreed ? (labels.block.acknowledged ?? null) : null);
     children.push(
@@ -316,6 +325,19 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         onBack: options.onBack,
         onSubmit: options.onSubmit,
       }),
+    );
+  } else if ((page.clarifications?.questions.length ?? 0) > 0) {
+    const items = page.clarifications?.questions ?? [];
+    children.push(
+      h(
+        "section",
+        {
+          class: "block",
+          "data-clarifications": page.clarifications?.slice ?? "",
+        },
+        h("h2", { class: "block__heading" }, labels.clarificationsTitle(items.length)),
+        ...items.map((text) => h("p", { class: "block__paragraph" }, text)),
+      ),
     );
   } else if (!waiting && page.offer !== null && options.publicView !== true) {
     children.push(

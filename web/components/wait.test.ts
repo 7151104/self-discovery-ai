@@ -147,3 +147,20 @@ test("экран ожидания объявлен живой областью �
   // Форма будущего текста — украшение, скринридеру её читать незачем.
   assert.match(markup, /class="wait__shape" aria-hidden="true"/);
 });
+
+test("уточняющие после непройденного порога не превращаются в ожидание", () => {
+  const page: PageStateDto = {
+    ...pageStates.paidWaiting,
+    clarifications: { slice: "slice_node_finish", questions: ["follow-up"] },
+  };
+  assert.equal(waitFromPage(page, { now: at(page) }), null);
+});
+
+test("пока на экране порция добора, ожидание ступени 4 не показывается", () => {
+  const page: PageStateDto = {
+    ...pageStates.paidPending,
+    blocks: pageStates.s4Waiting.blocks,
+  };
+  assert.ok(page.nextPortion?.key.startsWith("slice:"));
+  assert.equal(waitFromPage(page, { now: at(page) }), null);
+});

@@ -146,6 +146,30 @@ test("числовой вопрос без options — одно поле с те
   assert.equal(findAll(node, "input").filter((item) => item.attrs["class"] === "portion__number-input").length, 1);
 });
 
+test("числовой вопрос несёт кнопку отправки, пока поля не заполнены — она выключена", () => {
+  const question = { id: "S10", kind: "число" as const, text: "T", options: [], scale: null };
+  const empty = portion({ question });
+  const submit = findAll(empty, "button").find((item) => item.attrs["class"] === "portion__submit");
+  assert.ok(submit);
+  assert.equal(submit.attrs["disabled"], true);
+
+  const ready = portion({ question, value: "8" });
+  const readySubmit = findAll(ready, "button").find((item) => item.attrs["class"] === "portion__submit");
+  assert.equal(Boolean(readySubmit?.attrs["disabled"]), false);
+  assert.ok(visibleText(ready).includes(portionTexts.openSubmit()));
+});
+
+test("на порции добора открытый ответ можно отправить с одного слова", () => {
+  const short = portion({
+    id: "slice:slice_node_finish:1",
+    question: openQuestion,
+    value: "слово",
+    labels: { ...labels(), submitFromWords: 1 },
+  });
+  const submit = findAll(short, "button").find((item) => item.attrs["class"] === "field__submit");
+  assert.equal(Boolean(submit?.attrs["disabled"]), false);
+});
+
 test("общее число вопросов лестницы на карточке заявить нечем", () => {
   const markup = renderToString(portion({ total: 3 }));
   assert.equal(markup.includes("из 12"), false);

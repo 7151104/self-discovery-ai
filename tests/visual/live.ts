@@ -41,6 +41,7 @@ type TestSupport = {
   answersForStep: (step: 1 | 2 | 3 | 4) => unknown[];
   answersForPortion: (portion: { key: string; questions: unknown[] }) => unknown[];
   answerSlicePortions: (origin: string, profileId: string) => Promise<PageStateDto>;
+  answerSliceFixtures: (origin: string, profileId: string, slice: string) => Promise<PageStateDto>;
   deliverWebhook: (
     origin: string,
     input: { kind: "payment.succeeded"; orderId: string; reference: string; amount: number },
@@ -120,7 +121,7 @@ async function deliverSlice(
 ): Promise<PageStateDto> {
   const paid = await pay(support, origin, page);
   const slice = paid.offer?.slice ?? page.offer?.slice ?? "slice_node_finish";
-  await support.answerSlicePortions(origin, paid.profileId);
+  await support.answerSliceFixtures(origin, paid.profileId, slice);
   // Ступень 4 тоже доводится до готовой: пока она в очереди, предложение скрыто,
   // и `paid_done` снимал бы не полную страницу, а ожидание.
   deliverBlock(store, db, paid.profileId, "step4", false, {

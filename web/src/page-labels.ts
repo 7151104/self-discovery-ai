@@ -67,9 +67,11 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
       scaleHint: portionTexts.scaleHint(),
       openHint: portionTexts.openTooShort(),
       openSubmit: portionTexts.openSubmit(),
-      counterText: (state) => portionTexts.counter(state, SUBMIT_FROM_WORDS),
+      counterText: (state) =>
+        portionTexts.counter(state, page.nextPortion?.key.startsWith("slice:") === true ? 1 : SUBMIT_FROM_WORDS),
       progress: portionTexts.progress,
     },
+    clarificationsTitle: (count) => offerTexts.questions(count),
     wait: {
       title: waitTexts.title,
       topics: waitTexts.topics,

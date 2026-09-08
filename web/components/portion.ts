@@ -42,6 +42,8 @@ export interface PortionLabels {
   openHint: string;
   openSubmit: string;
   counterText: (state: OpenFieldState) => string;
+  /** Порог кнопки открытого ответа. Нет — порог лестницы. */
+  submitFromWords?: number;
 }
 
 export interface PortionProps {
@@ -96,10 +98,14 @@ const numberValues = (value: PortionProps["value"], count: number): string[] => 
   return Array.from({ length: count }, (_, index) => parts[index] ?? "");
 };
 
+const numberFilled = (parts: string[]): boolean =>
+  parts.every((part) => part.trim() !== "" && Number.isFinite(Number(part.replace(",", ".").trim())));
+
 function renderNumber(props: PortionProps): VNode {
   const fields = numberFields(props.question);
   const values = numberValues(props.value, fields.length);
   const disabled = props.disabled === true;
+  const ready = numberFilled(values);
 
   return h(
     "div",
@@ -119,10 +125,29 @@ function renderNumber(props: PortionProps): VNode {
           name: id,
           value: values[index],
           disabled,
-          onInput: props.onAnswer,
+          onInput: (event) => {
+            const target = event.target as { value?: unknown } | null;
+            const value = target && typeof target.value === "string" ? target.value : "";
+            const next = [...values];
+            next[index] = value;
+            props.onAnswer?.({
+              ...event,
+              target: { ...(typeof target === "object" && target !== null ? target : {}), value: next.join(",") },
+            } as unknown as Event);
+          },
         }),
       );
     }),
+    h(
+      "button",
+      {
+        class: "portion__submit",
+        type: "button",
+        disabled: disabled || !ready,
+        onClick: props.onSubmit,
+      },
+      props.labels.openSubmit,
+    ),
   );
 }
 
@@ -153,6 +178,7 @@ function renderQuestion(props: PortionProps): VNode {
       disabled: props.disabled === true,
       onInput: props.onAnswer,
       onSubmit: props.onSubmit,
+      submitFromWords: labels.submitFromWords,
     });
   }
 

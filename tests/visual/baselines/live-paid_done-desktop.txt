@@ -306,23 +306,23 @@
         </button>
       </div>
     </article>
-    <section class="offer" data-slice="slice_decisions">
+    <section class="offer" data-slice="slice_decision_moment">
       <h2 class="offer__title">
-        Как тебе принимать решения
+        Разбор твоей развилки
       </h2>
       <p class="offer__promise">
-        Тебе тяжело от незакрытого, и ты сам его создаёшь. Десять вопросов, и разберём, по какому механизму ты на самом деле выбираешь, где он ломается и как выглядит решение, которое ты не будешь пересматривать полгода.
+        Я не скажу, что тебе выбрать — у меня нет твоих обстоятельств, и никто честный этого не скажет. Разберём другое: где именно ты ошибёшься в этом решении по своему устройству, что ты сейчас называешь взвешиванием, а что им не является, и как проверить свой вариант до того, как он станет необратимым.
       </p>
       <button class="offer__buy" type="button">
         <span class="offer__buy-label">
-          Открыть — 590 ₽
+          Открыть — 1490 ₽
         </span>
       </button>
       <p class="offer__contents">
-        Что внутри · механизм, по которому ты выбираешь · место, где он ломается · чем ты занят, пока решение стоит · как выглядит решение, которое ты не пересматриваешь
+        Что внутри · где ты ошибёшься в этом решении по своему устройству · что у тебя сейчас называется взвешиванием · признак ошибки, по которому это будет видно · точка невозврата твоего варианта
       </p>
       <button class="offer__decline" type="button">
-        Не сейчас — страница остаётся полной, а это решение от срока не зависит.
+        Не сейчас — разбор развилки остаётся доступным и до того, как ты выберешь, и после.
       </button>
       <p class="offer__one-door">
         Остальные двери сейчас без цен: на этом шаге открывается одна
@@ -391,6 +391,19 @@
           </span>
         </button>
       </li>
+      <li class="door" data-door="door_slice_decisions" data-state="open">
+        <button class="door__face" type="button">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Как тебе принимать решения
+            </span>
+            <span class="door__note">
+              открыто
+            </span>
+          </span>
+        </button>
+      </li>
       <li class="door" data-door="door_slice_motivation" data-state="locked_profiled">
         <div class="door__face" data-static="true">
           <span aria-hidden="true" class="door__mark"></span>
@@ -430,19 +443,19 @@
           </span>
         </div>
       </li>
-      <li class="door" data-door="offer_slice_decisions" data-state="offered">
+      <li class="door" data-door="offer_slice_decision_moment" data-state="offered">
         <button class="door__face" type="button">
           <span aria-hidden="true" class="door__mark"></span>
           <span class="door__body">
             <span class="door__title">
-              Как тебе принимать решения
+              Разбор твоей развилки
             </span>
             <span class="door__note">
               закрыто
             </span>
           </span>
           <span class="door__price">
-            Открыть — 590 ₽
+            Открыть — 1490 ₽
           </span>
         </button>
       </li>

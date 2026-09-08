@@ -129,6 +129,12 @@ test("кнопка включается ровно от пятнадцати с�
   assert.equal(fifteen.submitEnabled, true);
 });
 
+test("на доборе среза кнопка включается с одного слова", () => {
+  const one = openFieldState("слово", 1);
+  assert.equal(one.submitEnabled, true);
+  assert.equal(openFieldState("", 1).submitEnabled, false);
+});
+
 test("порог кнопки совпадает с порогом из content/questions-ladder.md", async () => {
   const engine = (await import(
     pathToFileURL(join(repoRoot, "engine/dist/index.js")).href

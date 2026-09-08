@@ -3,9 +3,9 @@
  * пробел активирует контроль. Браузера нет — события вызываются на тех же
  * обработчиках, которые `mount` повесил бы на DOM.
  *
- * После ответа живой клиент пересобирает дерево (`replaceChildren`), поэтому
- * фокус сбрасывается. Следующий вопрос начинается с Tab с начала страницы —
- * это честное поведение текущего клиента, не обход.
+ * После ответа клиент ставит фокус на первый контроль нового вопроса
+ * (`focusRoot`). Следующий вопрос начинается с этой точки, а не Tab'ом
+ * с начала страницы.
  */
 
 import type { Child, VNode } from "../visual/capture.js";
@@ -40,6 +40,11 @@ export type PageApp = {
   intro: (name: string, birthDate: string | null) => Promise<void>;
 };
 
+export type FocusTrack = {
+  selector: () => string | null;
+  expected: (question: Question) => string;
+};
+
 const fire = (node: VNode, name: string, extra: Record<string, unknown>): void => {
   const handler = node.attrs[name];
   if (typeof handler !== "function") {
@@ -62,11 +67,6 @@ const currentQuestion = (app: PageApp): Question | null => {
   return portion.questions[session.questionIndex] ?? null;
 };
 
-const isControl = (node: VNode, question: Question): boolean => {
-  if (question.kind === "открытый") return node.tag === "textarea" && node.attrs["id"] === question.id;
-  return node.attrs["type"] === "radio" && String(node.attrs["name"] ?? "") === question.id;
-};
-
 const radiosOf = (tree: Child, kit: Kit, name: string): VNode[] =>
   kit.focusable(tree).filter((node) => node.attrs["type"] === "radio" && String(node.attrs["name"] ?? "") === name);
 
@@ -82,9 +82,16 @@ export async function waitUntil(probe: () => boolean, message: string, ms = 8000
   throw new Error(message);
 }
 
-const tabTo = (app: PageApp, kit: Kit, keys: KeyName[], match: (node: VNode) => boolean, where: string): VNode => {
+const tabTo = (
+  app: PageApp,
+  kit: Kit,
+  keys: KeyName[],
+  match: (node: VNode) => boolean,
+  where: string,
+  from = 0,
+): VNode => {
   const stops = tabStops(app.tree(), kit);
-  for (let index = 0; index < stops.length; index += 1) {
+  for (let index = from; index < stops.length; index += 1) {
     keys.push("Tab");
     const node = stops[index];
     if (node && match(node)) return node;
@@ -92,10 +99,19 @@ const tabTo = (app: PageApp, kit: Kit, keys: KeyName[], match: (node: VNode) => 
   throw new Error(`Tab не дошёл: ${where}`);
 };
 
+const assertFocusOnQuestion = (question: Question, focus: FocusTrack): void => {
+  const expected = focus.expected(question);
+  const actual = focus.selector();
+  if (actual !== expected) {
+    throw new Error(`фокус «${actual}», ждали ${expected} (${question.id})`);
+  }
+};
+
 export async function walkLadder(
   app: PageApp,
   kit: Kit,
   openText: string,
+  focus: FocusTrack,
 ): Promise<{ keys: KeyName[]; questions: number }> {
   const keys: KeyName[] = [];
   let questions = 0;
@@ -105,9 +121,9 @@ export async function walkLadder(
     if (question === null) break;
     const beforeId = question.id;
     const beforeState = app.session().page?.state;
+    assertFocusOnQuestion(question, focus);
 
     if (question.kind === "открытый") {
-      tabTo(app, kit, keys, (node) => isControl(node, question), `поле ${question.id}`);
       const field = kit.findAll(app.tree(), "textarea").find((node) => node.attrs["id"] === question.id);
       if (!field) throw new Error(`нет поля ${question.id}`);
       fire(field, "onInput", { target: { value: openText } });
@@ -117,18 +133,26 @@ export async function walkLadder(
       if (!submit || submit.attrs["disabled"] === true) {
         throw new Error("кнопка отправки открытого ответа недоступна");
       }
-      tabTo(app, kit, keys, (node) => node === submit || classesOf(node).includes("field__submit"), "отправка открытого");
+      const fieldIndex = tabStops(app.tree(), kit).indexOf(field);
+      tabTo(
+        app,
+        kit,
+        keys,
+        (node) => node === submit || classesOf(node).includes("field__submit"),
+        "отправка открытого",
+        fieldIndex < 0 ? 0 : fieldIndex,
+      );
       fire(submit, "onClick", {});
       keys.push("Enter");
     } else if (question.kind === "шкала") {
-      tabTo(app, kit, keys, (node) => isControl(node, question), `шкала ${question.id}`);
       const group = radiosOf(app.tree(), kit, question.id);
       const next = group[1] ?? group[0];
       if (!next) throw new Error(`шкала ${question.id} без отметок`);
       keys.push("ArrowRight");
       fire(next, "onChange", { target: { value: String(next.attrs["value"] ?? "") } });
     } else {
-      const radio = tabTo(app, kit, keys, (node) => isControl(node, question), `выбор ${question.id}`);
+      const radio = radiosOf(app.tree(), kit, question.id)[0];
+      if (!radio) throw new Error(`выбор ${question.id} без вариантов`);
       keys.push(" ");
       fire(radio, "onChange", { target: { value: String(radio.attrs["value"] ?? "") } });
     }

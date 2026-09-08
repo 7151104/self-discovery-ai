@@ -18,6 +18,7 @@ export const reducedMotion = () => ({
 
 export const hostOf = (origin: string, pathname = "/") => {
   const location = { pathname };
+  const focus = { selector: null as string | null };
   return {
     location,
     origin,
@@ -28,5 +29,16 @@ export const hostOf = (origin: string, pathname = "/") => {
       },
     },
     motion: reducedMotion(),
+    focus,
+    focusRoot: {
+      querySelector: (selector: string) => {
+        if (!selector) return null;
+        return {
+          focus: () => {
+            focus.selector = selector;
+          },
+        };
+      },
+    },
   };
 };

@@ -397,6 +397,7 @@ function parseStep3() {
 // ── Платные срезы ─────────────────────────────────────────────────────────────
 
 const SLICE_TYPES = ["выбор", "шкала", "открытый", "число"];
+const SLICE_TABLE_HEADER = "ID|Вопрос|Тип|Коорд.|Варианты|Зачем в отчёте";
 
 /** Ячейка вариантов добора: `**A** сам нашёл · **B** позвали`, `как в S4` или «—». */
 function parseSliceOptions(cell, id) {
@@ -423,6 +424,7 @@ function parseSliceQuestions(file, body) {
   const out = [];
   let portion = 1;
   let inside = false;
+  let header = false;
 
   for (const line of body) {
     const heading = /^## (.+)$/.exec(line);
@@ -431,6 +433,7 @@ function parseSliceQuestions(file, body) {
       const numbered = /^Порция (\d)/.exec(section);
       inside = Boolean(numbered) || section.startsWith("Вопросы-доборы");
       if (numbered) portion = Number(numbered[1]);
+      header = false;
       continue;
     }
     if (!inside || !line.trim().startsWith("|")) continue;
@@ -438,7 +441,16 @@ function parseSliceQuestions(file, body) {
     const cells = tableRows([line])[0];
     if (!cells || cells.length !== 6) continue;
     const [id, text, type, coordinates, options, purpose] = cells;
+
+    // Шапка таблицы обязательна: без неё колонки читаются по счёту, а не по смыслу.
+    if (id === "ID") {
+      if (cells.join("|") !== SLICE_TABLE_HEADER)
+        throw new Error(`${file}: шапка таблицы вопросов — «${cells.join(" | ")}», ожидалась «${SLICE_TABLE_HEADER.split("|").join(" | ")}»`);
+      header = true;
+      continue;
+    }
     if (!/^S\d+$/.test(id)) continue;
+    if (!header) throw new Error(`${file} ${id}: вопрос записан до шапки таблицы`);
 
     if (!text || /\*\*|\||·/.test(text)) throw new Error(`${file} ${id}: в тексте вопроса осталась разметка`);
     if (!SLICE_TYPES.includes(type)) throw new Error(`${file} ${id}: неизвестный тип «${type}»`);
@@ -546,6 +558,15 @@ function parseSliceThreshold(file, body) {
   return { checks, followUps, entryMinWords };
 }
 
+/** Колонка «Координаты» в README: номера через запятую или «все 16». */
+function parseSliceCoordinates(cell) {
+  if (/^все 16$/.test(cell.trim())) return Array.from({ length: 16 }, (_, i) => i + 1);
+  const out = cell.split(",").map((n) => Number(n.trim()));
+  if (out.some((n) => !Number.isInteger(n) || n < 1 || n > 16))
+    throw new Error(`content/slices/README.md: не разобраны координаты «${cell}»`);
+  return out;
+}
+
 /** Таблица «Следующие двери»: условие текстом и один идентификатор среза. */
 function parseSliceDoors(file, body) {
   const start = body.findIndex((l) => l.startsWith("## Следующие двери"));
@@ -567,6 +588,20 @@ function parseSliceDoors(file, body) {
   return out;
 }
 
+/**
+ * Файлы срезов, объявленные в таблице, но ещё не написанные: строка
+ * «**Ещё не написан:** `файл` — …». Пометка обязательна и проверяется в обе
+ * стороны, чтобы «нет файла» не превращалось в тихо пропущенный срез.
+ */
+function parsePendingFiles(index) {
+  const out = new Map();
+  for (const line of index) {
+    const m = /^\*\*Ещё не написан:\*\*\s*`([^`]+)`\s*—\s*дверь «([^»]+)»/.exec(line.trim());
+    if (m) out.set(m[1], m[2]);
+  }
+  return out;
+}
+
 function parseSlices() {
   const index = lines(read("content/slices/README.md"));
   const start = index.findIndex((l) => l.startsWith("| Файл "));
@@ -574,10 +609,39 @@ function parseSlices() {
   const extraStart = index.findIndex((l) => l.startsWith("| slice_id "));
   if (extraStart < 0) throw new Error("content/slices/README.md: не найдена таблица срезов без доборов");
 
+  const pending = parsePendingFiles(index);
+  const written = new Set(readdirSync(join(root, "content/slices")).filter((f) => f.endsWith(".md")));
+  for (const file of pending.keys()) {
+    if (written.has(file))
+      throw new Error(`content/slices/${file} написан — убери пометку «Ещё не написан» из README`);
+  }
+
   const slices = [];
   for (const cells of tableAt(index, start)) {
     if (cells[0] === "Файл" || !cells[1]) continue;
     const file = unwrap(cells[0]);
+
+    // Срез объявлен, файла доборов ещё нет: дверь и цена известны, вопросов нет.
+    if (pending.has(file)) {
+      slices.push({
+        id: unwrap(cells[1]),
+        file: null,
+        plannedFile: file,
+        title: pending.get(file),
+        price: Number(cells[2]),
+        questionCount: cells[3],
+        coordinates: parseSliceCoordinates(cells[4]),
+        promise: "",
+        questions: [],
+        subtypes: [],
+        threshold: null,
+        nextDoors: [],
+      });
+      continue;
+    }
+    if (!written.has(file))
+      throw new Error(`content/slices/${file} не найден — если файла ещё нет, пометь его «Ещё не написан» в README`);
+
     const body = lines(read(`content/slices/${file}`));
 
     const h1 = body.find((l) => l.startsWith("# "));
@@ -603,10 +667,11 @@ function parseSlices() {
     slices.push({
       id: unwrap(cells[1]),
       file,
+      plannedFile: null,
       title: title[1],
       price: Number(cells[2]),
       questionCount: cells[3],
-      coordinates: cells[4].split(",").map((n) => Number(n.trim())).filter((n) => !Number.isNaN(n)),
+      coordinates: parseSliceCoordinates(cells[4]),
       promise: promise.join(" ").replace(/\s+/g, " ").trim(),
       questions,
       subtypes: parseSliceSubtypes(file, body),
@@ -620,6 +685,7 @@ function parseSlices() {
     slices.push({
       id: unwrap(cells[0]),
       file: null,
+      plannedFile: null,
       title: cells[2],
       price: Number(cells[1]),
       questionCount: cells[3],

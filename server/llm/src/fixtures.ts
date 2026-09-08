@@ -28,7 +28,7 @@ export const DEMO_ANSWERS: LadderAnswers = {
 
 /** Задание ступени 4 так, как его отдаёт движок. */
 export function demoTask(answers: LadderAnswers = DEMO_ANSWERS): LlmTask {
-  const task = buildPage(DEMO_PERSON, answers).llmTask;
+  const task = buildPage(DEMO_PERSON, answers).internal.llmTask;
   if (!task) throw new Error("fixtures: движок не отдал задание ступени 4");
   return task;
 }

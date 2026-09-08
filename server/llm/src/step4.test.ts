@@ -47,7 +47,7 @@ test("хороший ответ модели превращается в бло�
 test("сюжет закрывает координату 15, а невалидный выход её не касается", async () => {
   const before = buildPage(DEMO_PERSON, DEMO_ANSWERS);
   assert.ok(
-    unknownCoordinates(before.internalProfile).some((coordinate) => coordinate.id === 15),
+    unknownCoordinates(before.internal.profile).some((coordinate) => coordinate.id === 15),
     "до синтеза координата 15 пуста",
   );
 
@@ -57,12 +57,12 @@ test("сюжет закрывает координату 15, а невалидн
 
   const after = buildPage(DEMO_PERSON, DEMO_ANSWERS, { storyline: outcome.storyline });
   assert.ok(
-    !unknownCoordinates(after.internalProfile).some((coordinate) => coordinate.id === 15),
+    !unknownCoordinates(after.internal.profile).some((coordinate) => coordinate.id === 15),
     "сюжет обязан закрыть координату 15",
   );
-  assert.equal(after.internalProfile.coordinates[15]!.code, GOOD_STORYLINE.code);
-  assert.equal(after.internalProfile.coordinates[15]!.confidence, "medium");
-  assert.deepEqual(after.internalProfile.coordinates[15]!.sources, ["L12"]);
+  assert.equal(after.internal.profile.coordinates[15]!.code, GOOD_STORYLINE.code);
+  assert.equal(after.internal.profile.coordinates[15]!.confidence, "medium");
+  assert.deepEqual(after.internal.profile.coordinates[15]!.sources, ["L12"]);
 
   const broken = await run(answering(envelope({ storyline: { code: "НЕ КОД" } })));
   assert.equal(broken.ok, false, "невалидный сюжет обязан быть отклонён");
@@ -70,7 +70,7 @@ test("сюжет закрывает координату 15, а невалидн
 
   const untouched = buildPage(DEMO_PERSON, DEMO_ANSWERS);
   assert.ok(
-    unknownCoordinates(untouched.internalProfile).some((coordinate) => coordinate.id === 15),
+    unknownCoordinates(untouched.internal.profile).some((coordinate) => coordinate.id === 15),
     "отклонённый выход в профиль не пишется",
   );
 });

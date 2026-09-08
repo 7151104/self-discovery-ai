@@ -109,6 +109,19 @@ export interface SliceThreshold {
   blocked: string | null;
 }
 
+/**
+ * Три варианта «не согласен с этим» из docs/11-ui-page-spec.md. Формулировки те же,
+ * что видит человек: словарь один и для интерфейса, и для правил скоринга.
+ */
+export type DisagreementKind = "это не про меня" | "частично" | "слишком общо";
+
+/** Несогласие с блоком: данные, а не жалоба (content/scoring-rules.md). */
+export interface Disagreement {
+  /** Ступень блока, с которым человек не согласился. */
+  step: 1 | 2 | 3 | 4;
+  kind: DisagreementKind;
+}
+
 export interface Step0Input {
   name: string;
   /** ISO-дата. Можно не указывать: тогда карточки периода не будет. */
@@ -133,9 +146,12 @@ export interface Block {
   source: "lookup" | "llm";
 }
 
-/** Полоса визуальной карты. Значений и чисел наружу не отдаёт. */
+/**
+ * Полоса визуальной карты. Значений и чисел наружу не отдаёт, номера координаты —
+ * тем более: полоса опознаётся устойчивым ключом из docs/11-ui-page-spec.md.
+ */
 export interface MapBar {
-  coordinate: number;
+  key: string;
   label: string;
   poles: { low: string; high: string } | null;
   state: "empty" | "approximate" | "precise";
@@ -189,7 +205,11 @@ export interface Portion {
   questions: Question[];
 }
 
-export interface PageState {
+/**
+ * Всё, что уходит на клиент. Профиля, кодов координат и заданий для LLM здесь
+ * нет по устройству типа, а не по внимательности читающего (docs/11-ui-page-spec.md).
+ */
+export interface PageView {
   /** Последняя завершённая ступень. */
   step: 0 | 1 | 2 | 3 | 4;
   card: Step0Card | null;
@@ -199,7 +219,19 @@ export interface PageState {
   doors: Door[];
   offer: Offer | null;
   nextPortion: Portion | null;
+}
+
+/**
+ * Внутренняя половина состояния: наружу не отдаётся ни целиком, ни полем.
+ * Задание для LLM лежит здесь, потому что несёт профиль внутри себя.
+ */
+export interface PageInternals {
+  profile: Profile;
   llmTask: LlmTask | null;
-  /** Внутреннее. На клиент не отдаётся (docs/11-ui-page-spec.md). */
-  internalProfile: Profile;
+}
+
+/** Состояние страницы: публичная половина и внутренняя, без общих полей. */
+export interface PageState {
+  view: PageView;
+  internal: PageInternals;
 }

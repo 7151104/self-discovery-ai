@@ -586,7 +586,7 @@ export function generationStatus(context: Context, params: Record<string, string
 /** Пересчёт профиля: новая версия и снимок. Возвращает номер версии. */
 function revise(context: Context, profile: ProfileRecord, reason: "portion" | "answer_edit"): number {
   const { internal } = assemble({ db: context.db, profile, publicOrigin: context.config.publicOrigin });
-  return recordProfileVersion(context.db, profile.profileId, reason, internal.internalProfile);
+  return recordProfileVersion(context.db, profile.profileId, reason, internal.internal.profile);
 }
 
 /** Состояние страницы по свежей записи профиля: версия и время уже обновлены. */

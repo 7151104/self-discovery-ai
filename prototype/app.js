@@ -341,18 +341,19 @@ function renderRoute(doors) {
 }
 
 function renderInternal(page) {
+  const { profile, llmTask } = page.internal;
   const summary = {
-    step: page.step,
-    dominant_node: page.internalProfile.dominantNode,
-    next_paid_offer: page.internalProfile.nextPaidOffer,
-    flags: page.internalProfile.flags,
-    nodes: page.internalProfile.nodes.map((node) => `${node.id} (priority ${node.priority})`),
-    coordinates: Object.values(page.internalProfile.coordinates).map((coordinate) =>
+    ступень: page.view.step,
+    главный_узел: profile.dominantNode,
+    следующее_предложение: profile.nextPaidOffer,
+    флаги: profile.flags,
+    сработавшие_узлы: profile.nodes.map((node) => `${node.id} · ${node.priority}`),
+    координаты: Object.values(profile.coordinates).map((coordinate) =>
       coordinate.sources.length
         ? `${coordinate.id} ${coordinate.name}: ${coordinate.value} · ${coordinate.confidence} · ${coordinate.sources.join(", ")}`
         : `${coordinate.id} ${coordinate.name}: closed`,
     ),
-    llm_task: page.llmTask ? `${page.llmTask.prompt.slice(0, 160)}…` : null,
+    задание_LLM: llmTask ? `${llmTask.prompt.slice(0, 160)}…` : null,
   };
   return el("pre", "internal", JSON.stringify(summary, null, 2));
 }
@@ -366,17 +367,18 @@ function render() {
   }
 
   const page = buildPage(state.person, state.answers);
-  const parts = [renderHead(page.card)];
+  const view = page.view;
+  const parts = [renderHead(view.card)];
 
-  if (page.hook) parts.push(el("section", "hook", page.hook));
-  parts.push(renderMap(page.map));
+  if (view.hook) parts.push(el("section", "hook", view.hook));
+  parts.push(renderMap(view.map));
 
-  for (const block of page.blocks) parts.push(renderBlock(block));
+  for (const block of view.blocks) parts.push(renderBlock(block));
 
-  if (page.nextPortion) parts.push(renderPortion(page.nextPortion));
-  if (page.offer && !state.offerDeclined) parts.push(renderOffer(page.offer, page.card.name));
+  if (view.nextPortion) parts.push(renderPortion(view.nextPortion));
+  if (view.offer && !state.offerDeclined) parts.push(renderOffer(view.offer, view.card.name));
 
-  parts.push(renderRoute(page.doors));
+  parts.push(renderRoute(view.doors));
   if (state.internal) parts.push(renderInternal(page));
 
   app.replaceChildren(...parts);

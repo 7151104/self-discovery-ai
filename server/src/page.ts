@@ -25,7 +25,7 @@ import type {
 } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
 import { BAR_DEFINITIONS, buildPage, rawContent } from "./engine.js";
-import type { LadderAnswers, MapBar, PageState } from "./engine.js";
+import type { LadderAnswers, MapBar, PageState, PageView } from "./engine.js";
 import {
   ensureBlock,
   findActiveShareToken,
@@ -38,28 +38,6 @@ import {
   type ProfileRecord,
 } from "./store.js";
 
-/**
- * Устойчивые ключи полос карты. Номер координаты клиенту не отдаётся, но полосу
- * надо чем-то опознавать между запросами — этим ключом.
- * Состав полос задан таблицей в `docs/11-ui-page-spec.md`.
- *
- * ВРЕМЕННО. Таблица дублирует состав `BAR_DEFINITIONS` из движка и живёт здесь
- * только потому, что движок отдаёт полосу вместе с номером координаты
- * (`MapBar.coordinate`). Когда движок начнёт отдавать ключ полосы сам, эта
- * таблица и функция `barKey` уходят, а проекция берёт ключ из полосы.
- */
-const BAR_IDS: Record<number, string> = {
-  2: "tempo",
-  11: "completion",
-  9: "pressure",
-  8: "trigger",
-  3: "attention",
-  5: "structure",
-  7: "holding",
-};
-
-/** Ключи для всех полос, которые отдаёт движок. Проверяется тестом. */
-export const barKey = (coordinate: number): string => BAR_IDS[coordinate] ?? `bar_${coordinate}`;
 
 /** Ответы из базы в форму, которую понимает движок. */
 export function toLadderAnswers(records: AnswerRecord[]): LadderAnswers {
@@ -111,7 +89,7 @@ const sliceQuestion = (slice: string, questionId: string) =>
 
 const projectMap = (bars: MapBar[]): MapBarDto[] =>
   bars.map((bar) => ({
-    id: barKey(bar.coordinate),
+    id: bar.key,
     label: bar.label,
     poles: bar.poles,
     fill: bar.state,
@@ -120,7 +98,7 @@ const projectMap = (bars: MapBar[]): MapBarDto[] =>
     hint: bar.hint,
   }));
 
-const projectDoors = (page: PageState): DoorDto[] =>
+const projectDoors = (page: PageView): DoorDto[] =>
   page.doors.map((door) => ({
     id: door.id,
     title: door.title,
@@ -129,7 +107,7 @@ const projectDoors = (page: PageState): DoorDto[] =>
     slice: door.slice,
   }));
 
-const projectOffer = (page: PageState): OfferDto | null =>
+const projectOffer = (page: PageView): OfferDto | null =>
   page.offer
     ? {
         slice: page.offer.slice,
@@ -140,7 +118,7 @@ const projectOffer = (page: PageState): OfferDto | null =>
       }
     : null;
 
-const projectPortion = (page: PageState, answered: Set<string>): PortionDto | null =>
+const projectPortion = (page: PageView, answered: Set<string>): PortionDto | null =>
   page.nextPortion
     ? {
         key: `step:${page.nextPortion.step}`,
@@ -198,7 +176,7 @@ function projectSlicePortion(slice: string, answered: Set<string>): PortionDto |
   return null;
 }
 
-function projectBlocks(page: PageState, stored: BlockRecord[], disagreed: Set<string>): BlockDto[] {
+function projectBlocks(page: PageView, stored: BlockRecord[], disagreed: Set<string>): BlockDto[] {
   const bySlot = new Map(stored.map((block) => [block.slot, block]));
   const blocks: BlockDto[] = [];
 
@@ -253,7 +231,7 @@ function projectBlocks(page: PageState, stored: BlockRecord[], disagreed: Set<st
   return blocks;
 }
 
-function stateName(step: PageState["step"], stored: BlockRecord[], paidSlices: string[]): PageStateName {
+function stateName(step: PageView["step"], stored: BlockRecord[], paidSlices: string[]): PageStateName {
   if (paidSlices.length) {
     const done = paidSlices.every((slice) =>
       stored.some((block) => block.slot === `slice:${slice}` && block.status === "ready"),
@@ -291,17 +269,18 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     answers,
     { profileId: profile.profileId },
   );
+  const view = enginePage.view;
 
   // Ступень 4 пишет LLM (E4). Запись блока заводится сразу, чтобы у клиента
   // с первого запроса был идентификатор генерации, за которым он следит.
-  if (enginePage.llmTask) {
+  if (enginePage.internal.llmTask) {
     ensureBlock(db, profile.profileId, {
       slot: "step4",
       profileVersion: profile.version,
       status: "pending",
       origin: "llm",
       purchased: false,
-      heading: enginePage.blocks[enginePage.blocks.length - 1]?.heading ?? "",
+      heading: view.blocks[view.blocks.length - 1]?.heading ?? "",
       paragraphs: [],
       highlight: null,
     });
@@ -349,21 +328,21 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   const page: PageStateDto = {
     profileId: profile.profileId,
     url: pageUrl(options.publicOrigin, profile.profileId),
-    state: stateName(enginePage.step, blocks, paid),
+    state: stateName(view.step, blocks, paid),
     card: {
-      name: enginePage.card?.name ?? profile.name,
-      season: enginePage.card?.season ?? null,
-      theme: enginePage.card?.theme ?? null,
-      metaphor: enginePage.card?.metaphor ?? null,
-      cta: enginePage.card?.cta ?? "",
+      name: view.card?.name ?? profile.name,
+      season: view.card?.season ?? null,
+      theme: view.card?.theme ?? null,
+      metaphor: view.card?.metaphor ?? null,
+      cta: view.card?.cta ?? "",
     },
-    hook: enginePage.hook,
-    map: projectMap(enginePage.map),
-    blocks: projectBlocks(enginePage, blocks, disagreed),
-    doors: projectDoors(enginePage),
-    offer: projectOffer(enginePage),
+    hook: view.hook,
+    map: projectMap(view.map),
+    blocks: projectBlocks(view, blocks, disagreed),
+    doors: projectDoors(view),
+    offer: projectOffer(view),
     // Порция добора идёт первой: после оплаты человек видит вопросы.
-    nextPortion: slicePortion ?? projectPortion(enginePage, answered),
+    nextPortion: slicePortion ?? projectPortion(view, answered),
     share: share ? { url: shareUrl(options.publicOrigin, share.token), createdAt: share.createdAt } : null,
     updatedAt: profile.updatedAt,
   };

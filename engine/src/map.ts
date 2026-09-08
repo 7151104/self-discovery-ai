@@ -11,6 +11,9 @@ import { barCopy, uiCopy } from "./ui-copy.js";
 import type { Band, LadderAnswers, MapBar, Profile } from "./types.js";
 
 interface BarDefinition {
+  /** Устойчивый ключ полосы: им её опознаёт клиент вместо номера координаты. */
+  key: string;
+  /** Внутреннее: какая координата питает полосу. Наружу не выходит. */
   coordinate: number;
   label: string;
   poles: { low: string; high: string } | null;
@@ -21,19 +24,19 @@ interface BarDefinition {
 }
 
 /** Состав полос — код, подписи — реестр микрокопии (`content/ui-copy.md`). */
-const bar = (coordinate: number, invert = false): BarDefinition => {
+const bar = (key: string, coordinate: number, invert = false): BarDefinition => {
   const copy = barCopy(coordinate);
-  return { coordinate, label: copy.label, poles: copy.poles, invert, hint: copy.empty };
+  return { key, coordinate, label: copy.label, poles: copy.poles, invert, hint: copy.empty };
 };
 
 export const BAR_DEFINITIONS: BarDefinition[] = [
-  bar(2),
-  bar(11),
-  bar(9),
-  bar(8),
-  bar(3),
-  bar(5, true),
-  bar(7),
+  bar("tempo", 2),
+  bar("completion", 11),
+  bar("pressure", 9),
+  bar("trigger", 8),
+  bar("attention", 3),
+  bar("structure", 5, true),
+  bar("holding", 7),
 ];
 
 const POSITION: Record<Band, number> = { low: 0.08, "mid-low": 0.3, mid: 0.5, "mid-high": 0.72, high: 0.92 };
@@ -48,7 +51,7 @@ export function buildMap(profile: Profile, answers: LadderAnswers): MapBar[] {
 
     if (!coordinate || !known) {
       return {
-        coordinate: definition.coordinate,
+        key: definition.key,
         label: definition.label,
         poles: definition.poles,
         state: "empty" as const,
@@ -69,7 +72,7 @@ export function buildMap(profile: Profile, answers: LadderAnswers): MapBar[] {
         };
 
     return {
-      coordinate: definition.coordinate,
+      key: definition.key,
       label: definition.label,
       poles: definition.poles,
       state: coordinate.confidence === "high" ? ("precise" as const) : ("approximate" as const),

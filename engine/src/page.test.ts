@@ -47,78 +47,91 @@ test("порции идут по 3 и 4 вопроса и несут подво�
 
 test("ступени 1–3 собираются без LLM и без предложения купить", () => {
   for (const answers of [step1, step2, step3]) {
-    const page = buildPage(person, answers);
-    assert.ok(page.blocks.every((block) => block.source === "lookup"), "на ступенях 1–3 не должно быть LLM-блоков");
-    assert.equal(page.llmTask, null);
-    assert.equal(page.offer, null, "платное предложение появляется только после ступени 4");
-    assert.ok(page.nextPortion, "должна быть следующая порция");
+    const { view, internal } = buildPage(person, answers);
+    assert.ok(view.blocks.every((block) => block.source === "lookup"), "на ступенях 1–3 не должно быть LLM-блоков");
+    assert.equal(internal.llmTask, null);
+    assert.equal(view.offer, null, "платное предложение появляется только после ступени 4");
+    assert.ok(view.nextPortion, "должна быть следующая порция");
   }
 });
 
 test("страница растёт по ступеням, карта заполняется постепенно", () => {
   const filled = (answers: LadderAnswers): number =>
-    buildPage(person, answers).map.filter((bar) => bar.state !== "empty").length;
+    buildPage(person, answers).view.map.filter((bar) => bar.state !== "empty").length;
 
-  assert.equal(buildPage(person, {}).blocks.length, 0);
+  assert.equal(buildPage(person, {}).view.blocks.length, 0);
   assert.equal(filled({}), 0);
-  assert.equal(buildPage(person, step1).blocks.length, 1);
+  assert.equal(buildPage(person, step1).view.blocks.length, 1);
   assert.equal(filled(step1), 3);
-  assert.equal(buildPage(person, step2).blocks.length, 2);
+  assert.equal(buildPage(person, step2).view.blocks.length, 2);
   assert.equal(filled(step2), 5);
-  assert.equal(buildPage(person, step3).blocks.length, 3);
+  assert.equal(buildPage(person, step3).view.blocks.length, 3);
   assert.equal(filled(step3), 7);
 });
 
 test("ступень 1 даёт три абзаца и фразу-сшивку из матрицы", () => {
-  const block = buildPage(person, step1).blocks[0]!;
+  const block = buildPage(person, step1).view.blocks[0]!;
   assert.equal(block.paragraphs.length, 3);
   assert.ok(block.highlight?.startsWith("Ты тащишь один"), "пара B×C при L3=A должна выбрать самую точную строку");
 });
 
 test("ступень 2 добавляет цену силы", () => {
-  const block = buildPage(person, step2).blocks[1]!;
+  const block = buildPage(person, step2).view.blocks[1]!;
   assert.equal(block.paragraphs.length, 4);
   assert.ok(block.highlight?.includes("возможности раньше других"));
 });
 
 test("ступень 3 показывает ровно один узел, остальные становятся дверями", () => {
-  const page = buildPage(person, step3);
-  const block = page.blocks[2]!;
+  const { view } = buildPage(person, step3);
+  const block = view.blocks[2]!;
   assert.equal(block.paragraphs.length, 1);
 
-  const paidDoors = page.doors.filter((door) => door.state === "paid");
+  const paidDoors = view.doors.filter((door) => door.state === "paid");
   assert.ok(paidDoors.length >= 3, "несработавшие узлы должны стать закрытыми дверями");
   assert.ok(paidDoors.every((door) => door.price === null), "до оффера цены не показываем");
-  assert.ok(page.doors.some((door) => door.state === "opens_with_answers"), "хотя бы одна дверь открывается ответами");
+  assert.ok(view.doors.some((door) => door.state === "opens_with_answers"), "хотя бы одна дверь открывается ответами");
 });
 
 test("после ступени 4 появляется одно платное предложение с ценой", () => {
-  const page = buildPage(person, step4);
+  const { view, internal } = buildPage(person, step4);
 
-  assert.ok(page.llmTask, "ступень 4 отдаёт задание LLM, а не готовый текст");
-  assert.equal(page.llmTask?.input.node?.id, "NODE_FINISH_FEAR");
-  assert.equal(page.offer?.slice, "slice_node_finish");
-  assert.equal(page.offer?.price, 590);
+  assert.ok(internal.llmTask, "ступень 4 отдаёт задание LLM, а не готовый текст");
+  assert.equal(internal.llmTask?.input.node?.id, "NODE_FINISH_FEAR");
+  assert.equal(view.offer?.slice, "slice_node_finish");
+  assert.equal(view.offer?.price, 590);
 
-  const priced = page.doors.filter((door) => door.price !== null);
+  const priced = view.doors.filter((door) => door.price !== null);
   assert.equal(priced.length, 1, "на первом шаге оплаты видна одна цена");
-  assert.equal(page.nextPortion, null);
+  assert.equal(view.nextPortion, null);
 });
 
 test("короткий открытый ответ не даёт ни блока, ни оффера", () => {
-  const page = buildPage(person, { ...step3, L12: "Всё повторяется." });
-  assert.equal(page.llmTask, null);
-  assert.equal(page.offer, null);
-  assert.ok(page.blocks.every((block) => block.step !== 4));
+  const { view, internal } = buildPage(person, { ...step3, L12: "Всё повторяется." });
+  assert.equal(internal.llmTask, null);
+  assert.equal(view.offer, null);
+  assert.ok(view.blocks.every((block) => block.step !== 4));
 });
 
 test("на клиент уходят блоки и полосы, значения координат наружу не идут", () => {
-  const page = buildPage(person, step3);
-  for (const bar of page.map) {
+  const { view } = buildPage(person, step3);
+  for (const bar of view.map) {
     assert.ok(!("value" in bar), "полоса не должна нести значение координаты");
+    assert.ok(!("coordinate" in bar), "номер координаты наружу не уходит");
+    assert.ok(bar.key.length > 0, "полоса опознаётся устойчивым ключом");
     assert.ok(bar.position === null || (bar.position >= 0 && bar.position <= 1));
   }
-  const serialized = JSON.stringify(page.map) + JSON.stringify(page.blocks);
+  const serialized = JSON.stringify(view.map) + JSON.stringify(view.blocks);
   assert.ok(!serialized.includes("confidence"), "confidence — внутреннее поле");
   assert.ok(!serialized.includes("at_80"), "машинные коды координат наружу не выводятся");
+});
+
+test("публичная половина состояния не содержит ни профиля, ни задания LLM", () => {
+  const { view } = buildPage(person, step4);
+  const serialized = JSON.stringify(view);
+
+  assert.ok(!("internal" in view), "внутреннее живёт отдельной структурой, а не полем вида");
+  assert.ok(!serialized.includes("coordinates"), "профиль в публичную половину не попадает");
+  assert.ok(!serialized.includes("profileId"));
+  assert.ok(!serialized.includes("dominantNode"));
+  assert.ok(!serialized.includes("self_report_mismatch"), "флаги наружу не уходят");
 });

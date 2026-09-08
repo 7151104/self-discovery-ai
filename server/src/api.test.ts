@@ -6,7 +6,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { DEFAULTS, loadConfig } from "./config.js";
 import { BAR_DEFINITIONS, rawContent } from "./engine.js";
-import { barKey } from "./page.js";
 import { matchApi, matchPage } from "./http/router.js";
 import { answersForStep, call, latestMigration, portionKey, profileAtStep, startTestServer } from "./test-support.js";
 import { countProfileVersions, listEvents } from "./store.js";
@@ -54,7 +53,7 @@ test("маршрутизатор строится из реестра контр
 });
 
 test("у каждой полосы карты есть устойчивый ключ, номер координаты наружу не идёт", () => {
-  const keys = BAR_DEFINITIONS.map((definition) => barKey(definition.coordinate));
+  const keys = BAR_DEFINITIONS.map((definition) => definition.key);
   assert.equal(new Set(keys).size, BAR_DEFINITIONS.length);
   for (const key of keys) assert.ok(/^[a-z]+$/.test(key), `ключ полосы «${key}» похож на номер координаты`);
 });

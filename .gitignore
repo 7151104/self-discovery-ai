@@ -24,6 +24,9 @@ server/.data/
 # Сгенерировано из content/*.md сборщиком (npm run build:content)
 engine/src/generated/
 
+# Сгенерировано из content/ui-copy.md сборкой клиента (npm run build:web)
+web/src/generated/
+
 # Dependencies (when code appears)
 node_modules/
 dist/

@@ -11,191 +11,205 @@
       <h1 class="head__name">
         Аня
       </h1>
+      <p class="head__link">
+        Страница живёт по ссылке /p/«профиль». Сохрани её — вернёшься на то же место.
+      </p>
     </header>
     <p class="page__notice" data-edge="no-date" data-tone="rest">
       Дата не введена, поэтому карточки периода нет. На разбор это не влияет
     </p>
-    <p class="hook">
+    <p class="hook" data-empty="false">
       Тебе физически тяжело от незакрытого — и ты сам его создаёшь.
     </p>
-    <ul aria-label="Карта" class="map">
-      <li class="bar" data-animate="off" data-bar="tempo" data-fill="approximate" data-kind="axis">
-        <span class="visually-hidden">
-          Темп: сильный перевес — ровный поток. Пока предположение
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Темп
+    <section aria-label="Карта" class="map">
+      <p class="section-title">
+        Карта
+      </p>
+      <p class="section-note">
+        Здесь семь полос. Остальное закрыто и видно ниже, дверями
+      </p>
+      <ul class="map__bars">
+        <li class="bar" data-animate="off" data-bar="tempo" data-fill="approximate" data-kind="axis">
+          <span class="visually-hidden">
+            Темп: сильный перевес — ровный поток. Пока предположение
           </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="far-low"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            ровный поток
-          </span>
-          <span class="bar__pole">
-            импульсы
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="off" data-bar="completion" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Доведение: сильный перевес — обрыв. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Доведение
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="far-high"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            до конца
-          </span>
-          <span class="bar__pole">
-            обрыв
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="off" data-bar="pressure" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Под давлением: сильный перевес — ускорение. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Под давлением
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="far-high"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            замирание
-          </span>
-          <span class="bar__pole">
-            ускорение
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="off" data-bar="trigger" data-fill="precise" data-kind="category">
-        <span class="visually-hidden">
-          Что задевает: когда меня не воспринимают всерьёз. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Что задевает
-          </span>
-        </div>
-        <ul class="bar__dots">
-          <li class="bar__dot" data-selected="true">
-            <span class="visually-hidden">
-              когда меня не воспринимают всерьёз
+          <div class="bar__row">
+            <span class="bar__label">
+              Темп
             </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда я теряю контроль над ситуацией
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="far-low"></span>
             </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда меня отвергают
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              ровный поток
             </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда я оказываюсь ненужным
+            <span class="bar__pole">
+              импульсы
             </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда я оказываюсь неправ
+          </div>
+        </li>
+        <li class="bar" data-animate="off" data-bar="completion" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Доведение: сильный перевес — обрыв. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Доведение
             </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда меня ограничивают
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="far-high"></span>
             </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда всё оказывается бессмысленным
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              до конца
             </span>
-          </li>
-        </ul>
-        <p class="bar__selected">
-          когда меня не воспринимают всерьёз
-        </p>
-      </li>
-      <li class="bar" data-animate="off" data-bar="attention" data-fill="approximate" data-kind="axis">
-        <span class="visually-hidden">
-          Внимание: сильный перевес — конкретика. Пока предположение
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Внимание
+            <span class="bar__pole">
+              обрыв
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="off" data-bar="pressure" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Под давлением: сильный перевес — ускорение. Точно
           </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="far-low"></span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Под давлением
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="far-high"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              замирание
+            </span>
+            <span class="bar__pole">
+              ускорение
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="off" data-bar="trigger" data-fill="precise" data-kind="category">
+          <span class="visually-hidden">
+            Что задевает: когда меня не воспринимают всерьёз. Точно
           </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            конкретика
+          <div class="bar__row">
+            <span class="bar__label">
+              Что задевает
+            </span>
+          </div>
+          <ul class="bar__dots">
+            <li class="bar__dot" data-selected="true">
+              <span class="visually-hidden">
+                когда меня не воспринимают всерьёз
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда я теряю контроль над ситуацией
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда меня отвергают
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда я оказываюсь ненужным
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда я оказываюсь неправ
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда меня ограничивают
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда всё оказывается бессмысленным
+              </span>
+            </li>
+          </ul>
+          <p class="bar__selected">
+            когда меня не воспринимают всерьёз
+          </p>
+        </li>
+        <li class="bar" data-animate="off" data-bar="attention" data-fill="approximate" data-kind="axis">
+          <span class="visually-hidden">
+            Внимание: сильный перевес — конкретика. Пока предположение
           </span>
-          <span class="bar__pole">
-            связи
+          <div class="bar__row">
+            <span class="bar__label">
+              Внимание
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="far-low"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              конкретика
+            </span>
+            <span class="bar__pole">
+              связи
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="off" data-bar="structure" data-fill="approximate" data-kind="axis">
+          <span class="visually-hidden">
+            Структура: посередине, без перевеса. Пока предположение
           </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="off" data-bar="structure" data-fill="approximate" data-kind="axis">
-        <span class="visually-hidden">
-          Структура: посередине, без перевеса. Пока предположение
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Структура
+          <div class="bar__row">
+            <span class="bar__label">
+              Структура
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="center"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              определённость
+            </span>
+            <span class="bar__pole">
+              открытый финал
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="off" data-bar="holding" data-fill="approximate" data-kind="axis">
+          <span class="visually-hidden">
+            Удержание: сильный перевес — держит долго. Пока предположение
           </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="center"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            определённость
-          </span>
-          <span class="bar__pole">
-            открытый финал
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="off" data-bar="holding" data-fill="approximate" data-kind="axis">
-        <span class="visually-hidden">
-          Удержание: сильный перевес — держит долго. Пока предположение
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Удержание
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="far-high"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            отпускает
-          </span>
-          <span class="bar__pole">
-            держит долго
-          </span>
-        </div>
-      </li>
-    </ul>
+          <div class="bar__row">
+            <span class="bar__label">
+              Удержание
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="far-high"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              отпускает
+            </span>
+            <span class="bar__pole">
+              держит долго
+            </span>
+          </div>
+        </li>
+      </ul>
+    </section>
+    <p class="section-title">
+      Разбор
+    </p>
     <article class="block" data-block="step1" data-enter="off" data-state="rest">
       <h2 class="block__heading">
         Как ты работаешь
@@ -278,115 +292,120 @@
         <span class="wait__line" data-line="last"></span>
       </div>
     </section>
-    <ul aria-label="Маршрут" class="route">
-      <li class="door" data-door="block_1" data-state="open">
-        <button class="door__face" type="button">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Как ты работаешь
+    <section aria-label="Маршрут" class="route">
+      <h2 class="section-title">
+        Маршрут
+      </h2>
+      <ul class="route__doors">
+        <li class="door" data-door="block_1" data-state="open">
+          <button class="door__face" type="button">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Как ты работаешь
+              </span>
+              <span class="door__note">
+                открыто
+              </span>
             </span>
-            <span class="door__note">
-              открыто
+          </button>
+        </li>
+        <li class="door" data-door="block_2" data-state="open">
+          <button class="door__face" type="button">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Как ты обрабатываешь и как тебя задевает
+              </span>
+              <span class="door__note">
+                открыто
+              </span>
             </span>
-          </span>
-        </button>
-      </li>
-      <li class="door" data-door="block_2" data-state="open">
-        <button class="door__face" type="button">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Как ты обрабатываешь и как тебя задевает
+          </button>
+        </li>
+        <li class="door" data-door="block_3" data-state="open">
+          <button class="door__face" type="button">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Где ты сам себе мешаешь
+              </span>
+              <span class="door__note">
+                открыто
+              </span>
             </span>
-            <span class="door__note">
-              открыто
+          </button>
+        </li>
+        <li class="door" data-door="block_4" data-state="open">
+          <button class="door__face" type="button">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Твой повторяющийся сюжет
+              </span>
+              <span class="door__note">
+                открыто
+              </span>
             </span>
-          </span>
-        </button>
-      </li>
-      <li class="door" data-door="block_3" data-state="open">
-        <button class="door__face" type="button">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Где ты сам себе мешаешь
+          </button>
+        </li>
+        <li class="door" data-door="door_slice_motivation" data-state="locked_profiled">
+          <div class="door__face" data-static="true">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Почему ты не двигаешься без давления снаружи
+              </span>
+              <span class="door__note">
+                закрыто
+              </span>
             </span>
-            <span class="door__note">
-              открыто
+          </div>
+        </li>
+        <li class="door" data-door="door_slice_stress" data-state="locked_profiled">
+          <div class="door__face" data-static="true">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Куда девается твоя нагрузка
+              </span>
+              <span class="door__note">
+                закрыто
+              </span>
             </span>
-          </span>
-        </button>
-      </li>
-      <li class="door" data-door="block_4" data-state="open">
-        <button class="door__face" type="button">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Твой повторяющийся сюжет
+          </div>
+        </li>
+        <li class="door" data-door="door_slice_full_map" data-state="locked_profiled">
+          <div class="door__face" data-static="true">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Полная карта всех шестнадцати
+              </span>
+              <span class="door__note">
+                закрыто
+              </span>
             </span>
-            <span class="door__note">
-              открыто
+          </div>
+        </li>
+        <li class="door" data-door="offer_slice_decisions" data-state="offered">
+          <button class="door__face" type="button">
+            <span aria-hidden="true" class="door__mark"></span>
+            <span class="door__body">
+              <span class="door__title">
+                Как тебе принимать решения
+              </span>
+              <span class="door__note">
+                закрыто
+              </span>
             </span>
-          </span>
-        </button>
-      </li>
-      <li class="door" data-door="door_slice_motivation" data-state="locked_profiled">
-        <div class="door__face" data-static="true">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Почему ты не двигаешься без давления снаружи
+            <span class="door__price">
+              Открыть — 590 ₽
             </span>
-            <span class="door__note">
-              закрыто
-            </span>
-          </span>
-        </div>
-      </li>
-      <li class="door" data-door="door_slice_stress" data-state="locked_profiled">
-        <div class="door__face" data-static="true">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Куда девается твоя нагрузка
-            </span>
-            <span class="door__note">
-              закрыто
-            </span>
-          </span>
-        </div>
-      </li>
-      <li class="door" data-door="door_slice_full_map" data-state="locked_profiled">
-        <div class="door__face" data-static="true">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Полная карта всех шестнадцати
-            </span>
-            <span class="door__note">
-              закрыто
-            </span>
-          </span>
-        </div>
-      </li>
-      <li class="door" data-door="offer_slice_decisions" data-state="offered">
-        <button class="door__face" type="button">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Как тебе принимать решения
-            </span>
-            <span class="door__note">
-              закрыто
-            </span>
-          </span>
-          <span class="door__price">
-            Открыть — 590 ₽
-          </span>
-        </button>
-      </li>
-    </ul>
+          </button>
+        </li>
+      </ul>
+    </section>
   </div>
   <aside class="disclaimer-list">
     <p class="disclaimer" data-disclaimer="«id»">
@@ -820,6 +839,13 @@
   padding-top: 16px;
 }
 
+.head__link {
+  color: #4c4136;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 36ch;
+}
+
 .head__name {
   color: #0d0b09;
   font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
@@ -841,7 +867,23 @@
   padding: 32px 0 24px;
 }
 
+.hook[data-empty="true"] {
+  color: #4c4136;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 .map {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.map__bars {
   background: #fffdf8;
   border: 1px solid #c1ad93;
   border-radius: 20px;
@@ -891,10 +933,33 @@
 .route {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.route__doors {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.section-note {
+  color: #4c4136;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 36ch;
+}
+
+.section-title {
+  color: #4c4136;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .site-footer {

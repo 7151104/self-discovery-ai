@@ -44,8 +44,8 @@ export const FONT_SIZES: FontSizeToken[] = [
   { name: "text-sm", rem: rem(14), purpose: "вспомогательный текст: подписи полос, действия блока, подписи дверей" },
   { name: "text-md", rem: rem(16), purpose: "основной текст: абзацы разбора, варианты ответа, текст вопроса" },
   { name: "text-lg", rem: rem(20), purpose: "заголовок блока, сшивка, заголовок предложения" },
-  { name: "text-xl", rem: rem(24), purpose: "фраза-крючок — единственный крупный текст на странице" },
-  { name: "text-2xl", rem: rem(30), purpose: "имя в шапке, ступень 0" },
+  { name: "text-xl", rem: rem(28), purpose: "фраза-крючок — единственный крупный текст на странице" },
+  { name: "text-2xl", rem: rem(36), purpose: "имя в шапке, ступень 0" },
 ];
 
 /** Основной текст разбора: на нём считается длина строки. */
@@ -112,35 +112,36 @@ export interface ColorToken {
   purpose: string;
 }
 
-/** Нейтральная шкала. На ней держится вся страница. */
+/** Нейтральная шкала. Тёплая бумага, не канцелярский серый. */
 export const NEUTRALS: ColorToken[] = [
-  { name: "color-surface-card", hex: "#ffffff", purpose: "поверхность блока, карточки, поля" },
-  { name: "color-surface-page", hex: "#fbfbfa", purpose: "фон страницы" },
-  { name: "color-surface-muted", hex: "#f1f1ef", purpose: "приглушённая поверхность: отключённое, пустая полоса" },
-  { name: "color-surface-inset", hex: "#e8e8e5", purpose: "дорожка полосы карты, желоб шкалы" },
-  { name: "color-line", hex: "#dcdcd8", purpose: "тонкая граница" },
-  { name: "color-line-strong", hex: "#b4b5b1", purpose: "контур выбранного и контур пустой полосы" },
-  { name: "color-text-faint", hex: "#666a73", purpose: "текст отключённого состояния" },
-  { name: "color-text-soft", hex: "#4f5563", purpose: "вспомогательный текст" },
-  { name: "color-text", hex: "#14161a", purpose: "основной текст" },
-  { name: "color-text-strong", hex: "#0b0d10", purpose: "заголовки, сшивка, чёткий маркер карты" },
+  { name: "color-surface-card", hex: "#fffdf8", purpose: "поверхность блока, карточки, поля" },
+  { name: "color-surface-page", hex: "#f3e9dc", purpose: "фон страницы — бумага" },
+  { name: "color-surface-muted", hex: "#e6d7c4", purpose: "приглушённая поверхность: отключённое, пустая полоса" },
+  { name: "color-surface-inset", hex: "#d3c2aa", purpose: "дорожка полосы карты, желоб шкалы" },
+  { name: "color-line", hex: "#c1ad93", purpose: "тонкая граница" },
+  { name: "color-line-strong", hex: "#8a7662", purpose: "контур выбранного и контур пустой полосы" },
+  { name: "color-text-faint", hex: "#6d5c4c", purpose: "текст отключённого состояния" },
+  { name: "color-text-soft", hex: "#4c4136", purpose: "вспомогательный текст" },
+  { name: "color-text", hex: "#1a1612", purpose: "основной текст" },
+  { name: "color-text-strong", hex: "#0d0b09", purpose: "заголовки, сшивка, чёткий маркер карты" },
 ];
 
 /**
- * Смысловых цветов два. Акцент — только действие и активный маркер карты,
- * тревога — только ошибка ввода и кризисный контур. Третий смысловой цвет
- * не понадобился: состояния различаются формой, а не оттенком.
+ * Смысловых цветов три. Акцент — действие и активный маркер карты.
+ * Тревога — ошибка ввода и кризис. Тёплый — графический знак входа,
+ * не текст разбора и не кнопка.
  */
 export const SEMANTIC_COLORS: ColorToken[] = [
-  { name: "color-accent", hex: "#1d4ed8", purpose: "действие и активный маркер карты — больше нигде" },
-  { name: "color-alert", hex: "#a3161c", purpose: "ошибка ввода и кризисный контур" },
+  { name: "color-accent", hex: "#0e524c", purpose: "действие и активный маркер карты — больше нигде" },
+  { name: "color-alert", hex: "#a11628", purpose: "ошибка ввода и кризисный контур" },
+  { name: "color-warm", hex: "#b45314", purpose: "графический знак входа: семь полос-силуэт карты" },
 ];
 
 /** Производные от смысловых: текст на акценте и его тихие подложки. */
 export const SEMANTIC_DERIVED: ColorToken[] = [
-  { name: "color-accent-contrast", hex: "#ffffff", purpose: "текст на акцентной поверхности" },
-  { name: "color-accent-quiet", hex: "#eef2ff", purpose: "подложка выбранного варианта" },
-  { name: "color-focus", hex: "#1d4ed8", purpose: "кольцо фокуса с клавиатуры" },
+  { name: "color-accent-contrast", hex: "#fffdf8", purpose: "текст на акцентной поверхности" },
+  { name: "color-accent-quiet", hex: "#dceae7", purpose: "подложка выбранного варианта" },
+  { name: "color-focus", hex: "#0e524c", purpose: "кольцо фокуса с клавиатуры" },
 ];
 
 export interface ColorRole {
@@ -210,8 +211,8 @@ export interface RadiusToken {
 }
 
 export const RADII: RadiusToken[] = [
-  { name: "radius-sm", px: 8, purpose: "поле ввода, мелкая кнопка" },
-  { name: "radius-md", px: 14, purpose: "карточка, блок, дверь" },
+  { name: "radius-sm", px: 10, purpose: "поле ввода, мелкая кнопка" },
+  { name: "radius-md", px: 20, purpose: "карточка, блок, дверь" },
   { name: "radius-pill", px: 999, purpose: "дорожка полосы, маркер, отметка шкалы" },
 ];
 
@@ -221,11 +222,12 @@ export interface ShadowToken {
   purpose: string;
 }
 
-/** Две тени. Тень — способ отделить поверхность, а не украшение. */
+/** Тени. Глубина бумаги, не стеклянный интерфейс. */
 export const SHADOWS: ShadowToken[] = [
   { name: "shadow-none", value: "none", purpose: "плоские поверхности и все закрытые состояния" },
-  { name: "shadow-card", value: "0 1px 2px rgba(11, 13, 16, 0.04), 0 8px 24px rgba(11, 13, 16, 0.05)", purpose: "блок разбора, карточка порции" },
-  { name: "shadow-raised", value: "0 2px 4px rgba(11, 13, 16, 0.06), 0 12px 32px rgba(11, 13, 16, 0.08)", purpose: "предложенная платная дверь и точка оплаты" },
+  { name: "shadow-card", value: "0 1px 2px rgba(13, 11, 9, 0.06), 0 12px 28px rgba(13, 11, 9, 0.08)", purpose: "блок разбора, карточка порции" },
+  { name: "shadow-raised", value: "0 4px 8px rgba(13, 11, 9, 0.08), 0 20px 40px rgba(13, 11, 9, 0.12)", purpose: "предложенная платная дверь и точка оплаты" },
+  { name: "shadow-inset", value: "inset 0 1px 2px rgba(13, 11, 9, 0.14)", purpose: "дорожка карты: желоб, а не плоская линия" },
 ];
 
 export interface DurationToken {
@@ -308,9 +310,10 @@ export const MIN_TARGET_PX = 44;
 export const SIZES: SizeToken[] = [
   { name: "size-target", rem: rem(44), purpose: "минимальная интерактивная цель — 44 px" },
   { name: "size-mark", rem: rem(20), purpose: "видимая отметка шкалы внутри цели 44 px" },
-  { name: "size-bar-track", rem: rem(20), purpose: "высота дорожки полосы карты" },
-  { name: "size-bar-marker", rem: rem(14), purpose: "маркер полосы карты" },
-  { name: "size-dot", rem: rem(10), purpose: "точка категориальной полосы" },
+  { name: "size-bar-track", rem: rem(24), purpose: "высота дорожки полосы карты" },
+  { name: "size-bar-marker", rem: rem(16), purpose: "маркер полосы карты" },
+  { name: "size-dot", rem: rem(12), purpose: "точка категориальной полосы" },
+  { name: "size-mark-bar", rem: rem(48), purpose: "высота графического знака на входе" },
   { name: "size-wait-line", rem: rem(12), purpose: "намётка строки будущего текста на экране ожидания" },
   { name: "size-field", rem: rem(152), purpose: "открытое поле: шесть строк текста" },
   { name: "size-container", rem: rem(560), purpose: "предельная ширина страницы на десктопе" },
@@ -335,7 +338,8 @@ export const TOKENS: Record<string, string> = {
   ...Object.fromEntries(BORDERS.map((token) => [token.name, `${token.px}px`])),
   ...Object.fromEntries(ZONE_POSITIONS.map((token) => [token.name, `${token.percent}%`])),
   ...Object.fromEntries(SIZES.map((token) => [token.name, `${token.rem}rem`])),
-  "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif',
+  "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  "font-display": '"Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif',
 };
 
 /** Группы для витрины: показать шкалу целиком и назначение каждого значения. */
@@ -353,6 +357,13 @@ export const TOKEN_GROUPS = [
   { title: "Границы", items: BORDERS.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
   { title: "Зоны маркера", items: ZONE_POSITIONS.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
   { title: "Размеры", items: SIZES.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
+  {
+    title: "Шрифты",
+    items: [
+      { name: "font-family", value: TOKENS["font-family"] ?? "", purpose: "основной текст, интерфейс, кнопки" },
+      { name: "font-display", value: TOKENS["font-display"] ?? "", purpose: "имя, крючок, вход: системная антиква, без веб-шрифта" },
+    ],
+  },
 ];
 
 /** Значение токена в пикселях, если оно длина. Иначе null. */

@@ -1,19 +1,58 @@
 /*
- * Карточка входа. Поля во всю ширину, цели не меньше --size-target.
+ * Вход на страницу. Сначала идея и состав, поля — второй блок:
+ * действие «открыть», а не вся карточка целиком.
  * Дата не обязательна: подсказка объясняет, что будет без неё.
  */
 
 .intro {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-7);
   max-width: var(--size-container);
   margin: 0 auto;
-  padding: var(--space-5) var(--space-3);
+  padding: var(--space-7) var(--space-3);
 }
 
+.intro__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.intro__mark {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: var(--size-mark-bar);
+}
+
+.intro__mark-bar {
+  width: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warm);
+}
+
+.intro__mark-bar[data-n="1"] { height: 40%; }
+.intro__mark-bar[data-n="2"] { height: 70%; }
+.intro__mark-bar[data-n="3"] { height: 55%; }
+.intro__mark-bar[data-n="4"] { height: 100%; background: var(--color-text-strong); }
+.intro__mark-bar[data-n="5"] { height: 45%; }
+.intro__mark-bar[data-n="6"] { height: 80%; }
+.intro__mark-bar[data-n="7"] { height: 35%; }
+
 .intro__title {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+  letter-spacing: -0.03em;
+}
+
+.intro__lead {
+  max-width: var(--measure-hook);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
   font-weight: var(--weight-strong);
   line-height: var(--leading-tight);
   color: var(--color-text-strong);
@@ -24,6 +63,49 @@
   font-size: var(--text-md);
   line-height: var(--leading-normal);
   color: var(--color-text);
+}
+
+.intro__beats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro__beat {
+  max-width: var(--measure-block);
+  padding-left: var(--space-4);
+  border-left: var(--border-strong) solid var(--color-line-strong);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.intro__start {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+.intro__start-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.intro__legal {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
 }
 
 .intro__field {
@@ -51,6 +133,7 @@
   font-family: var(--font-family);
   font-size: var(--text-md);
   line-height: var(--leading-snug);
+  box-shadow: var(--shadow-inset);
   transition: border-color var(--duration-fast) ease;
 }
 

@@ -12,10 +12,12 @@
 }
 
 .missing__title {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: var(--weight-strong);
   line-height: var(--leading-tight);
   color: var(--color-text-strong);
+  letter-spacing: -0.03em;
 }
 
 .missing__text {

@@ -69,6 +69,7 @@
 .option[data-state="selected"] {
   border-color: var(--color-accent);
   background: var(--color-accent-quiet);
+  box-shadow: var(--shadow-card);
 }
 
 /* Выбранное различимо в градациях серого: кружок залит, а не подкрашен. */

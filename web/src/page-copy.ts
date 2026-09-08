@@ -57,13 +57,22 @@ export const mapTexts = {
 export const headTexts = {
   period: (theme: string): string => copy("UI_HEAD_PERIOD", { тема: theme }),
   noPeriod: (): string => copy("UI_HEAD_NO_PERIOD"),
-  linkHint: (): string => copy("UI_HEAD_LINK_HINT"),
+  linkHint: (url: string): string => copy("UI_HEAD_LINK_HINT", { ссылка: url }),
   emptyHook: (): string => copy("UI_HOOK_EMPTY"),
+};
+
+export const readingTexts = {
+  title: (): string => copy("UI_READING_TITLE"),
+  empty: (): string => copy("UI_READING_EMPTY"),
 };
 
 export const introTexts = {
   title: (): string => copy("UI_INTRO_TITLE"),
+  lead: (): string => copy("UI_INTRO_CTA"),
   about: (): string => copy("UI_INTRO_ABOUT"),
+  beats: (): string[] => [copy("UI_INTRO_BEAT_MAP"), copy("UI_INTRO_BEAT_READING"), copy("UI_INTRO_BEAT_ROUTE")],
+  startTitle: (): string => copy("UI_INTRO_START_TITLE"),
+  legal: (): string => copy("UI_INTRO_LEGAL"),
   nameLabel: (): string => copy("UI_INTRO_NAME_LABEL"),
   namePlaceholder: (): string => copy("UI_INTRO_NAME_PLACEHOLDER"),
   nameRequired: (): string => copy("UI_INTRO_NAME_REQUIRED"),
@@ -71,6 +80,35 @@ export const introTexts = {
   dateHint: (): string => copy("UI_INTRO_DATE_HINT"),
   submit: (): string => copy("UI_INTRO_SUBMIT"),
 };
+
+/** Готовый набор подписей входа: все строки из реестра, ни одной на месте. */
+export const introLabels = (): {
+  title: string;
+  lead: string;
+  about: string;
+  beats: string[];
+  startTitle: string;
+  legal: string;
+  nameLabel: string;
+  namePlaceholder: string;
+  nameRequired: string;
+  dateLabel: string;
+  dateHint: string;
+  submit: string;
+} => ({
+  title: introTexts.title(),
+  lead: introTexts.lead(),
+  about: introTexts.about(),
+  beats: introTexts.beats(),
+  startTitle: introTexts.startTitle(),
+  legal: introTexts.legal(),
+  nameLabel: introTexts.nameLabel(),
+  namePlaceholder: introTexts.namePlaceholder(),
+  nameRequired: introTexts.nameRequired(),
+  dateLabel: introTexts.dateLabel(),
+  dateHint: introTexts.dateHint(),
+  submit: introTexts.submit(),
+});
 
 /**
  * Несуществующий профиль. Отдельной строки в реестре нет (вопрос 38):

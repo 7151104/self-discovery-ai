@@ -41,6 +41,7 @@ import {
 } from "./legal-copy.js";
 import {
   errorTexts,
+  introLabels,
   introTexts,
   missingTexts,
   publicNotice,
@@ -118,17 +119,6 @@ export interface PageApp {
   /** Дождаться текущего тика опроса. Нужно тестам: сеть внутри тика асинхронна. */
   flushWatch: () => Promise<void>;
 }
-
-const introLabels = () => ({
-  title: introTexts.title(),
-  about: introTexts.about(),
-  nameLabel: introTexts.nameLabel(),
-  namePlaceholder: introTexts.namePlaceholder(),
-  nameRequired: introTexts.nameRequired(),
-  dateLabel: introTexts.dateLabel(),
-  dateHint: introTexts.dateHint(),
-  submit: introTexts.submit(),
-});
 
 const currentQuestion = (session: Session): QuestionDto | null => {
   const portion = session.page?.nextPortion;

@@ -84,7 +84,7 @@ const cases: { name: string; node: VNode }[] = [
       stale: true,
     }),
   },
-  { name: "карта", node: renderMap({ bars: latinBars, label: "L" }) },
+  { name: "карта", node: renderMap({ bars: latinBars, label: "L", note: "N" }) },
   { name: "дверь", node: renderDoor({ door: latinDoors[1] as DoorDto, visual: "offered", priceText: "590" }) },
   {
     name: "маршрут",
@@ -93,6 +93,7 @@ const cases: { name: string; node: VNode }[] = [
       context: { offerSlice: "s", profiled: true },
       formatPrice: (price) => String(price),
       label: "L",
+      note: "N",
     }),
   },
   {
@@ -194,13 +195,17 @@ const cases: { name: string; node: VNode }[] = [
     node: renderIntro({
       labels: {
         title: "T",
+        lead: "L",
         about: "A",
+        beats: ["B1", "B2", "B3"],
+        startTitle: "S",
+        legal: "G",
         nameLabel: "N",
         namePlaceholder: "P",
         nameRequired: "R",
         dateLabel: "D",
         dateHint: "H",
-        submit: "S",
+        submit: "U",
       },
       values: { name: "Ada", birthDate: "1990-01-01" },
     }),

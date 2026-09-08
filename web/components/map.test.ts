@@ -60,6 +60,12 @@ test("полос ровно семь, состав и подписи совпа�
 
 // ── Наружу не выходят координаты ──────────────────────────────────────────────
 
+test("у карты видимый заголовок, не только подпись скринридера", () => {
+  const node = map();
+  assert.equal(node.tag, "section");
+  assert.ok(visibleText(node).includes(mock.mapLabel));
+});
+
 test("в разметке карты нет ни одной цифры и ни одного процента", () => {
   const markup = html();
   assert.equal(/\d/.test(markup), false, `цифра в разметке: ${/.{0,40}\d.{0,40}/.exec(markup)?.[0]}`);
@@ -203,8 +209,8 @@ const line = (selector: string): number => {
 };
 
 test("карта помещается в 360×640 без скролла", () => {
-  const padding = declaredPx(lookup, ".map", "padding") ?? 0;
-  const mapGap = declaredPx(lookup, ".map", "gap") ?? 0;
+  const padding = declaredPx(lookup, ".map__bars", "padding") ?? 0;
+  const mapGap = declaredPx(lookup, ".map__bars", "gap") ?? 0;
   const barGap = declaredPx(lookup, ".bar", "gap") ?? 0;
   const rowGap = declaredPx(lookup, ".bar__row", "gap") ?? 0;
   const rowMin = declaredPx(lookup, ".bar__row", "min-height") ?? 0;
@@ -230,7 +236,7 @@ test("карта помещается в 360×640 без скролла", () => 
 });
 
 test("карта не шире базового экрана: горизонтального скролла нет", () => {
-  const padding = declaredPx(lookup, ".map", "padding") ?? 0;
+  const padding = declaredPx(lookup, ".map__bars", "padding") ?? 0;
   assert.ok(2 * padding < 360, "поля карты съедают экран");
-  assert.equal(declared(lookup, ".map", "width"), null, "ширина карты обязана идти от контейнера");
+  assert.equal(declared(lookup, ".map__bars", "width"), null, "ширина карты обязана идти от контейнера");
 });

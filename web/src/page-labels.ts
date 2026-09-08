@@ -16,6 +16,7 @@ import {
   offerTexts,
   portionTexts,
   publicTexts,
+  readingTexts,
   routeTexts,
   waitTexts,
 } from "./page-copy.js";
@@ -26,11 +27,13 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
   return {
     map: {
       label: mapTexts.label(),
+      note: mapTexts.closedNote(),
       zoneLabel: mapTexts.zone,
       fillLabels: mapTexts.fill(),
     },
     route: {
       label: routeTexts.label(),
+      note: routeTexts.note(),
       formatPrice: routeTexts.price,
       tag: routeTexts.tag,
     },
@@ -56,6 +59,7 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
       legalLinks: offerLegalLinks(),
     },
     portion: {
+      title: portionTexts.title(),
       back: portionTexts.back(),
       scaleMarks: [
         portionTexts.scaleMark(1),
@@ -82,6 +86,12 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
     head: {
       period: headTexts.period,
       noPeriod: headTexts.noPeriod(),
+      linkHint: headTexts.linkHint(page.url),
+      emptyHook: headTexts.emptyHook(),
+    },
+    reading: {
+      title: readingTexts.title(),
+      empty: readingTexts.empty(),
     },
     public: {
       makeOwn: publicTexts.makeOwn(),

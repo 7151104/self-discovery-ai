@@ -90,6 +90,8 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.equal(app.session().screen, "intro");
   const intro = visibleText(app.tree());
   assert.ok(intro.includes(introTexts.dateHint()));
+  assert.ok(intro.includes(introTexts.lead()));
+  assert.ok(intro.includes(introTexts.about()));
   assert.ok(intro.includes("не делается ни одного вывода о характере"));
   assert.ok(byClass(app.tree(), "consent").length === 1);
   assert.equal(byClass(app.tree(), "consent")[0]?.attrs["data-consent"], "off");
@@ -142,7 +144,7 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.ok(s1);
   assert.equal(s1.state, "s1");
   assert.equal(filledBars(s1), 3);
-  assert.equal(byClass(app.tree(), "hook").length, s1.hook ? 1 : 0);
+  assert.equal(byClass(app.tree(), "hook").length, 1);
   assert.ok(host.scrolled.includes('.block[data-enter="on"]'));
 
   await answerPortion(app, 2);

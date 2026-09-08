@@ -7,13 +7,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding-top: var(--space-4);
 }
 
 .head__name {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: var(--weight-strong);
   line-height: var(--leading-tight);
   color: var(--color-text-strong);
+  letter-spacing: -0.03em;
 }
 
 .head__theme {
@@ -29,11 +32,29 @@
   color: var(--color-text-soft);
 }
 
+.head__link {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
 .hook {
   max-width: var(--measure-hook);
-  padding: var(--space-5) 0;
+  padding: var(--space-6) 0 var(--space-5);
+  border-top: var(--border-hair) solid var(--color-line);
+  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--weight-strong);
   line-height: var(--leading-tight);
   color: var(--color-text-strong);
+  letter-spacing: -0.02em;
+}
+
+.hook[data-empty="true"] {
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-soft);
+  letter-spacing: 0;
 }

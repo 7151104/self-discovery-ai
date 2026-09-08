@@ -18,7 +18,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-surface-page);
+  background-color: var(--color-surface-page);
+  background-image: radial-gradient(ellipse at top, var(--color-surface-card), var(--color-surface-page) 70%);
+  background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-family);
   font-size: var(--text-md);
@@ -59,14 +61,36 @@ button {
   max-width: var(--size-container);
   margin: 0 auto;
   padding: var(--space-3);
+  padding-bottom: var(--space-7);
+}
+
+.section-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.section-note {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .page__notice {
   max-width: var(--measure-block);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   border: var(--border-hair) solid var(--color-line-strong);
   border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
   color: var(--color-text);

@@ -61,19 +61,17 @@ export function screenSlots(tree: Child, kit: Kit): string[] {
 /**
  * Ожидаемый порядок слотов на конкретном состоянии.
  *
- * Крючок — после первой порции. Ступень 4 в ожидании занимает место блока
+ * Крючок всегда на месте: на `s0` это зарезервированная фраза, после первой
+ * порции — настоящий. Ступень 4 в ожидании занимает место блока
  * слотом `wait`, а не `.block`. После готового сюжета порцию сменяет предложение.
  */
 export function expectedSlots(input: {
-  hook: boolean;
   blocks: string[];
   waiting: boolean;
   offer: boolean;
   portion: boolean;
 }): string[] {
-  const slots: string[] = ["head"];
-  if (input.hook) slots.push("hook");
-  slots.push("map");
+  const slots: string[] = ["head", "hook", "map"];
   for (const id of input.blocks) {
     slots.push(input.waiting && id === "step4" ? "wait" : "block");
   }

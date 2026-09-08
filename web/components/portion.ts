@@ -31,6 +31,8 @@ export const PORTION_KIND: Record<QuestionKind, string> = {
 };
 
 export interface PortionLabels {
+  /** Имя раздела: вопросы живут на этой странице, а не уводят в сторону. */
+  title?: string | null;
   /** Подводка порции. Приходит из контента вместе с самой порцией. */
   lead: string;
   /** Подпись прогресса для скринридера: «вопрос такой-то из такого-то». */
@@ -211,6 +213,7 @@ export function renderPortion(props: PortionProps): VNode {
       "data-index": String(props.index),
       "data-total": String(props.total),
     },
+    props.labels.title ? h("h2", { class: "section-title" }, props.labels.title) : null,
     h("p", { class: "portion__lead" }, props.labels.lead),
     renderProgress(props),
     renderQuestion(props),

@@ -46,11 +46,13 @@ export interface PageNotice {
 export interface PageViewLabels {
   map: {
     label: string;
+    note: string;
     zoneLabel: (bar: PageStateDto["map"][number], zone: Zone) => string;
     fillLabels: Record<PageStateDto["map"][number]["fill"], string>;
   };
   route: {
     label: string;
+    note: string;
     formatPrice: (price: number) => string;
     tag: (state: DoorDto["state"]) => string;
   };
@@ -66,6 +68,7 @@ export interface PageViewLabels {
   };
   offer: OfferLabels;
   portion: {
+    title: string;
     back: string;
     scaleMarks: [string, string, string, string, string];
     scaleHint: string;
@@ -83,7 +86,8 @@ export interface PageViewLabels {
     resumedNote: (state: WaitState) => string | null;
     collecting: string;
   };
-  head: { period: (theme: string) => string; noPeriod: string };
+  head: { period: (theme: string) => string; noPeriod: string; linkHint: string; emptyHook: string };
+  reading: { title: string; empty: string };
   public?: { makeOwn: string; makeOwnHint: string; title?: string };
 }
 
@@ -158,6 +162,7 @@ export const currentQuestion = (
 };
 
 const portionLabels = (page: PageStateDto, labels: PageViewLabels, index: number, total: number): PortionLabels => ({
+  title: labels.portion.title,
   lead: page.nextPortion?.lead ?? "",
   progress: labels.portion.progress(index, total),
   back: labels.portion.back,
@@ -228,14 +233,22 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       ? page.blocks.filter((block) => block.id === "step1" || block.id === "step2")
       : page.blocks;
 
-  const children: VNode[] = [renderHead(card)];
+  const owner = options.publicView !== true;
+  const afterFirstPortion = page.state !== "s0" && page.url.length > 0;
+  const children: VNode[] = [
+    renderHead(card, {
+      linkHint: owner && afterFirstPortion ? labels.head.linkHint : null,
+    }),
+  ];
   if (options.notice) children.push(...renderNotices(options.notice));
   if (page.hook) children.push(renderHook(page.hook));
+  else children.push(renderHook(labels.head.emptyHook, { empty: true }));
 
   children.push(
     renderMap({
       bars: page.map,
       label: labels.map.label,
+      note: labels.map.note,
       zoneLabel: labels.map.zoneLabel,
       fillLabels: labels.map.fillLabels,
       animated: options.seenBars,
@@ -244,7 +257,21 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
 
   if (options.sharePanel) children.push(renderSharePanel(options.sharePanel));
 
-  for (const block of orderedBlocks(visibleBlocks)) {
+  const readingBlocks = orderedBlocks(visibleBlocks);
+  if (readingBlocks.length === 0 && owner) {
+    children.push(
+      h(
+        "div",
+        { class: "reading", "data-empty": "true" },
+        h("h2", { class: "section-title" }, labels.reading.title),
+        h("p", { class: "section-note" }, labels.reading.empty),
+      ),
+    );
+  } else if (readingBlocks.length > 0) {
+    children.push(h("p", { class: "section-title" }, labels.reading.title));
+  }
+
+  for (const block of readingBlocks) {
     if (block.generation?.status === "pending") {
       if (wait !== null) {
         children.push(
@@ -358,6 +385,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         formatPrice: labels.route.formatPrice,
         notes: doorNotes(page, labels),
         label: labels.route.label,
+        note: page.state === "s0" ? labels.route.note : null,
         strict: false,
       }),
     );

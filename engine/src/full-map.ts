@@ -114,7 +114,7 @@ export interface FullMapSlice {
  */
 export interface FullMapInput {
   ladder: LadderAnswers;
-  /** Ответы порций добора: `Q1`–`Q35`, `О2`, `О3`. */
+  /** Ответы порций добора: `Q1`–`Q40`, `О2`, `О3`. */
   bank?: BankAnswers;
   slices?: FullMapSlice[];
 }
@@ -177,7 +177,7 @@ export function fullMapRemainder(input: FullMapInput): RawFullMapQuestion[] {
 
 // ── Порции добора ─────────────────────────────────────────────────────────────
 
-/** Порция добора полной карты: 10 + 10 + 6 по файлу среза. */
+/** Порция добора полной карты: 10 + 11 + 10 по файлу среза. */
 export interface FullMapPortion {
   number: number;
   /** Сколько всего порций у добора. */
@@ -283,7 +283,6 @@ const checkAt = (index: number): string => {
  */
 export const FULL_MAP_SUBTYPES: string[] = [
   "map_full",
-  "map_thin_pairs",
   "map_motive_hypothesis",
   "map_open_thin",
   "entry_mismatch",
@@ -303,13 +302,13 @@ const mapFullCount = (): number =>
   numberIn(subtypeText("map_full"), /не меньше (\d+) координат/, "формулировке подтипа map_full");
 
 /**
- * Потолок точности из раздела «Границы точности»: координаты на двух вопросах и
- * уровень, выше которого банк их не поднимает до калибровки (E5-11). И список, и
- * уровень читаются из контента: продукт обещает ровно то, что там записано.
+ * Потолок точности из раздела «Границы точности», если он ещё записан как действующий.
+ * После калибровки банка (E5-11) координат на двух вопросах не осталось: строка
+ * про прежний предел medium больше не задаёт потолок, и функция возвращает null.
  */
-function accuracyCeiling(): { coordinates: number[]; cap: Confidence } {
-  const line = fullMap().accuracy.find((item) => /потолок/.test(item));
-  if (!line) throw new Error(`${fullMap().file}: в границах точности не назван потолок`);
+function accuracyCeiling(): { coordinates: number[]; cap: Confidence } | null {
+  const line = fullMap().accuracy.find((item) => /потолок — `/.test(item) || /потолок —`/.test(item));
+  if (!line) return null;
 
   const bold = /\*\*([\d,\sи]+)\*\*/.exec(line);
   const level = /`(low|medium|high)`/.exec(line);
@@ -396,12 +395,13 @@ function applyFullMapFindings(profile: Profile, input: FullMapInput): Profile {
   const ceiling = accuracyCeiling();
   const coordinates = { ...profile.coordinates };
 
-  // Потолок пар: координата на двух вопросах выше него не поднимается, и это
-  // предел банка, а не свойство человека.
-  for (const id of ceiling.coordinates) {
-    const state = coordinates[id];
-    if (!state || !state.sources.length) continue;
-    coordinates[id] = { ...state, confidence: capConfidence(state.confidence, ceiling.cap) };
+  // Потолок пар: если в границах точности он ещё записан, координата выше него не поднимается.
+  if (ceiling) {
+    for (const id of ceiling.coordinates) {
+      const state = coordinates[id];
+      if (!state || !state.sources.length) continue;
+      coordinates[id] = { ...state, confidence: capConfidence(state.confidence, ceiling.cap) };
+    }
   }
 
   const filled = (id: number): boolean => (coordinates[id]?.sources.length ?? 0) > 0;
@@ -416,8 +416,12 @@ function applyFullMapFindings(profile: Profile, input: FullMapInput): Profile {
   if (mediumOrBetter({ ...profile, coordinates }) >= mapFullCount()) {
     configure("map_full", ["весь добор"]);
   }
-  // Подтип называет потолок банка: пары стоят на месте и выше него не поднялись.
-  if (ceiling.coordinates.every(filled) && ceiling.coordinates.every((id) => coordinates[id]?.confidence !== "high")) {
+  if (
+    ceiling &&
+    FULL_MAP_SUBTYPES.includes("map_thin_pairs") &&
+    ceiling.coordinates.every(filled) &&
+    ceiling.coordinates.every((id) => coordinates[id]?.confidence !== "high")
+  ) {
     configure(
       "map_thin_pairs",
       ceiling.coordinates.flatMap((id) => coordinates[id]?.sources ?? []),

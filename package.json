@@ -11,7 +11,7 @@
     "test": "npm run build && node --disable-warning=ExperimentalWarning --test engine/dist/*.test.js server/dist/*.test.js server/llm/dist/*.test.js web/dist/*/*.test.js",
     "serve": "npm run build && node tools/serve.mjs",
     "lint:styles": "npm run build && node web/dist/src/lint-styles.js",
-    "lint:content": "npm run build && node --disable-warning=ExperimentalWarning --test engine/dist/content*.test.js",
+    "lint:content": "npm run build && node tools/lint-content.mjs",
     "lint:budget": "npm run build && node --disable-warning=ExperimentalWarning --test web/dist/src/budget.test.js",
     "verify": "npm test && npm run lint:content && npm run lint:styles && npm run lint:budget && npm run migrate:check",
     "dev:server": "npm run build && node --disable-warning=ExperimentalWarning server/dist/main.js",

@@ -108,3 +108,20 @@ export {
 } from "./revision.js";
 export { buildPage, buildStep0Card, completedStep, portionForStep, type PageOptions } from "./page.js";
 export { rawContent } from "./generated/content.js";
+export { rawExtraContent } from "./generated/content-extra.js";
+export { wordCount, words, unwrapLines } from "./words.js";
+export {
+  collectCorpus,
+  degreeOf,
+  formatLintReport,
+  lintCorpus,
+  lintEntry,
+  lintSnippet,
+  lookupVolume,
+  rejectGroups,
+  sampleFor,
+  type CorpusEntry,
+  type Finding,
+  type LintReport,
+  type WordRange,
+} from "./content-linter.js";

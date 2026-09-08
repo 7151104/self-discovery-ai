@@ -274,7 +274,7 @@ test("смена провайдера — новая реализация пор
 
 test("настройки читаются из окружения, ключа в репозитории нет", () => {
   const bare = loadLlmConfig({});
-  assert.equal(bare.provider, "fake");
+  assert.equal(bare.provider, "stub");
   assert.equal(bare.apiKey, "", "ключа по умолчанию не существует");
   assert.deepEqual(bare.retry, DEFAULTS.retry);
   assert.equal(bare.cost.profileLimitKopecks, DEFAULTS.cost.profileLimitKopecks);

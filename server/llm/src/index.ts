@@ -26,6 +26,16 @@ export {
 
 export { FakeProvider, answering, type FakeProviderOptions, type FakeTurn } from "./fake-provider.js";
 
+export { StubProvider, stubEnvelope, type StubProviderOptions } from "./stub-provider.js";
+
+export {
+  createGenerationProvider,
+  knownLlmProviders,
+  UnknownLlmProvider,
+  type ProviderFactoryInput,
+  type ProviderName,
+} from "./registry.js";
+
 export { envelope, GOOD_TEXT, DEMO_ANSWERS, DEMO_PERSON, textOfVolume, sliceEnvelope } from "./fixtures.js";
 
 export {
@@ -37,7 +47,7 @@ export {
   type RunOutcome,
 } from "./runner.js";
 
-export { DEFAULTS, LlmConfigError, loadLlmConfig, type LlmConfig, type ProviderName } from "./config.js";
+export { DEFAULTS, LlmConfigError, loadLlmConfig, type LlmConfig } from "./config.js";
 
 export {
   buildStep4Prompt,
@@ -77,6 +87,8 @@ export {
 } from "./output.js";
 
 export { checkRegisters, describeRegisterProblem, type RegisterCheck, type RegisterProblem } from "./registers.js";
+
+export { failureNotesForLog, stripQuotedFailureDetail } from "./failure-notes.js";
 
 export {
   LADDER_FINAL,

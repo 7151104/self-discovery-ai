@@ -8,7 +8,7 @@ import { DEFAULTS, loadConfig } from "./config.js";
 import { BAR_DEFINITIONS, rawContent } from "./engine.js";
 import { barKey } from "./page.js";
 import { matchApi, matchPage } from "./http/router.js";
-import { answersForStep, call, portionKey, profileAtStep, startTestServer } from "./test-support.js";
+import { answersForStep, call, latestMigration, portionKey, profileAtStep, startTestServer } from "./test-support.js";
 import { countProfileVersions, listEvents } from "./store.js";
 import type {
   DisagreementResponse,
@@ -20,22 +20,24 @@ import type {
 } from "./contract/index.js";
 
 test("настройки читаются из окружения, значений по умолчанию хватает для разработки", () => {
-  assert.deepEqual(loadConfig({}), {
-    host: DEFAULTS.host,
-    port: DEFAULTS.port,
-    databasePath: DEFAULTS.databasePath,
-    autoMigrate: true,
-    publicOrigin: "",
-    maxBodyBytes: DEFAULTS.maxBodyBytes,
-  });
+  const defaults = loadConfig({});
+  assert.equal(defaults.environment, "development");
+  assert.equal(defaults.host, DEFAULTS.host);
+  assert.equal(defaults.port, DEFAULTS.port);
+  assert.equal(defaults.databasePath, DEFAULTS.databasePath);
+  assert.equal(defaults.autoMigrate, true);
+  assert.equal(defaults.publicOrigin, "");
+  assert.equal(defaults.maxBodyBytes, DEFAULTS.maxBodyBytes);
+  assert.equal(defaults.trustProxy, false);
+  assert.deepEqual(defaults.rateLimit.rules, DEFAULTS.rate);
 
   const custom = loadConfig({ SDAI_PORT: "9000", SDAI_PUBLIC_ORIGIN: "https://example.com/", SDAI_DB_AUTO_MIGRATE: "0" });
   assert.equal(custom.port, 9000);
   assert.equal(custom.publicOrigin, "https://example.com");
   assert.equal(custom.autoMigrate, false);
 
-  assert.throws(() => loadConfig({ SDAI_PORT: "восемь" }), /config:SDAI_PORT/);
-  assert.throws(() => loadConfig({ SDAI_DB_AUTO_MIGRATE: "maybe" }), /config:SDAI_DB_AUTO_MIGRATE/);
+  assert.throws(() => loadConfig({ SDAI_PORT: "восемь" }), /config:expected-positive-integer:SDAI_PORT/);
+  assert.throws(() => loadConfig({ SDAI_DB_AUTO_MIGRATE: "maybe" }), /config:expected-boolean:SDAI_DB_AUTO_MIGRATE/);
 });
 
 test("маршрутизатор строится из реестра контракта", () => {
@@ -65,7 +67,7 @@ test("эндпоинт здоровья отвечает и показывает
   assert.equal(reply.status, 200);
   assert.equal(reply.body.status, "ok");
   assert.equal(reply.body.database, "ok");
-  assert.equal(reply.body.schemaVersion, "0001");
+  assert.equal(reply.body.schemaVersion, latestMigration());
   assert.ok(reply.body.uptimeMs >= 0);
 });
 

@@ -6,13 +6,16 @@
  */
 
 import type { AddressInfo } from "node:net";
-import { loadConfig } from "./config.js";
+import { loadConfig, type ServerConfig } from "./config.js";
 import type { Db } from "./db/driver.js";
-import { up } from "./db/migrate.js";
+import { readMigrations, up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
 import { rawContent } from "./engine.js";
 import { createHttpServer } from "./http/server.js";
+import { saveBlockContent, updateOrderStatus } from "./store.js";
 import type { AnswerInput, PageStateDto, PortionKey } from "./contract/index.js";
+
+export { FORBIDDEN_FIELDS } from "./contract/index.js";
 
 export interface TestServer {
   origin: string;
@@ -20,12 +23,19 @@ export interface TestServer {
   close(): Promise<void>;
 }
 
+/** Номер последней миграции: тесты не переписываются при добавлении новой. */
+export const latestMigration = (): string => {
+  const versions = readMigrations().map((migration) => migration.version);
+  return versions[versions.length - 1] ?? "";
+};
+
 /** Сервер на случайном порту с чистой базой в памяти. */
-export async function startTestServer(): Promise<TestServer> {
+export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<TestServer> {
   const db = openDatabase({ path: ":memory:" });
   up(db);
 
-  const server = createHttpServer({ db, config: loadConfig({}), version: "test" });
+  const config: ServerConfig = loadConfig(env);
+  const server = createHttpServer({ db, config, version: "test" });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 
@@ -102,23 +112,41 @@ export async function profileAtStep(origin: string, step: 0 | 1 | 2 | 3 | 4): Pr
   return page;
 }
 
-/** Поля внутреннего профиля, которых не должно быть в ответе API ни на одном уровне. */
-export const FORBIDDEN_FIELDS = [
-  "band",
-  "code",
-  "confidence",
-  "coordinate",
-  "coordinates",
-  "dominantNode",
-  "flags",
-  "internalProfile",
-  "llmTask",
-  "nextPaidOffer",
-  "nodes",
-  "profile",
-  "sources",
-  "value",
-];
+/**
+ * Профиль в платном состоянии.
+ *
+ * Оплата — задача E8, тексты платных срезов — E4, поэтому заказ переводится в
+ * оплаченный и блок среза записывается напрямую в хранилище. Проекции состояния
+ * этого достаточно: она собирает страницу из того, что лежит в базе.
+ */
+export async function profileAtPaidState(
+  origin: string,
+  db: Db,
+  options: { delivered: boolean },
+): Promise<PageStateDto> {
+  const page = await profileAtStep(origin, 4);
+  const slice = page.offer?.slice ?? "slice_node_finish";
+
+  const order = await call<{ order: { orderId: string } }>(origin, "POST", `/api/p/${page.profileId}/orders`, {
+    slice,
+    requestId: "paid",
+  });
+  updateOrderStatus(db, page.profileId, order.body.order.orderId, "paid");
+
+  if (options.delivered) {
+    saveBlockContent(db, page.profileId, {
+      slot: `slice:${slice}`,
+      profileVersion: 1,
+      purchased: true,
+      heading: "Почему ты останавливаешься у финиша",
+      paragraphs: ["Механизм включается на восьмидесяти процентах пути.", "Дальше идёт цена этого механизма."],
+      highlight: "Обрыв у финиша — не лень, а способ не проверять результат.",
+    });
+  }
+
+  const state = await call<PageStateDto>(origin, "GET", `/api/p/${page.profileId}`);
+  return state.body;
+}
 
 /** Все ключи в дереве ответа. */
 export function collectKeys(value: unknown, found: Set<string> = new Set()): Set<string> {

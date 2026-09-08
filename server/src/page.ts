@@ -19,12 +19,16 @@ import type {
   PageStateName,
   PortionDto,
   PortionKey,
+  PublicBlockDto,
+  PublicPageDto,
+  PublicSlot,
 } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
 import { BAR_DEFINITIONS, buildPage, rawContent } from "./engine.js";
 import type { LadderAnswers, MapBar, PageState } from "./engine.js";
 import {
   ensureBlock,
+  findActiveShareToken,
   listAnswers,
   listBlocks,
   listDisagreements,
@@ -38,6 +42,11 @@ import {
  * Устойчивые ключи полос карты. Номер координаты клиенту не отдаётся, но полосу
  * надо чем-то опознавать между запросами — этим ключом.
  * Состав полос задан таблицей в `docs/11-ui-page-spec.md`.
+ *
+ * ВРЕМЕННО. Таблица дублирует состав `BAR_DEFINITIONS` из движка и живёт здесь
+ * только потому, что движок отдаёт полосу вместе с номером координаты
+ * (`MapBar.coordinate`). Когда движок начнёт отдавать ключ полосы сам, эта
+ * таблица и функция `barKey` уходят, а проекция берёт ключ из полосы.
  */
 const BAR_IDS: Record<number, string> = {
   2: "tempo",
@@ -97,7 +106,7 @@ const projectOffer = (page: PageState): OfferDto | null =>
       }
     : null;
 
-const projectPortion = (page: PageState): PortionDto | null =>
+const projectPortion = (page: PageState, answered: Set<string>): PortionDto | null =>
   page.nextPortion
     ? {
         key: `step:${page.nextPortion.step}`,
@@ -109,6 +118,10 @@ const projectPortion = (page: PageState): PortionDto | null =>
           options: question.options,
           scale: question.scale,
         })),
+        // Возврат на середине: порция та же, отвеченные вопросы не спрашиваются заново.
+        answered: page.nextPortion.questions
+          .map((question) => question.id)
+          .filter((id) => answered.has(id)),
       }
     : null;
 
@@ -187,6 +200,9 @@ export interface AssembleOptions {
 /** Постоянная ссылка на страницу. */
 export const pageUrl = (publicOrigin: string, profileId: string): string => `${publicOrigin}/p/${profileId}`;
 
+/** Адрес публичного вида. Строится из токена, а не из идентификатора профиля. */
+export const shareUrl = (publicOrigin: string, token: string): string => `${publicOrigin}/s/${token}`;
+
 /**
  * Состояние страницы целиком. Возвращает и внутренний результат движка —
  * он нужен для снимка версии профиля и наружу не уходит.
@@ -194,7 +210,9 @@ export const pageUrl = (publicOrigin: string, profileId: string): string => `${p
 export function assemble(options: AssembleOptions): { page: PageStateDto; internal: PageState } {
   const { db, profile } = options;
 
-  const answers = toLadderAnswers(listAnswers(db, profile.profileId));
+  const stored = listAnswers(db, profile.profileId);
+  const answered = new Set(stored.map((record) => record.questionId));
+  const answers = toLadderAnswers(stored);
   const enginePage = buildPage(
     { name: profile.name, birthDate: profile.birthDate ?? undefined },
     answers,
@@ -216,16 +234,35 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     });
   }
 
-  const stored = listBlocks(db, profile.profileId);
-  const disagreed = new Set(listDisagreements(db, profile.profileId).map((record) => record.slot));
   const paidSlices = listOrders(db, profile.profileId)
     .filter((order) => order.status === "paid")
     .map((order) => order.slice);
 
+  // Оплаченный срез появляется на странице сразу: заголовок из `content/slices/`,
+  // текст пишет LLM (E4). До текста у клиента есть идентификатор генерации.
+  for (const slice of paidSlices) {
+    const known = rawContent.slices.find((candidate) => candidate.id === slice);
+    if (!known) continue;
+    ensureBlock(db, profile.profileId, {
+      slot: `slice:${slice}`,
+      profileVersion: profile.version,
+      status: "pending",
+      origin: "llm",
+      purchased: true,
+      heading: known.title,
+      paragraphs: [],
+      highlight: null,
+    });
+  }
+
+  const blocks = listBlocks(db, profile.profileId);
+  const disagreed = new Set(listDisagreements(db, profile.profileId).map((record) => record.slot));
+  const share = findActiveShareToken(db, profile.profileId);
+
   const page: PageStateDto = {
     profileId: profile.profileId,
     url: pageUrl(options.publicOrigin, profile.profileId),
-    state: stateName(enginePage.step, stored, paidSlices),
+    state: stateName(enginePage.step, blocks, paidSlices),
     card: {
       name: enginePage.card?.name ?? profile.name,
       season: enginePage.card?.season ?? null,
@@ -235,12 +272,44 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     },
     hook: enginePage.hook,
     map: projectMap(enginePage.map),
-    blocks: projectBlocks(enginePage, stored, disagreed),
+    blocks: projectBlocks(enginePage, blocks, disagreed),
     doors: projectDoors(enginePage),
     offer: projectOffer(enginePage),
-    nextPortion: projectPortion(enginePage),
+    nextPortion: projectPortion(enginePage, answered),
+    share: share ? { url: shareUrl(options.publicOrigin, share.token), createdAt: share.createdAt } : null,
     updatedAt: profile.updatedAt,
   };
 
   return { page, internal: enginePage };
 }
+
+/**
+ * Публичный вид: карта, одна фраза и первые два блока.
+ *
+ * Узел, сюжет и купленные срезы сюда не попадают — и не потому, что здесь
+ * стоит фильтр, а потому, что тип `PublicBlockDto` умеет держать только
+ * `step1` и `step2`. Попытка положить сюда `BlockDto` не соберётся.
+ */
+export function assemblePublic(page: PageStateDto): PublicPageDto {
+  const blocks: PublicBlockDto[] = [];
+  for (const block of page.blocks) {
+    if (!isPublicSlot(block.id)) continue;
+    blocks.push({
+      id: block.id,
+      heading: block.heading,
+      paragraphs: block.paragraphs,
+      highlight: block.highlight,
+    });
+  }
+
+  return {
+    state: page.state,
+    name: page.card.name,
+    hook: page.hook,
+    map: page.map,
+    blocks,
+  };
+}
+
+/** Сужение места блока до публичного. Без него `PublicBlockDto` не собрать. */
+const isPublicSlot = (slot: BlockSlot): slot is PublicSlot => slot === "step1" || slot === "step2";

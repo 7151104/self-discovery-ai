@@ -10,6 +10,10 @@ import type { Db } from "./db/driver.js";
 
 const fresh = (): Db => openDatabase({ path: ":memory:" });
 
+const versions = (): string[] => readMigrations().map((migration) => migration.version);
+
+const latest = (): string => versions()[versions().length - 1] ?? "";
+
 const tables = (db: Db): string[] =>
   db
     .all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
@@ -40,11 +44,13 @@ test("чистая база поднимается одной командой",
       "disagreements",
       "events",
       "orders",
+      "portion_submissions",
       "profile_versions",
       "profiles",
       "schema_migrations",
+      "share_tokens",
     ]);
-    assert.equal(schemaVersion(db), "0001");
+    assert.equal(schemaVersion(db), latest());
   } finally {
     db.close();
   }
@@ -62,6 +68,8 @@ test("схема покрывает профиль, ответы, версии, 
       orders: ["profile_id", "slice", "amount", "status", "request_id"],
       disagreements: ["profile_id", "slot", "kind"],
       events: ["profile_id", "type", "payload"],
+      portion_submissions: ["profile_id", "request_id", "portion", "answer_count", "profile_version"],
+      share_tokens: ["token", "profile_id", "created_at", "revoked_at"],
     };
     for (const [table, wanted] of Object.entries(expected)) {
       const actual = columns(db, table);
@@ -110,12 +118,20 @@ test("чувствительные поля хранятся парой «стр
   }
 });
 
-test("миграция откатывается и накатывается заново", () => {
+test("миграции откатываются по одной, в обратном порядке, и накатываются заново", () => {
   const db = fresh();
   try {
     up(db);
+
+    // Шаг назад снимает только последнюю миграцию.
+    assert.deepEqual(down(db), [latest()]);
+    assert.ok(!tables(db).includes("share_tokens"));
+    assert.ok(tables(db).includes("profiles"));
+
+    assert.deepEqual(up(db), [latest()]);
+
     const rolled = down(db, readMigrations().length);
-    assert.deepEqual(rolled, ["0001"]);
+    assert.deepEqual(rolled, [...versions()].reverse());
     assert.deepEqual(tables(db), ["schema_migrations"]);
     assert.equal(schemaVersion(db), null);
 
@@ -124,7 +140,7 @@ test("миграция откатывается и накатывается за
 
     reset(db);
     assert.ok(tables(db).includes("profiles"));
-    assert.equal(schemaVersion(db), "0001");
+    assert.equal(schemaVersion(db), latest());
   } finally {
     db.close();
   }

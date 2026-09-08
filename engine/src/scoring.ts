@@ -2,7 +2,7 @@
  * Rule Engine: ответы → профиль из 16 координат.
  *
  * Реализует content/scoring-rules.md. Две ветки входа — бесплатная лестница
- * (`buildProfile`, раздел «Лестница 11+1: точные правила») и полный банк 35+3
+ * (`buildProfile`, раздел «Лестница 11+1: точные правила») и полный банк 40+3
  * (`buildProfileFromBank`, раздел «Полный банк: точные правила») — считают числа
  * одной общей функцией `scoreCoordinate`: инверсия обратных вопросов, усреднение,
  * полоса, разброс и confidence живут только в ней.
@@ -627,7 +627,7 @@ function bandForDirection(score: CoordinateScore): Band {
     : bandOfPointer(score.direction);
 }
 
-// ── Ветка входа 2: полный банк 35+3 ───────────────────────────────────────────
+// ── Ветка входа 2: полный банк 40+3 ───────────────────────────────────────────
 
 const bankQuestion = (id: string) => {
   const question = rawContent.bank.find((candidate) => candidate.id === id);
@@ -658,7 +658,7 @@ const optionText = (id: string, answer: string): string => {
  * разворачивается к оси. Таблица одна, потому что полосу этих пар спрашивает не
  * только сборка профиля — её же читают промежуточные блоки полной карты.
  */
-const MIRRORED = new Set(["Q9", "Q10", "Q15", "Q16", "Q23", "Q25", "Q26", "Q27", "Q28"]);
+const MIRRORED = new Set(["Q9", "Q10", "Q15", "Q16", "Q23", "Q25", "Q26", "Q27", "Q28", "Q37", "Q38"]);
 
 /** Обратный ли ответ при чтении: направление вопроса из банка плюс разворот группы к оси. */
 const bankReversed = (id: string): boolean => (bankQuestion(id).direction === "обратный") !== MIRRORED.has(id);
@@ -691,7 +691,7 @@ export function bankAnswersFromLadder(answers: LadderAnswers): BankAnswers {
 }
 
 /**
- * Профиль по полному банку 35+3.
+ * Профиль по полному банку 40+3.
  *
  * Правила — content/scoring-rules.md, раздел «Полный банк: точные правила».
  * Арифметика — та же `scoreCoordinate`, что и в лестнице. Открытые ответы
@@ -750,8 +750,8 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
     return score;
   };
 
-  // 1 — источник энергии. Q1 прямой, Q2 обратный.
-  assignScaleCoordinate(1, [...scale("Q1"), ...scale("Q2")]);
+  // 1 — источник энергии. Q1 прямой, Q2 обратный, Q36 последний случай.
+  assignScaleCoordinate(1, [...scale("Q1"), ...scale("Q2"), ...scale("Q36")]);
 
   // 2 — ритм расхода. Ключевой Q4, шкалы Q3 и обратный Q5.
   const rhythmAnswer = choiceAnswer(answers, "Q4");
@@ -777,10 +777,11 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
   // 3 — тип внимания. Q6 прямой, Q7 обратный, Q8 указывает сторону.
   assignScaleCoordinate(3, [...scale("Q6"), ...scale("Q7"), ...choice("Q8", ATTENTION_POINTER)]);
 
-  // 4 — основание решений. Группа Q9/Q10 смотрит на «логику», ось — на «людей».
+  // 4 — основание решений. Группа Q9/Q10/Q37 смотрит на «логику», ось — на «людей».
   assignScaleCoordinate(4, [
     ...scale("Q9"),
     ...scale("Q10"),
+    ...scale("Q37"),
     ...choice("Q8", DECISION_POINTER),
     ...choice("Q11", TRADEOFF_POINTER),
   ]);
@@ -912,17 +913,17 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
     }
   }
 
-  // 12 — позиция среди людей. Группа Q27/Q28 смотрит на кооперацию, ось — на соперничество.
-  assignScaleCoordinate(12, [...scale("Q27"), ...scale("Q28")]);
+  // 12 — позиция среди людей. Группа Q27/Q28/Q38 смотрит на кооперацию, ось — на соперничество.
+  assignScaleCoordinate(12, [...scale("Q27"), ...scale("Q28"), ...scale("Q38")]);
 
-  // 13 — способ входа в дело. Ключевой Q29, шкалы Q30 и Q31, дополняет Q26.
+  // 13 — способ входа в дело. Ключевой Q29, последний случай Q31, шкала Q30, дополняет Q26.
   const entryAnswer = choiceAnswer(answers, "Q29");
   const entry = entryAnswer ? ENTRY[entryAnswer] : undefined;
   {
     const score = scoreCoordinate([
       ...choice("Q29", optionPointers(ENTRY), true),
+      ...choice("Q31", optionPointers(ENTRY)),
       ...scale("Q30"),
-      ...scale("Q31"),
       ...support("Q26"),
     ]);
     if (score) {
@@ -950,11 +951,14 @@ export function buildProfileFromBank(answers: BankAnswers, options: ProfileOptio
 
 /** Категории координаты 14 и вопросы, которые за них голосуют (content/scoring-rules.md). */
 const DECISION_MODES: { code: string; value: string; scales: string[]; choices: Record<string, string[]> }[] = [
-  { code: "analysis", value: "анализ и расчёт", scales: [], choices: { Q11: ["A", "C"] } },
+  { code: "analysis", value: "анализ и расчёт", scales: ["Q39"], choices: { Q11: ["A", "C"] } },
   { code: "inner_response", value: "внутренний отклик", scales: ["Q33"], choices: { Q11: ["D"] } },
-  { code: "discussion", value: "обсуждение вслух", scales: ["Q2"], choices: {} },
+  { code: "discussion", value: "обсуждение вслух", scales: ["Q40", "Q2"], choices: {} },
   { code: "pause", value: "пауза и время", scales: ["Q32"], choices: {} },
 ];
+
+/** Свои вопросы анализа и обсуждения: ключевые, когда голосуют за победившую категорию. */
+const DECISION_OWN_KEY = new Set(["Q39", "Q40"]);
 
 /**
  * Координата 14. Голос за категорию — шкальный ответ в верхней полосе (по общей
@@ -980,7 +984,13 @@ function assignDecisionMode(answers: BankAnswers, assign: (id: number, assignmen
   if (!leader.out.length) return;
 
   const evidence: Evidence[] = [
-    ...leader.out.map<PointerEvidence>(({ question, answer }) => ({ kind: "указание", question, answer, direction: 1 })),
+    ...leader.out.map<PointerEvidence>(({ question, answer }) => ({
+      kind: "указание",
+      question,
+      answer,
+      direction: 1,
+      key: DECISION_OWN_KEY.has(question),
+    })),
     ...votes
       .filter((candidate) => candidate.mode.code !== leader.mode.code)
       .flatMap((candidate) =>

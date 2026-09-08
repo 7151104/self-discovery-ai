@@ -3,7 +3,7 @@
  *
  * Главное, что здесь проверяется, — единственность источника правды: в
  * `content/slices/full-map.md` стоят идентификаторы банка и ни одной формулировки
- * вопроса. Остальное — состав остатка (24 закрытых + `О2`, `О3`), размеры порций,
+ * вопроса. Остальное — состав остатка (29 закрытых + `О2`, `О3`), размеры порций,
  * полнота матриц промежуточных блоков и то, что тексты блоков проходят реестр
  * запрещённых формулировок.
  */
@@ -28,24 +28,24 @@ const repoFile = (path: string): string => readFileSync(new URL(`../../${path}`,
 const source = repoFile("content/slices/full-map.md");
 const ladderSources = new Set(rawContent.questions.map((question) => question.source));
 
-test("добор полной карты — 26 вопросов тремя порциями 10 + 10 + 6", () => {
+test("добор полной карты — 31 вопрос тремя порциями 10 + 11 + 10", () => {
   const portions = fullMapPortions();
   assert.deepEqual(
     portions.map((portion) => portion.questions.length),
-    [10, 10, 6],
+    [10, 11, 10],
   );
   assert.deepEqual(
     portions.map((portion) => portion.number),
     [1, 2, 3],
   );
-  assert.equal(fullMapQuestions().length, 26);
+  assert.equal(fullMapQuestions().length, 31);
 });
 
-test("состав добора — остаток банка: 24 закрытых плюс О2 и О3", () => {
+test("состав добора — остаток банка: 29 закрытых плюс О2 и О3", () => {
   const questions = fullMapQuestions();
   const closed = questions.filter((question) => question.type !== "открытый");
   const open = questions.filter((question) => question.type === "открытый");
-  assert.equal(closed.length, 24);
+  assert.equal(closed.length, 29);
   assert.deepEqual(
     open.map((question) => question.id),
     ["О2", "О3"],
@@ -108,11 +108,11 @@ test("текст, тип и варианты каждого вопроса до�
 test("вопрос, на который ответ уже есть, во следующую порцию не попадает", () => {
   const first = fullMapPortions()[0]!.questions.map((question) => question.id);
   const remaining = fullMapRemaining(first);
-  assert.equal(remaining.length, 16);
+  assert.equal(remaining.length, 21);
   for (const id of first) {
     assert.ok(!remaining.some((question) => question.id === id), `${id}: задан второй раз`);
   }
-  assert.deepEqual(fullMapRemaining().length, 26, "без ответов остаток равен всему добору");
+  assert.deepEqual(fullMapRemaining().length, 31, "без ответов остаток равен всему добору");
 });
 
 test("у каждого промежуточного блока две оси и полная матрица пар", () => {

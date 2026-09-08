@@ -135,7 +135,7 @@ export interface RawUiCopy {
  * остался один источник правды.
  */
 export interface RawFullMapQuestion {
-  /** Идентификатор банка: `Q1`–`Q35`, `О1`–`О3`. */
+  /** Идентификатор банка: `Q1`–`Q40`, `О1`–`О3`. */
   id: string;
   type: string;
   text: string;

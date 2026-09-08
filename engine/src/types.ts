@@ -73,8 +73,8 @@ export interface LadderAnswers {
 }
 
 /**
- * Ответы полного банка 35+3: ключ — идентификатор вопроса из
- * `content/questions-full-bank.md` (Q1–Q35, О1–О3). Шкалы приходят числом,
+ * Ответы полного банка 40+3: ключ — идентификатор вопроса из
+ * `content/questions-full-bank.md` (Q1–Q40, О1–О3). Шкалы приходят числом,
  * варианты и открытые ответы — строкой.
  */
 export type BankAnswers = Record<string, ScaleAnswer | ChoiceAnswer | undefined>;

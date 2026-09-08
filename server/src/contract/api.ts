@@ -333,6 +333,8 @@ export type ErrorCode =
   | "not_found"
   | "method_not_allowed"
   | "unknown_question"
+  /** Открытый ответ лестницы короче порога из `content/questions-ladder.md`. */
+  | "answer_too_short"
   | "unknown_slice"
   | "payload_too_large"
   | "rate_limited"

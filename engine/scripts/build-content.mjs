@@ -709,10 +709,15 @@ function parseStep4() {
   const blocks = [...raw.matchAll(/^```(?:\w+)?\n([\s\S]*?)^```$/gm)].map((m) => m[1].trim());
   if (blocks.length < 2) throw new Error("step4-open-synthesis.md: ожидались промпт и шаблон оффера");
 
+  const ladder = read("content/questions-ladder.md");
+  const minimum = /Минимум для генерации:\s*(\d+)\s*слов/.exec(ladder);
+  if (!minimum) throw new Error("questions-ladder.md: не найден минимум слов открытого ответа");
+
   return {
     heading: blockHeading(lines(raw), "## Заголовок на странице"),
     prompt: blocks[0],
     offerTemplate: blocks[1],
+    minWords: Number(minimum[1]),
   };
 }
 

@@ -78,7 +78,7 @@ export {
   type FullMapReport,
   type FullMapSlice,
 } from "./full-map.js";
-export { buildSliceInterludeBlock } from "./blocks.js";
+export { buildSliceInterludeBlock, countWords, openMinWords } from "./blocks.js";
 export {
   diffProfiles,
   diffSincePurchase,

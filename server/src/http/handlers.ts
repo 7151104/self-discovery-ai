@@ -32,7 +32,7 @@ import type {
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
 import { schemaVersion } from "../db/migrate.js";
-import { rawContent } from "../engine.js";
+import { countWords, openMinWords, rawContent } from "../engine.js";
 import { isValidId, newProfileId, newRecordId, newShareToken } from "../ids.js";
 import { assemble, assemblePublic, pageUrl, parseSliceQuestionId, portionOf, shareUrl } from "../page.js";
 import {
@@ -129,6 +129,19 @@ function knownQuestion(id: string): { type: QuestionKind; options: { key: string
   const found = slice?.questions.find((candidate) => candidate.id === parsed.questionId);
   return found ? { type: found.type, options: found.options } : null;
 }
+
+/**
+ * Открытый ответ лестницы короче порога. Ниже порога движок сюжет не пишет, а
+ * без сюжета ступень 4 никуда не ведёт: ни блока, ни предложения, ни следующей
+ * порции. Поэтому короткий ответ отбивается на входе, а не сохраняется молча.
+ *
+ * Доборов срезов это не касается: там короткий ответ по Закону 2 приводит к
+ * уточняющим вопросам, и порог живёт в файле среза.
+ */
+const tooShort = (answer: AnswerInput): boolean =>
+  answer.kind === "открытый" &&
+  question(answer.questionId) !== undefined &&
+  countWords(answer.text) < openMinWords();
 
 /**
  * Один ответ. Тип вопроса и допустимые варианты берутся из контента:
@@ -277,6 +290,7 @@ export function submitPortion(context: Context, params: Record<string, string>, 
 
   const parsed = answers as AnswerInput[];
   if (parsed.some((answer) => portionOf(answer.questionId) !== portion)) return fail(400, "bad_request");
+  if (parsed.some(tooShort)) return fail(400, "answer_too_short");
 
   const state = context.db.transaction(() => {
     // Повтор той же отправки: ответы уже записаны, профиль уже пересчитан.
@@ -324,6 +338,7 @@ export function editAnswer(context: Context, params: Record<string, string>, raw
   const body = asObject(raw);
   const answer = body ? parseAnswer(body["answer"]) : null;
   if (!questionId || !answer || answer.questionId !== questionId) return fail(400, "bad_request");
+  if (tooShort(answer)) return fail(400, "answer_too_short");
 
   const portion = portionOf(questionId);
   if (!portion) return fail(400, "unknown_question");

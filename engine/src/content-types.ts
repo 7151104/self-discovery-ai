@@ -160,6 +160,8 @@ export interface RawContent {
     heading: string;
     prompt: string;
     offerTemplate: string;
+    /** Порог открытого ответа: короче — сюжет не пишется (`content/questions-ladder.md`). */
+    minWords: number;
   };
   slices: RawSlice[];
 }

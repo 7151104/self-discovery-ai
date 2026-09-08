@@ -15,6 +15,12 @@ import type { Block, InterludeBlock, LadderAnswers, LlmTask, Profile, SliceAnswe
 const answerAt = (answers: LadderAnswers, id: string): string | number | undefined =>
   (answers as Record<string, string | number | undefined>)[id];
 
+/** Слова открытого ответа. Одна мерка для движка и для проверки на входе сервера. */
+export const countWords = (text: string): number => text.trim().split(/\s+/).filter(Boolean).length;
+
+/** Порог открытого ответа лестницы. Число живёт в `content/questions-ladder.md`. */
+export const openMinWords = (): number => rawContent.step4.minWords;
+
 const extrasMatch = (extras: Record<string, string>, answers: LadderAnswers): boolean =>
   Object.entries(extras).every(([question, expected]) => answerAt(answers, question) === expected);
 
@@ -105,7 +111,7 @@ export function buildStep3Block(profile: Profile): Block | null {
  */
 export function buildStep4Task(answers: LadderAnswers, profile: Profile, shownBlocks: Block[]): LlmTask | null {
   const openAnswer = (answers.L12 ?? "").trim();
-  if (openAnswer.split(/\s+/).filter(Boolean).length < 15) return null;
+  if (countWords(openAnswer) < openMinWords()) return null;
   if (crisisBlocks(openAnswer)) return null;
 
   return {

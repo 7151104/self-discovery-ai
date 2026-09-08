@@ -20,7 +20,6 @@ import type { OperationName } from "../contract/index.js";
 export interface CreateOptions {
   db: Db;
   config: ServerConfig;
-  version: string;
 }
 
 /** Какой корзиной лимита считается операция. Остальные попадают в общую. */
@@ -245,7 +244,6 @@ export function createHttpServer(options: CreateOptions): Server {
     config: options.config,
     // Незнакомое имя провайдера — отказ при запуске, а не при первой оплате.
     payments: createProvider({ payments: options.config.payments, publicOrigin: options.config.publicOrigin }),
-    version: options.version,
     startedAt: Date.now(),
   };
   const limiter = new RateLimiter(options.config.rateLimit.rules, options.config.rateLimit.enabled);

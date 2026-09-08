@@ -9,10 +9,27 @@
  * Список переменных с описаниями — `.env.example`.
  */
 
+import { readFileSync } from "node:fs";
 import { buildKeyring, KeyError, type Keyring } from "./db/crypto.js";
 import type { RateRules } from "./http/rate-limit.js";
 
-export type Environment = "development" | "production";
+/**
+ * Окружения (E10-01). Их три, и разница между ними — в требованиях, а не в коде:
+ *
+ * `development`  — своя машина, значений по умолчанию хватает, ключей нет;
+ * `staging`      — предварительное окружение: те же обязательные переменные,
+ *                  что в рабочем, но платежи разрешено проводить поддельным
+ *                  провайдером;
+ * `production`   — рабочее: поддельный провайдер запрещён совсем.
+ *
+ * Раздельность данных держится обязательным `SDAI_DB_PATH`: и рабочее, и
+ * предварительное окружения называют файл базы явно, поэтому «случайно один и
+ * тот же файл по умолчанию» невозможно.
+ */
+export type Environment = "development" | "staging" | "production";
+
+/** Окружения, в которых сервер требует полного набора переменных. */
+const DEPLOYED: Environment[] = ["staging", "production"];
 
 /**
  * Настройки оплаты. Провайдер выбирается по имени: реальный адаптер добавится
@@ -23,6 +40,31 @@ export interface PaymentConfig {
   provider: string;
   /** Секрет для проверки подписи уведомлений. */
   webhookSecret: string;
+}
+
+/**
+ * Версия сборки (E10-03). Отдаётся в ответе `GET /api/health`, поэтому по ней
+ * видно, что именно сейчас развёрнуто, и есть чему сопоставлять откат.
+ * Персональных данных здесь нет и быть не может: три технических поля.
+ */
+export interface BuildInfo {
+  /** Тег или номер выпуска. По умолчанию — версия из `package.json`. */
+  version: string;
+  /** Коммит, из которого собрано. `unknown` — сборка вне конвейера. */
+  commit: string;
+  /** Время сборки в ISO-8601 или null, если сборка его не записала. */
+  builtAt: string | null;
+}
+
+/** Резервные копии (E10-05). Расписание задаёт таймер, а не сервер. */
+export interface BackupConfig {
+  /**
+   * Каталог для копий. В рабочем окружении обязателен и должен лежать вне
+   * каталога выпуска: выпуск заменяется при деплое, копии — нет.
+   */
+  directory: string;
+  /** Срок хранения копии в сутках. Более старые удаляет `backup prune`. */
+  keepDays: number;
 }
 
 export interface ServerConfig {
@@ -49,6 +91,8 @@ export interface ServerConfig {
    * хранение и в рабочем окружении невозможна.
    */
   keys: Keyring;
+  build: BuildInfo;
+  backup: BackupConfig;
 }
 
 export const DEFAULTS = {
@@ -63,6 +107,12 @@ export const DEFAULTS = {
   rateLimitEnabled: true,
   /** Поддельный провайдер: единственный, который есть в репозитории. */
   paymentProvider: "fake",
+  backupDirectory: "server/.backups",
+  /**
+   * Срок хранения копий. Две недели — столько, чтобы порча данных, замеченная
+   * не сразу, ещё имела копию «до»; больше держать на той же машине незачем.
+   */
+  backupKeepDays: 14,
   /** Окна подобраны под живой сценарий: порция — минута, создание профиля — час. */
   rate: {
     createProfile: { limit: 20, windowMs: 60 * 60 * 1000 },
@@ -102,19 +152,46 @@ function readBoolean(env: NodeJS.ProcessEnv, variable: string, fallback: boolean
 function readEnvironment(env: NodeJS.ProcessEnv): Environment {
   const raw = env["SDAI_ENV"];
   if (raw === undefined || raw === "") return DEFAULTS.environment;
-  if (raw === "development" || raw === "production") return raw;
-  throw new ConfigError(["SDAI_ENV"], "expected-development-or-production");
+  if (raw === "development" || raw === "staging" || raw === "production") return raw;
+  throw new ConfigError(["SDAI_ENV"], "expected-development-staging-or-production");
 }
 
 /**
- * Переменные, без которых рабочее окружение работает неправильно.
+ * Переменные, без которых развёрнутое окружение работает неправильно.
  *
  * `SDAI_PUBLIC_ORIGIN` — без него постоянная и публичная ссылки относительные,
  * то есть непригодные для отправки другому человеку.
  * `SDAI_ENCRYPTION_KEY` — без него чувствительные поля лягут открытым текстом.
  * `SDAI_PAYMENT_WEBHOOK_SECRET` — без него подпись уведомлений не проверяется.
+ * `SDAI_DB_PATH` — путь по умолчанию лежит внутри каталога выпуска: при деплое
+ * он заменяется, а два окружения на одной машине делят один файл.
+ * `SDAI_BACKUP_DIR` — то же про копии: копия внутри выпуска исчезает с ним.
  */
-const REQUIRED_IN_PRODUCTION = ["SDAI_PUBLIC_ORIGIN", "SDAI_ENCRYPTION_KEY", "SDAI_PAYMENT_WEBHOOK_SECRET"] as const;
+const REQUIRED_IN_DEPLOYED = [
+  "SDAI_PUBLIC_ORIGIN",
+  "SDAI_ENCRYPTION_KEY",
+  "SDAI_PAYMENT_WEBHOOK_SECRET",
+  "SDAI_DB_PATH",
+  "SDAI_BACKUP_DIR",
+] as const;
+
+/** Версия из `package.json`: она же значение по умолчанию для версии сборки. */
+function packageVersion(): string {
+  try {
+    const raw = readFileSync(new URL("../../package.json", import.meta.url), "utf8");
+    return (JSON.parse(raw) as { version?: string }).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+function readBuild(env: NodeJS.ProcessEnv): BuildInfo {
+  return {
+    version: env["SDAI_BUILD_VERSION"] || packageVersion(),
+    commit: env["SDAI_BUILD_COMMIT"] || "unknown",
+    builtAt: env["SDAI_BUILD_AT"] || null,
+  };
+}
 
 /**
  * Поддельный провайдер и рабочее окружение несовместимы (E8-09).
@@ -156,8 +233,8 @@ function readKeys(env: NodeJS.ProcessEnv): Keyring {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const environment = readEnvironment(env);
 
-  if (environment === "production") {
-    const missing = REQUIRED_IN_PRODUCTION.filter((variable) => !env[variable]);
+  if (DEPLOYED.includes(environment)) {
+    const missing = REQUIRED_IN_DEPLOYED.filter((variable) => !env[variable]);
     if (missing.length) throw new ConfigError([...missing], "missing-required");
   }
 
@@ -193,5 +270,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     },
     payments: readPayments(env, environment),
     keys: readKeys(env),
+    build: readBuild(env),
+    backup: {
+      directory: env["SDAI_BACKUP_DIR"] || DEFAULTS.backupDirectory,
+      keepDays: readInteger(env, "SDAI_BACKUP_KEEP_DAYS", DEFAULTS.backupKeepDays),
+    },
   };
 }

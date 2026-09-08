@@ -1,0 +1,47 @@
+# Служба сервиса. Шаблон: положить в /etc/systemd/system/sdai.service и
+# заменить пути, если раскладка отличается от /srv/sdai.
+#
+# Предварительное окружение — тот же файл под именем sdai-staging.service со
+# своим SDAI_ROOT и своим файлом окружения: у него другая база, другие ключи и
+# другой каталог копий (E10-01).
+#
+# Площадка и домен ждут ответа основателя (открытые вопросы 4 и 29). Этот файл
+# от них не зависит: он описывает запуск на любой машине с systemd.
+
+[Unit]
+Description=Сервис самопознания на 16 координатах
+Documentation=https://github.com/7151104/self-discovery-ai
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sdai
+Group=sdai
+WorkingDirectory=/srv/sdai/current
+
+# Состав переменных — .env.example в корне репозитория. Секреты живут только
+# здесь, права на файл — 0600: ключ шифрования и секрет подписи уведомлений.
+EnvironmentFile=/etc/sdai/production.env
+# Версия сборки: файл пишет deploy/release.sh внутрь выпуска, поэтому откат
+# меняет и версию в ответе /api/health.
+EnvironmentFile=-/srv/sdai/current/release.env
+
+# Миграции сервер проверяет и применяет сам при старте и отказывается стартовать
+# на несовместимой (E10-04), поэтому отдельного шага перед запуском здесь нет.
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning /srv/sdai/current/server/dist/main.js
+
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# Служба пишет только в свою базу и в каталог копий.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sdai /var/backups/sdai
+
+[Install]
+WantedBy=multi-user.target

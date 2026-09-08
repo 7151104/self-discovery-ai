@@ -58,7 +58,7 @@ test("у каждой полосы карты есть устойчивый кл
   for (const key of keys) assert.ok(/^[a-z]+$/.test(key), `ключ полосы «${key}» похож на номер координаты`);
 });
 
-test("эндпоинт здоровья отвечает и показывает версию схемы", async (t) => {
+test("эндпоинт здоровья отвечает и показывает версию схемы и версию сборки", async (t) => {
   const server = await startTestServer();
   t.after(() => server.close());
 
@@ -68,6 +68,22 @@ test("эндпоинт здоровья отвечает и показывает
   assert.equal(reply.body.database, "ok");
   assert.equal(reply.body.schemaVersion, latestMigration());
   assert.ok(reply.body.uptimeMs >= 0);
+
+  // Версия сборки и коммит: по ним видно, что развёрнуто и что откатили (E10-03).
+  assert.equal(reply.body.version, "test");
+  assert.equal(reply.body.build.commit, "test-commit");
+  assert.equal(reply.body.environment, "development");
+
+  // Персональных данных в ответе нет ни одного поля.
+  assert.deepEqual(Object.keys(reply.body).sort(), [
+    "build",
+    "database",
+    "environment",
+    "schemaVersion",
+    "status",
+    "uptimeMs",
+    "version",
+  ]);
 });
 
 test("страница растёт по порциям: блок, полосы и следующая порция", async (t) => {

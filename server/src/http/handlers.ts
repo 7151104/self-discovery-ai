@@ -75,7 +75,6 @@ export interface Context {
   config: ServerConfig;
   /** Платёжный провайдер: поднимается из настроек один раз на запуск сервера. */
   payments: PaymentProvider;
-  version: string;
   startedAt: number;
 }
 
@@ -188,9 +187,12 @@ export function health(context: Context): HandlerResult {
     database = "unavailable";
   }
 
+  const build = context.config.build;
   const body: HealthResponse = {
     status: "ok",
-    version: context.version,
+    version: build.version,
+    build: { commit: build.commit, builtAt: build.builtAt },
+    environment: context.config.environment,
     uptimeMs: Date.now() - context.startedAt,
     database,
     schemaVersion: version,

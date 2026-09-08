@@ -23,10 +23,10 @@ import { renderHead, renderHook } from "../components/page-head.js";
 import { renderScale } from "../components/scale.js";
 import * as mock from "./mocks.js";
 
-const section = (title: string, note: string, ...items: Child[]): VNode =>
+const section = (id: string, title: string, note: string, ...items: Child[]): VNode =>
   h(
     "section",
-    { class: "showcase__section" },
+    { class: "showcase__section", id, "data-section": id },
     h("h2", { class: "showcase__title" }, title),
     h("p", { class: "showcase__note" }, note),
     ...items,
@@ -43,6 +43,7 @@ const phone = (caption: string, node: Child): VNode =>
 
 const tokensSection = (): VNode =>
   section(
+    "tokens",
     "Токены",
     "Единственный источник значений. Всё, что ниже, собрано из web/tokens/tokens.ts.",
     ...TOKEN_GROUPS.map((group) =>
@@ -72,6 +73,7 @@ const tokensSection = (): VNode =>
 
 const typographySection = (): VNode =>
   section(
+    "typography",
     "Типографика и крючок",
     "Крупного текста на странице ровно два: имя и фраза-крючок.",
     phone("Шапка и крючок", h("div", { class: "showcase__stack" }, renderHead(mock.card), renderHook(mock.hook))),
@@ -79,6 +81,7 @@ const typographySection = (): VNode =>
 
 const inputSection = (): VNode =>
   section(
+    "input",
     "Ввод",
     "Цель нажатия — не меньше 44 px. Фокус проверяется клавишей Tab: кольцо видно на каждом состоянии.",
     phone(
@@ -168,6 +171,7 @@ function liveField(): VNode {
 
 const blockSection = (): VNode =>
   section(
+    "block",
     "Блок разбора",
     "Сшивка сильнее абзацев размером, начертанием и линейкой слева — разница видна и без цвета.",
     phone("Покой", renderBlock(blockFromDto(mock.block, { actions: mock.blockActions }))),
@@ -191,6 +195,7 @@ const blockSection = (): VNode =>
 
 const mapSection = (): VNode =>
   section(
+    "map",
     "Визуальная карта",
     "Семь полос, три состояния и категориальная полоса. Ни чисел, ни процентов, ни названий координат.",
     phone(
@@ -223,6 +228,7 @@ const doorStates: { visual: DoorVisual; caption: string }[] = [
 
 const doorSection = (): VNode =>
   section(
+    "door",
     "Двери и маршрут",
     "Маршрут виден с первого экрана. Цена — только у предложенной двери, закрытые платные без цен.",
     phone(
@@ -265,13 +271,32 @@ const doorSection = (): VNode =>
 
 const paymentSection = (): VNode =>
   section(
+    "payment",
     "Точка оплаты",
     "Одно предложение и ничего больше: ни таймеров, ни второй кнопки с другим продуктом.",
     phone("Первый шаг оплаты", renderPaymentStep({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice })),
     phone("Предложение внутри страницы", renderOffer({ offer: mock.offer, labels: mock.offerLabels, formatPrice: mock.formatPrice })),
   );
 
-export function renderShowcase(): VNode {
+/**
+ * Разделы витрины. Отдельный раздел открывается как `?section=map` — этим же
+ * снимаются картинки для визуальных регрессий E11-04, по разделу за снимок.
+ */
+export const SECTIONS = [
+  tokensSection,
+  typographySection,
+  inputSection,
+  blockSection,
+  mapSection,
+  doorSection,
+  paymentSection,
+];
+
+export function renderShowcase(only?: string | null): VNode {
+  const sections = SECTIONS.map((build) => build()).filter(
+    (node) => only === undefined || only === null || node.attrs["data-section"] === only,
+  );
+
   return h(
     "main",
     { class: "showcase" },
@@ -281,15 +306,9 @@ export function renderShowcase(): VNode {
       { class: "showcase__lead" },
       "Компоненты дизайн-системы во всех состояниях на моковых данных. Состояния страницы s0–paid_done добавит E6-12.",
     ),
-    tokensSection(),
-    typographySection(),
-    inputSection(),
-    blockSection(),
-    mapSection(),
-    doorSection(),
-    paymentSection(),
+    ...sections,
   );
 }
 
 const root = typeof document === "undefined" ? null : document.querySelector("#app");
-if (root !== null) mount(renderShowcase(), root);
+if (root !== null) mount(renderShowcase(new URL(location.href).searchParams.get("section")), root);

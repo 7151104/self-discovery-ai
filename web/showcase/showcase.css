@@ -4,8 +4,10 @@
  * проверяет и её.
  */
 
+/* Витрина — внутренняя страница, а не продукт: ширину ей задаёт окно.
+   Читаемую длину строки держат отдельные тексты, а не общий контейнер. */
 .showcase {
-  max-width: var(--size-container);
+  max-width: 100%;
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) var(--space-7);
   display: flex;
@@ -127,7 +129,7 @@
 
 .showcase__token-value {
   flex: none;
-  width: var(--measure-hook);
+  white-space: nowrap;
 }
 
 .showcase__token-purpose {

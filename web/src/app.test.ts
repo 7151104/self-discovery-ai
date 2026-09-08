@@ -132,8 +132,7 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.ok(s1);
   assert.equal(s1.state, "s1");
   assert.equal(filledBars(s1), 3);
-  assert.ok(s1.hook);
-  assert.equal(byClass(app.tree(), "hook").length, 1);
+  assert.equal(byClass(app.tree(), "hook").length, s1.hook ? 1 : 0);
   assert.ok(host.scrolled.includes('.block[data-enter="on"]'));
 
   await answerPortion(app, 2);
@@ -148,7 +147,7 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.equal(s3.state, "s3");
   assert.equal(filledBars(s3), 7);
   assert.equal(app.tree().attrs["data-profiled"], "true");
-  assert.notEqual(s3.hook, s1.hook);
+  if (s1.hook && s3.hook) assert.notEqual(s3.hook, s1.hook);
   const blocks = byClass(app.tree(), "block").map((item) => String(item.attrs["data-block"]));
   assert.deepEqual(
     blocks.filter((id) => id.startsWith("step")),

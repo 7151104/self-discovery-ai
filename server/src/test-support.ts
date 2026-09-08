@@ -133,12 +133,15 @@ export async function call<T>(
   method: string,
   path: string,
   body?: unknown,
+  headers: Record<string, string> = {},
 ): Promise<Reply<T>> {
   const response = await fetch(`${origin}${path}`, {
     method,
-    ...(body === undefined
-      ? {}
-      : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+    headers: {
+      ...headers,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   return { status: response.status, body: (await response.json()) as T };
 }

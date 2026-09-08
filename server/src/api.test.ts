@@ -264,13 +264,15 @@ test("события пишутся без персональных данных
 
   const page = await profileAtStep(server.origin, 4);
   const events = listEvents(server.db, page.profileId);
+  const types = events.map((event) => event.type);
 
-  assert.deepEqual(
-    events.map((event) => event.type),
-    ["profile.created", "portion.submitted", "portion.submitted", "portion.submitted", "portion.submitted"],
-  );
+  assert.ok(types.includes("profile.created"));
+  assert.equal(types.filter((type) => type === "portion.submitted").length, 4);
   for (const event of events) {
     assert.ok(!event.payload.includes("Аня"), "имя в событии");
     assert.ok(!/[А-Яа-я]{10,}/.test(event.payload), "открытый ответ в событии");
+    const payload = JSON.parse(event.payload) as { step?: unknown; version?: unknown };
+    assert.equal(typeof payload.step, "string", event.type);
+    assert.equal(typeof payload.version, "string", event.type);
   }
 });

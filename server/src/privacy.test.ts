@@ -134,7 +134,10 @@ test("запись об удалении не называет удалённо�
   const deletion = events.find((event) => event.type === "profile.deleted");
   assert.ok(deletion);
   assert.equal(deletion.profile_id, null);
-  assert.equal(deletion.payload, "{}");
+  const payload = JSON.parse(deletion.payload) as { step?: unknown; version?: unknown };
+  assert.equal(payload.step, "none");
+  assert.equal(typeof payload.version, "string");
+  assert.ok(!deletion.payload.includes(page.profileId));
 
   // Прежние события профиля остались в воронке, но потеряли профиль.
   assert.ok(events.some((event) => event.type === "portion.submitted"));

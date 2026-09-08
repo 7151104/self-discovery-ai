@@ -1,0 +1,104 @@
+/*
+ * Карточка входа. Поля во всю ширину, цели не меньше --size-target.
+ * Дата не обязательна: подсказка объясняет, что будет без неё.
+ */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--size-container);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-3);
+}
+
+.intro__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.intro__about {
+  max-width: var(--measure-block);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.intro__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.intro__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.intro__input {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  width: 100%;
+  padding: var(--space-3);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  transition: border-color var(--duration-fast) ease;
+}
+
+.intro__input:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+.intro__hint {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.intro__error {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-alert);
+}
+
+.intro__submit {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  align-self: flex-start;
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-strong) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.intro__submit:disabled {
+  background: var(--color-surface-muted);
+  border-color: var(--color-line);
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .intro__input:hover:not(:disabled) {
+    border-color: var(--color-line-strong);
+  }
+
+  .intro__submit:hover:not(:disabled) {
+    border-color: var(--color-text-strong);
+  }
+}

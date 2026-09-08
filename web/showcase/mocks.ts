@@ -24,6 +24,8 @@ export const card: CardDto = {
 };
 
 export const hook = "Ты не бросаешь дела — ты останавливаешься за шаг до конца";
+export const hookAfterStep3 = "Ты закрываешь дело ровно тогда, когда его уже нельзя сделать лучше";
+export const hookAfterStep4 = "Круг замыкается там же, где начался";
 
 /** Тексты карты приходят из реестра микрокопии, а не сочиняются витриной. */
 export const zoneLabel = mapTexts.zone;

@@ -21,6 +21,8 @@ import { renderHead, renderHook } from "./page-head.js";
 import { renderPortion } from "./portion.js";
 import { renderScale } from "./scale.js";
 import { renderWait } from "./wait.js";
+import { renderIntro } from "./intro.js";
+import { renderMissing } from "./missing.js";
 import { renderToString, type VNode } from "../src/dom.js";
 import { componentFiles } from "../src/test-support.js";
 import { webRoot } from "../src/paths.js";
@@ -152,6 +154,23 @@ const cases: { name: string; node: VNode }[] = [
     }),
   },
   { name: "ожидание", node: renderWait({ title: "T", topics: "X", longNote: "N" }) },
+  {
+    name: "карточка входа",
+    node: renderIntro({
+      labels: {
+        title: "T",
+        about: "A",
+        nameLabel: "N",
+        namePlaceholder: "P",
+        nameRequired: "R",
+        dateLabel: "D",
+        dateHint: "H",
+        submit: "S",
+      },
+      values: { name: "Ada", birthDate: "1990-01-01" },
+    }),
+  },
+  { name: "нет профиля", node: renderMissing({ title: "T", text: "X", action: "A" }) },
 ];
 
 for (const item of cases) {

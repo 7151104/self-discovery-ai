@@ -19,8 +19,10 @@ import { renderOptions } from "../components/option.js";
 import { renderHead, renderHook } from "../components/page-head.js";
 import { renderPortion, type PortionLabels } from "../components/portion.js";
 import { renderScale } from "../components/scale.js";
+import { renderIntro } from "../components/intro.js";
+import { renderMissing } from "../components/missing.js";
 import { renderWait } from "../components/wait.js";
-import { portionTexts, waitTexts } from "../src/page-copy.js";
+import { introTexts, missingTexts, portionTexts, waitTexts } from "../src/page-copy.js";
 import { EDGE_CASES } from "./edge-states.js";
 import { viewLabels } from "./labels.js";
 import * as mock from "./mocks.js";
@@ -83,6 +85,32 @@ const typographySection = (): VNode =>
     "Типографика и крючок",
     "Крупного текста на странице ровно два: имя и фраза-крючок.",
     phone("Шапка и крючок", h("div", { class: "showcase__stack" }, renderHead(mock.card), renderHook(mock.hook))),
+  );
+
+const entrySection = (): VNode =>
+  section(
+    "entry",
+    "Вход и отсутствующий профиль",
+    "Ступень 0: имя обязательно, дату можно пропустить. Профиля нет — понятная страница без кодов отказа.",
+    phone(
+      "Карточка входа",
+      renderIntro({
+        labels: {
+          title: introTexts.title(),
+          about: introTexts.about(),
+          nameLabel: introTexts.nameLabel(),
+          namePlaceholder: introTexts.namePlaceholder(),
+          nameRequired: introTexts.nameRequired(),
+          dateLabel: introTexts.dateLabel(),
+          dateHint: introTexts.dateHint(),
+          submit: introTexts.submit(),
+        },
+      }),
+    ),
+    phone(
+      "Ссылка не открывается",
+      renderMissing({ title: missingTexts.title(), text: missingTexts.text(), action: missingTexts.action() }),
+    ),
   );
 
 const inputSection = (): VNode =>
@@ -395,6 +423,7 @@ const waitSection = (): VNode =>
         kind: "step4",
       }),
     ),
+    phone("Пауза «собираю» между порцией и новым блоком", renderWait({ title: waitTexts.collecting(), kind: "collecting" })),
     ...PAGE_STATE_CASES.filter((item) => !item.spec).map((item) =>
       phone(item.caption, renderPersonalPage(pageStates[item.key], viewLabels(pageStates[item.key]))),
     ),
@@ -438,6 +467,7 @@ const edgeSections = (): Array<() => VNode> =>
 export const SECTIONS = [
   tokensSection,
   typographySection,
+  entrySection,
   inputSection,
   blockSection,
   mapSection,

@@ -20,7 +20,7 @@ const sectionIds = (): string[] => SECTIONS.map((build) => String(build().attrs[
 
 test("разделы витрины на месте", () => {
   const page = markup();
-  for (const id of ["tokens", "typography", "input", "block", "map", "door", "payment", "portion", "wait"]) {
+  for (const id of ["tokens", "typography", "entry", "input", "block", "map", "door", "payment", "portion", "wait"]) {
     assert.ok(page.includes(`data-section="${id}"`), `нет раздела ${id}`);
   }
 });
@@ -138,6 +138,14 @@ test("ожидание показано для ступени 4 и для сре
   const page = markup("wait");
   assert.ok(page.includes('data-wait="step4"'));
   assert.ok(page.includes('data-wait="slice"'));
+  assert.ok(page.includes('data-wait="collecting"'));
   assert.ok(page.includes('data-page="s4"'));
   assert.ok(page.includes('data-page="paid_pending"'));
+});
+
+test("вход и отсутствующий профиль показаны в витрине", () => {
+  const page = markup("entry");
+  assert.ok(page.includes('data-screen="intro"'));
+  assert.ok(page.includes('data-screen="missing"'));
+  assert.equal(page.includes("404"), false);
 });

@@ -1,0 +1,46 @@
+/*
+ * Несуществующий профиль: короткая страница без технических подробностей.
+ */
+
+.missing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--size-container);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-3);
+}
+
+.missing__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.missing__text {
+  max-width: var(--measure-block);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.missing__action {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  align-self: flex-start;
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-strong) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+@media (hover: hover) {
+  .missing__action:hover {
+    border-color: var(--color-text-strong);
+  }
+}

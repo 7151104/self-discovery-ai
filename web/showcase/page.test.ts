@@ -31,7 +31,7 @@ test("s1 и s2 наращивают блоки и полосы, порция о�
   const s2 = renderPersonalPage(pageStates.s2, viewLabels(pageStates.s2));
   assert.equal(findAll(s1, "article").length, 1);
   assert.equal(findAll(s2, "article").length, 2);
-  assert.equal(pageStates.s1.map.filter((bar) => bar.fill !== "empty").length, 2);
+  assert.equal(pageStates.s1.map.filter((bar) => bar.fill !== "empty").length, 3);
   assert.equal(pageStates.s2.map.filter((bar) => bar.fill !== "empty").length, 5);
   assert.ok(visibleText(s1).includes(pageStates.s1.hook as string));
 });

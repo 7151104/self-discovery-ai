@@ -135,14 +135,14 @@ test("платный путь: оплата, доборы, отчёт, нова�
   const testServer = await support.startTestServer();
   t.after(() => testServer.close());
 
-  let lastOrder: OrderDto | null = null;
+  const capture: { order: OrderDto | null } = { order: null };
   const capturingFetch: typeof fetch = async (input, init) => {
     const response = await fetch(input, init);
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const method = (init?.method ?? "GET").toUpperCase();
     if (method === "POST" && url.includes("/orders")) {
       const body = (await response.clone().json()) as { order?: OrderDto };
-      if (body.order) lastOrder = body.order;
+      if (body.order) capture.order = body.order;
     }
     return response;
   };
@@ -211,11 +211,10 @@ test("платный путь: оплата, доборы, отчёт, нова�
   assert.equal(kit.byClass(app.tree(), "offer").length, 1);
 
   const payOfferedSlice = async (slice: string) => {
-    lastOrder = null;
     await app.buy();
-    assert.ok(lastOrder, "заказ после нажатия «купить» не создался");
-    assert.equal(lastOrder.slice, slice);
-    const order = lastOrder;
+    const order = capture.order;
+    assert.ok(order, "заказ после нажатия «купить» не создался");
+    assert.equal(order.slice, slice, "создан заказ на другой срез");
     const reference = referenceOf(order);
     assert.ok(reference, "у заказа нет идентификатора платежа");
 

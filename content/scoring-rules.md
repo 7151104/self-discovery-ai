@@ -134,7 +134,7 @@ L8 даёт medium сам по себе. Поднимается до high, ес�
   "profile_id": "uuid",
   "coordinates": { "1": {...}, ... "16": {...} },
   "flags": ["self_report_mismatch_11", "contradiction_plan_vs_open"],
-  "dominant_node": "fear_of_evaluation_at_finish",
+  "dominant_node": "NODE_FINISH_FEAR",
   "next_paid_offer": "slice_node_finish"
 }
 ```

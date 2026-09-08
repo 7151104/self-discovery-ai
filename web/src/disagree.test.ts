@@ -44,9 +44,10 @@ const hostOf = (origin: string, pathname: string): AppHost => {
   };
 };
 
-async function openPage(origin: string, profileId: string) {
+async function openPage(t: { after: (fn: () => void) => void }, origin: string, profileId: string) {
   const host = hostOf(origin, `/p/${profileId}`);
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   return app;
 }
@@ -56,7 +57,7 @@ test("после несогласия полоса становится пред
   t.after(() => server.close());
 
   const page = await profileAtStep(server.origin, 3);
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   const before = app.session().page;
   assert.ok(before);
   const block = before.blocks.find((item) => item.id === "step1");
@@ -93,11 +94,11 @@ test("несогласие сохранено на сервере: повтор�
   t.after(() => server.close());
 
   const page = await profileAtStep(server.origin, 3);
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   await app.pickDisagree("step2", "partly");
   assert.equal(app.session().page?.blocks.find((item) => item.id === "step2")?.disagreed, true);
 
-  const again = await openPage(server.origin, page.profileId);
+  const again = await openPage(t, server.origin, page.profileId);
   assert.equal(again.session().page?.blocks.find((item) => item.id === "step2")?.disagreed, true);
 });
 
@@ -110,7 +111,7 @@ test("купленный срез после несогласия с беспл�
   assert.ok(slice, "купленного среза нет — нечем проверять, что он остался");
   const paragraphs = [...slice.paragraphs];
 
-  const app = await openPage(server.origin, page.profileId);
+  const app = await openPage(t, server.origin, page.profileId);
   await app.pickDisagree("step1", "too_general");
   const after = app.session().page;
   assert.ok(after);
@@ -125,6 +126,7 @@ test("лестница до ступени 3 открывает выбор не�
   t.after(() => server.close());
   const host = hostOf(server.origin, "/");
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   app.consent(true);
   await app.intro("Аня", "1990-05-05");

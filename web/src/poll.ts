@@ -92,6 +92,10 @@ export function startPoll(options: PollOptions): Poller {
       timer = null;
       inFlight = run();
     }, ms);
+    // В Node таймер держит процесс. Тесты и остановленный сервер иначе не
+    // завершаются: опрос продолжается вхолостую после ухода со страницы.
+    const handle = timer as unknown as { unref?: () => void };
+    handle.unref?.();
   };
 
   schedule(0);

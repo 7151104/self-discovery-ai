@@ -70,6 +70,7 @@ test("несуществующий профиль открывает понят�
   t.after(() => server.close());
   const host = hostOf(server.origin, "/p/aaaaaaaaaaaaaaaaaaaaaa");
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   assert.equal(app.session().screen, "missing");
   const text = visibleText(app.tree());
@@ -83,6 +84,7 @@ test("лестница: вход без даты, порции, карта 3→5
   t.after(() => server.close());
   const host = hostOf(server.origin, "/");
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
 
   assert.equal(app.session().screen, "intro");
@@ -174,6 +176,7 @@ test("с датой рождения шапка показывает тему п
   t.after(() => server.close());
   const host = hostOf(server.origin, "/");
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   app.consent(true);
   await app.intro("Кирилл", "1990-05-05");

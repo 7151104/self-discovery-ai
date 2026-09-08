@@ -54,6 +54,7 @@ test("кнопка «Поделиться» отдаёт SVG крючка и к�
   const page = await profileAtStep(server.origin, 3);
   const host = hostOf(server.origin, `/p/${page.profileId}`);
   const app = createPageApp(host);
+  t.after(() => app.stop());
   await app.start();
   assert.ok(app.session().page?.hook);
 
@@ -75,6 +76,7 @@ test("публичный вид скрывает блоки 3 и 4, несогл
 
   const page = await profileAtStep(server.origin, 3);
   const owner = createPageApp(hostOf(server.origin, `/p/${page.profileId}`));
+  t.after(() => owner.stop());
   await owner.start();
   owner.share();
   await owner.openPublicLink();
@@ -85,6 +87,7 @@ test("публичный вид скрывает блоки 3 и 4, несогл
 
   const token = tokenOf(share.url);
   const guest = createPageApp(hostOf(server.origin, `/s/${token}`));
+  t.after(() => guest.stop());
   await guest.start();
   assert.equal(guest.session().screen, "public");
   assert.equal(guest.tree().attrs["data-view"], "public");
@@ -107,6 +110,7 @@ test("отозванная ссылка открывает понятную ст
 
   const page = await profileAtStep(server.origin, 2);
   const owner = createPageApp(hostOf(server.origin, `/p/${page.profileId}`));
+  t.after(() => owner.stop());
   await owner.start();
   owner.share();
   await owner.openPublicLink();
@@ -116,6 +120,7 @@ test("отозванная ссылка открывает понятную ст
   assert.ok(visibleText(owner.tree()).includes(copy("UI_SHARE_CLOSED")));
 
   const guest = createPageApp(hostOf(server.origin, `/s/${token}`));
+  t.after(() => guest.stop());
   await guest.start();
   assert.equal(guest.session().screen, "missing");
   assert.equal(guest.session().missingKind, "revoked");

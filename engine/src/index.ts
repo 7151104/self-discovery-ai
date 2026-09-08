@@ -109,7 +109,7 @@ export {
 export { buildPage, buildStep0Card, completedStep, portionForStep, type PageOptions } from "./page.js";
 export { rawContent } from "./generated/content.js";
 export { rawExtraContent } from "./generated/content-extra.js";
-export { wordCount, words } from "./words.js";
+export { wordCount, words, unwrapLines } from "./words.js";
 export {
   collectCorpus,
   degreeOf,

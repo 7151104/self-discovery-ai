@@ -10,3 +10,10 @@ export const words = (text: string): string[] => text.match(/[\p{L}\p{N}]+(?:-[\
 
 /** Число слов. Объём lookup-блоков и эталонов считается отсюда, а не пробелами. */
 export const wordCount = (text: string): number => words(text).length;
+
+/**
+ * Одиночный перевод строки в markdown — перенос строки, а не граница предложения.
+ * Двойной перевод остаётся абзацем. Нужно юридическим текстам: отрицание «не входит»
+ * и перечень на следующей строке — одно предложение.
+ */
+export const unwrapLines = (text: string): string => text.replace(/([^\n])\n(?!\n)/g, "$1 ");

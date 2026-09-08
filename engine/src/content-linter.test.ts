@@ -127,6 +127,17 @@ test("абзац длиннее потолка lookup-блока — отказ 
   assert.equal(wordCount(long), range.max + 1);
 });
 
+test("перенос строки не отрывает отрицание от перечня в юридических текстах", () => {
+  const wrapped =
+    "Что не входит и за что мы не берём денег: консультация, переписка со специалистом,\nпсихологическая или медицинская помощь, сопровождение.";
+  const findings = lintSnippet(wrapped, "интерфейс");
+  assert.equal(
+    findings.filter((item) => item.kind === "отказ").length,
+    0,
+    findings.map((item) => `${item.group} · ${item.match}`).join("; "),
+  );
+});
+
 test("отчёт линтера по-русски называет файл, место, группу и действие", () => {
   const findings = lintSnippet(sampleFor("MBTI"), "разбор");
   const report = formatLintReport({

@@ -23,7 +23,7 @@ import { rawContent } from "./generated/content.js";
 import { rawExtraContent } from "./generated/content-extra.js";
 import { scanText, type ForbiddenHit } from "./forbidden.js";
 import type { ForbiddenDegree, ForbiddenScope } from "./content-extra-types.js";
-import { wordCount } from "./words.js";
+import { unwrapLines, wordCount } from "./words.js";
 
 const repoFile = (path: string): string => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
@@ -92,8 +92,14 @@ export function lookupVolume(): WordRange {
     .slice(from)
     .split("\n")
     .find((line) => /Блок ступени 1/.test(line) && /lookup/i.test(line));
-  const range = /(\d+)\s*[–—-]\s*(\d+)/.exec(row ?? "");
-  if (!range) throw new Error("docs/06-report-structure.md: в строке lookup-блока нет диапазона слов");
+  const cells = (row ?? "")
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+  // Диапазон — в колонке «Слов», не в названии строки: иначе «1–3» из «ступени 1–3» читается как объём.
+  const range = /(\d+)\s*[–—-]\s*(\d+)/.exec(cells[2] ?? "");
+  if (!range) throw new Error("docs/06-report-structure.md: в колонке «Слов» lookup-блока нет диапазона");
   const min = Number(range[1]);
   const max = Number(range[2]);
   if (!(min > 0 && max > min)) throw new Error("docs/06-report-structure.md: диапазон lookup-блока бессмыслен");
@@ -396,11 +402,12 @@ function volumeFinding(entry: CorpusEntry, count: number): Finding {
 /** Проверка одного текста: реестр плюс объём, если он задан. */
 export function lintEntry(entry: CorpusEntry): Finding[] {
   const findings: Finding[] = [];
-  for (const hit of scanText(entry.text, entry.scope, { degrees: ALL_DEGREES })) {
-    findings.push(findingOf(entry, hit));
+  const text = unwrapLines(entry.text);
+  for (const hit of scanText(text, entry.scope, { degrees: ALL_DEGREES })) {
+    findings.push(findingOf({ ...entry, text }, hit));
   }
   if (entry.volume) {
-    const count = wordCount(entry.text);
+    const count = wordCount(text);
     const tooLong = count > entry.volume.max;
     const tooShort = entry.volume.min !== undefined && count < entry.volume.min;
     if (tooLong || tooShort) findings.push(volumeFinding(entry, count));

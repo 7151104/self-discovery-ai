@@ -1,0 +1,237 @@
+/*
+ * Визуальная карта.
+ *
+ * Три состояния полосы различаются без цвета:
+ *   пустая         — пунктирный контур, маркера нет вовсе;
+ *   предположительная — круглый размытый маркер вполсилы, ниже дорожки;
+ *   точная         — чёткая прямоугольная засечка во всю высоту дорожки.
+ * Уберите цвет — останутся пунктир против сплошного, размытое против чёткого
+ * и круглое против прямоугольного. Это проверяется тестом, а не глазом.
+ *
+ * Позиция маркера приходит классом зоны, а не числом: в разметке карты
+ * чисел нет.
+ */
+
+.map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  list-style: none;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.bar__row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--size-target);
+  list-style: none;
+}
+
+.bar__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.bar__track {
+  position: relative;
+  display: block;
+  height: var(--size-bar-track);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-inset);
+}
+
+.bar__marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--marker-left);
+  margin: auto 0;
+  background: var(--color-accent);
+}
+
+.bar__poles {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.bar__hint {
+  padding: var(--space-2) 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+/* ── Пустая полоса ─────────────────────────────────────────────────────────
+   Контур и ничего внутри. Строка кликабельна и объясняет, чем откроется. */
+
+.bar[data-fill="empty"] .bar__track {
+  border-style: dashed;
+  border-width: var(--border-strong);
+  background: transparent;
+}
+
+.bar[data-fill="empty"] .bar__label {
+  color: var(--color-text-soft);
+}
+
+.bar__explain {
+  border-radius: var(--radius-sm);
+}
+
+.bar__explain > summary {
+  cursor: pointer;
+}
+
+.bar__explain > summary::marker {
+  content: "";
+}
+
+/* ── Предположительная полоса ──────────────────────────────────────────────
+   Маркер круглый, размытый и вполсилы: видно, что это догадка. */
+
+.bar[data-fill="approximate"] .bar__track {
+  border-style: solid;
+  border-width: var(--border-hair);
+}
+
+.bar[data-fill="approximate"] .bar__marker {
+  width: var(--size-bar-marker);
+  height: var(--size-bar-marker);
+  border-radius: var(--radius-pill);
+  opacity: 0.6;
+  filter: blur(0.1875rem);
+}
+
+/* ── Точная полоса ─────────────────────────────────────────────────────────
+   Засечка во всю высоту дорожки, без размытия и без прозрачности. */
+
+.bar[data-fill="precise"] .bar__track {
+  border-style: solid;
+  border-width: var(--border-strong);
+  border-color: var(--color-line-strong);
+}
+
+.bar[data-fill="precise"] .bar__marker {
+  width: var(--border-heavy);
+  height: var(--size-bar-track);
+  border-radius: var(--radius-sm);
+  opacity: 1;
+  filter: none;
+}
+
+/* ── Категориальная полоса «что задевает» ──────────────────────────────────
+   Семь точек, подсвечена одна: человек видит выбор из семи, а не шкалу. */
+
+.bar__dots {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar__dot {
+  width: var(--size-dot);
+  height: var(--size-dot);
+  border: var(--border-hair) solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+.bar__dot[data-selected="true"] {
+  border-color: var(--color-accent);
+  border-width: var(--border-strong);
+  background: var(--color-accent);
+  transform: scale(1.4);
+}
+
+.bar__selected {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+/* ── Зоны маркера ──────────────────────────────────────────────────────────
+   Семь именованных положений. Число живёт в стилях, одинаковых для всех,
+   и не сообщает о человеке ничего. */
+
+.bar__marker[data-zone="far-low"] {
+  --marker-left: 6%;
+}
+
+.bar__marker[data-zone="low"] {
+  --marker-left: 20%;
+}
+
+.bar__marker[data-zone="mid-low"] {
+  --marker-left: 35%;
+}
+
+.bar__marker[data-zone="center"] {
+  --marker-left: 50%;
+}
+
+.bar__marker[data-zone="mid-high"] {
+  --marker-left: 65%;
+}
+
+.bar__marker[data-zone="high"] {
+  --marker-left: 80%;
+}
+
+.bar__marker[data-zone="far-high"] {
+  --marker-left: 94%;
+}
+
+/* ── Приезд маркера ────────────────────────────────────────────────────────
+   Один раз, из центра, за длительность из шкалы. Полоса, которую уже
+   показывали, приходит с data-animate="off" и не анимируется при скролле. */
+
+@keyframes marker-arrive {
+  from {
+    left: 50%;
+  }
+
+  to {
+    left: var(--marker-left);
+  }
+}
+
+.bar[data-animate="on"] .bar__marker {
+  animation-name: marker-arrive;
+  animation-duration: var(--duration-marker);
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+  animation-fill-mode: both;
+}
+
+.bar[data-animate="off"] .bar__marker {
+  animation-name: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar__marker {
+    animation-name: none;
+  }
+}

@@ -1,0 +1,134 @@
+/*
+ * Двери маршрута. Пять состояний различаются формой значка и рамкой,
+ * а не оттенком: закрытая — пунктир и пустой значок, открывающаяся ответами —
+ * пунктирный значок с точкой внутри, открытая — сплошная рамка и залитый
+ * значок, предложенная — приподнятая карточка с ценой.
+ */
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.door__face {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--size-target);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-hair) dashed var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-soft);
+  text-align: left;
+  transition: border-color var(--duration-base) ease, background-color var(--duration-base) ease;
+}
+
+.door__mark {
+  flex: none;
+  width: var(--size-mark);
+  height: var(--size-mark);
+  border: var(--border-strong) dashed var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+.door__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.door__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-snug);
+}
+
+.door__note {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.door__price {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+  white-space: nowrap;
+}
+
+/* Закрыта, тема неизвестна: приглушена, читается как «здесь что-то есть». */
+.door[data-state="locked_generic"] .door__face {
+  color: var(--color-text-faint);
+}
+
+/* Закрыта, тема известна: тот же контур, но подпись читаемая. */
+.door[data-state="locked_profiled"] .door__face {
+  color: var(--color-text);
+}
+
+.door[data-state="locked_profiled"] .door__title {
+  font-weight: var(--weight-medium);
+}
+
+/* Открывается ответами: значок с точкой внутри — доказательство, что
+   маршрут проходится ответами, а не только деньгами. */
+.door[data-state="opens_with_answers"] .door__face {
+  color: var(--color-text);
+}
+
+.door[data-state="opens_with_answers"] .door__mark {
+  border-style: dotted;
+  border-color: var(--color-text);
+  background: radial-gradient(circle at center, var(--color-text) 30%, transparent 32%);
+}
+
+/* Открыта: сплошная рамка, залитый значок, поверхность карточки. */
+.door[data-state="open"] .door__face {
+  border-style: solid;
+  border-color: var(--color-line);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+}
+
+.door[data-state="open"] .door__mark {
+  border-style: solid;
+  border-color: var(--color-text-strong);
+  background: var(--color-text-strong);
+}
+
+/* Предложенная платная: единственная выделенная дверь на экране. */
+.door[data-state="offered"] .door__face {
+  border-style: solid;
+  border-width: var(--border-strong);
+  border-color: var(--color-accent);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  box-shadow: var(--shadow-raised);
+}
+
+.door[data-state="offered"] .door__mark {
+  border-style: solid;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.door[data-state="offered"] .door__title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+@media (hover: hover) {
+  .door__face:not([data-static="true"]):hover {
+    border-color: var(--color-text-soft);
+  }
+}

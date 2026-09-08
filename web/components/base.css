@@ -1,0 +1,86 @@
+/*
+ * Общая основа: сброс, типографика страницы, кольцо фокуса.
+ * Ни одного литерального цвета и ни одного литерального пикселя —
+ * всё приходит из web/tokens/tokens.ts через var(--…).
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Размер шрифта не задаётся: он берётся из настроек человека,
+     поэтому масштаб текста 200% работает без правок вёрстки. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-page);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  cursor: pointer;
+}
+
+/*
+ * Контейнер страницы. Поля на базовом экране 360 px выбраны не на глаз:
+ * от них зависит длина строки блока разбора, а она обязана уложиться
+ * в 34–46 знаков. На широком экране длину держит уже --measure-block.
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: var(--size-container);
+  margin: 0 auto;
+  padding: var(--space-3);
+}
+
+@media (min-width: 30rem) {
+  .page {
+    padding: var(--space-5);
+  }
+}
+
+/* Фокус с клавиатуры виден всегда и одинаково: одно правило на всю страницу. */
+:focus-visible {
+  outline: var(--border-strong) solid var(--color-focus);
+  outline-offset: var(--space-1);
+}
+
+/* Текст только для скринридера: смысл не передаётся одним лишь видом. */
+.visually-hidden {
+  position: absolute;
+  width: var(--border-hair);
+  height: var(--border-hair);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

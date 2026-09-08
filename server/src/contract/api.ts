@@ -14,7 +14,7 @@
  * 3. Идентификатор профиля неперебираем и служит адресом страницы `/p/{profileId}`.
  */
 
-import type { AssertClean, Wire } from "./wire.js";
+import type { AssertClean, AssertViewable, PrivateSlot, Viewable, Wire } from "./wire.js";
 
 // ── Общие формы ───────────────────────────────────────────────────────────────
 
@@ -26,6 +26,12 @@ export type PageStateName = "s0" | "s1" | "s2" | "s3" | "s4" | "paid_pending" | 
  * четыре блока бесплатной лестницы и по блоку на купленный срез.
  */
 export type BlockSlot = "step1" | "step2" | "step3" | "step4" | `slice:${string}`;
+
+/**
+ * Блоки, которые видит посторонний по публичной ссылке. Узел (3), сюжет (4) и
+ * купленные срезы сюда не входят и по API публичного вида не отдаются вообще.
+ */
+export type PublicSlot = Exclude<BlockSlot, PrivateSlot>;
 
 /** Тип вопроса. Совпадает с типами из `content/questions-ladder.md`. */
 export type QuestionKind = "выбор" | "шкала" | "открытый";
@@ -121,6 +127,20 @@ export interface PortionDto {
   /** Подводка к порции: обещание конкретного результата. */
   lead: string;
   questions: QuestionDto[];
+  /**
+   * Вопросы этой порции, ответы на которые уже сохранены. Обычно пусто:
+   * клиент отправляет порцию целиком, а черновик держит у себя. Непустым
+   * бывает после обрыва связи посреди порции — тогда человек продолжает с
+   * первого неотвеченного вопроса, а не начинает заново.
+   */
+  answered: string[];
+}
+
+/** Публичная ссылка на страницу. Появляется только после «Поделиться». */
+export interface ShareDto {
+  /** Адрес публичного вида. Токен в нём не совпадает с идентификатором профиля. */
+  url: string;
+  createdAt: string;
 }
 
 /** Полное состояние личной страницы. Всё, что клиенту разрешено знать. */
@@ -137,7 +157,34 @@ export interface PageStateDto {
   offer: OfferDto | null;
   /** Порция, на которой человек остановился. null — свободных вопросов нет. */
   nextPortion: PortionDto | null;
+  /** Публичная ссылка, если человек нажал «Поделиться». null — страница закрыта. */
+  share: ShareDto | null;
   updatedAt: string;
+}
+
+/**
+ * Что видит посторонний по публичной ссылке: карта, одна фраза и первые два
+ * блока. Узел, сюжет и купленные срезы сюда не попадают — не «не рисуются», а
+ * отсутствуют в типе, поэтому положить их в этот ответ нельзя.
+ *
+ * Ни идентификатора профиля, ни адреса личной страницы здесь нет: публичная
+ * ссылка не должна давать доступ к личной.
+ */
+export interface PublicPageDto {
+  state: PageStateName;
+  /** Только имя: тема периода и дата рождения посторонним не показываются. */
+  name: string;
+  hook: string | null;
+  map: MapBarDto[];
+  blocks: PublicBlockDto[];
+}
+
+/** Блок в публичном виде: без отметок владельца и без статуса генерации. */
+export interface PublicBlockDto {
+  id: PublicSlot;
+  heading: string;
+  paragraphs: string[];
+  highlight: string | null;
 }
 
 export interface OrderDto {
@@ -225,6 +272,7 @@ export type ErrorCode =
   | "unknown_question"
   | "unknown_slice"
   | "payload_too_large"
+  | "rate_limited"
   | "internal_error";
 
 export interface ErrorDto {
@@ -239,17 +287,27 @@ export type PageStateResponse = Wire<PageStateDto>;
 export type OrderResponse = Wire<{ order: OrderDto; page: PageStateDto }>;
 export type GenerationResponse = Wire<{ generation: GenerationDto }>;
 export type DisagreementResponse = Wire<{ disagreement: DisagreementDto; page: PageStateDto }>;
+export type ShareResponse = Wire<{ share: ShareDto | null; page: PageStateDto }>;
+
+/** Публичный вид проходит обе стены: без координат и без закрытых блоков. */
+export type PublicPageResponse = Viewable<Wire<PublicPageDto>>;
 
 // Проверка на этапе сборки: DTO чисты. Строка перестаёт компилироваться,
 // как только в любой из форм появится поле координаты.
 const contractIsCoordinateFree: [
   AssertClean<HealthDto>,
   AssertClean<PageStateDto>,
+  AssertClean<PublicPageDto>,
   AssertClean<{ order: OrderDto; page: PageStateDto }>,
   AssertClean<{ generation: GenerationDto }>,
   AssertClean<{ disagreement: DisagreementDto; page: PageStateDto }>,
-] = [true, true, true, true, true];
+  AssertClean<{ share: ShareDto | null; page: PageStateDto }>,
+] = [true, true, true, true, true, true, true];
 void contractIsCoordinateFree;
+
+// То же для публичного вида: ни одно поле не способно принести блок 3, 4 или срез.
+const publicViewHasNoPrivateBlocks: AssertViewable<PublicPageDto> = true;
+void publicViewHasNoPrivateBlocks;
 
 // ── Реестр эндпоинтов ─────────────────────────────────────────────────────────
 
@@ -322,6 +380,33 @@ export interface ApiEndpoints {
     body: null;
     response: GenerationResponse;
   };
+  /** «Поделиться»: включает публичную ссылку. Повторный вызов отдаёт ту же. */
+  share: {
+    method: "POST";
+    path: "/api/p/:profileId/share";
+    params: { profileId: string };
+    body: null;
+    response: ShareResponse;
+  };
+  /** Отзыв публичной ссылки: старый адрес перестаёт работать. */
+  revokeShare: {
+    method: "DELETE";
+    path: "/api/p/:profileId/share";
+    params: { profileId: string };
+    body: null;
+    response: ShareResponse;
+  };
+  /**
+   * Публичный вид по токену. До нажатия «Поделиться» токена не существует,
+   * поэтому любая публичная ссылка отвечает отказом.
+   */
+  publicPage: {
+    method: "GET";
+    path: "/api/s/:token";
+    params: { token: string };
+    body: null;
+    response: PublicPageResponse;
+  };
 }
 
 export type OperationName = keyof ApiEndpoints;
@@ -344,10 +429,16 @@ export const API: {
   disagree: { method: "POST", path: "/api/p/:profileId/disagreements" },
   purchase: { method: "POST", path: "/api/p/:profileId/orders" },
   generationStatus: { method: "GET", path: "/api/p/:profileId/generations/:generationId" },
+  share: { method: "POST", path: "/api/p/:profileId/share" },
+  revokeShare: { method: "DELETE", path: "/api/p/:profileId/share" },
+  publicPage: { method: "GET", path: "/api/s/:token" },
 } as const;
 
 /** Адрес личной страницы. Один шаблон и для сервера, и для клиента. */
 export const PAGE_PATH = "/p/:profileId";
+
+/** Адрес публичного вида. Токен не совпадает с идентификатором профиля. */
+export const PUBLIC_PAGE_PATH = "/s/:token";
 
 /** Подстановка параметров в шаблон пути: `/api/p/:profileId` → `/api/p/abc`. */
 export function buildPath<Name extends OperationName>(

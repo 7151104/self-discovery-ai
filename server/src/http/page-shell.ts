@@ -7,7 +7,7 @@
  * пишет: на страницу попадают только строки, пришедшие из контента через API.
  */
 
-import type { PageStateDto } from "../contract/index.js";
+import type { PageStateDto, PublicPageDto } from "../contract/index.js";
 
 const escape = (text: string): string =>
   text.replace(/[&<>"']/g, (character) => {
@@ -88,7 +88,50 @@ ${doors}
   return document_(page.state, body, page.card.name);
 }
 
-/** Профиля нет. Понятная страница вместо кода — задача E7-01. */
+/**
+ * Публичный вид: карта, одна фраза и первые два блока.
+ *
+ * Отдельная функция, а не «тот же рендер с флагом»: она принимает только
+ * `PublicPageDto`, в котором блоков 3 и 4 нет по типу, поэтому нарисовать их
+ * здесь нечем.
+ */
+export function renderPublicPage(payload: unknown): string {
+  const page = payload as PublicPageDto;
+
+  const bars = page.map
+    .map(
+      (bar) =>
+        `<li data-bar="${escape(bar.id)}" data-fill="${escape(bar.fill)}"${
+          bar.position === null ? "" : ` data-position="${bar.position}"`
+        }>${escape(bar.label)}</li>`,
+    )
+    .join("\n");
+
+  const blocks = page.blocks
+    .map(
+      (block) => `<section data-block="${escape(block.id)}">
+<h2>${escape(block.heading)}</h2>
+${block.paragraphs.map((text) => `<p>${escape(text)}</p>`).join("\n")}
+</section>`,
+    )
+    .join("\n");
+
+  const hook = page.hook ? `<p data-role="hook">${escape(page.hook)}</p>` : "";
+
+  const body = `<body data-view="public">
+<header><h1 data-role="name">${escape(page.name)}</h1></header>
+${hook}
+<ul data-role="map">
+${bars}
+</ul>
+${blocks}
+<script type="application/json" data-role="state">${JSON.stringify(page).replace(/</g, "\\u003c")}</script>
+</body>`;
+
+  return document_(page.state, body, page.name);
+}
+
+/** Профиля нет или публичная ссылка не работает. Понятная страница — E7-01. */
 export function renderMissingPage(): string {
   return document_("missing", '<body data-error="profile_not_found"></body>', "");
 }

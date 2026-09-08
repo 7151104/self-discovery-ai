@@ -18,25 +18,33 @@ import type {
   OrderResponse,
   PageStateResponse,
   PortionKey,
+  PublicPageResponse,
   QuestionKind,
+  ShareResponse,
 } from "../contract/index.js";
 import type { ServerConfig } from "../config.js";
 import type { Db } from "../db/driver.js";
 import { schemaVersion } from "../db/migrate.js";
 import { rawContent } from "../engine.js";
-import { isValidId, newProfileId } from "../ids.js";
-import { assemble, portionOf } from "../page.js";
+import { isValidId, newProfileId, newShareToken } from "../ids.js";
+import { assemble, assemblePublic, portionOf, shareUrl } from "../page.js";
 import {
+  findActiveShareToken,
   findBlockById,
   findOrderByRequest,
   findProfile,
+  findProfileByShareToken,
+  findSubmission,
   insertDisagreement,
   insertOrder,
   insertProfile,
+  insertShareToken,
+  insertSubmission,
   listAnswers,
   markBlocksStale,
   recordEvent,
   recordProfileVersion,
+  revokeShareTokens,
   saveAnswers,
   type ProfileRecord,
 } from "../store.js";
@@ -164,6 +172,11 @@ export function pageState(context: Context, params: Record<string, string>): Han
   return { status: 200, body: context.db.transaction(() => page(context, profile)) };
 }
 
+/**
+ * Приём порции. Идемпотентность держится ключом отправки: повтор при обрыве
+ * связи или двойном нажатии не пишет ответы второй раз и не пересчитывает
+ * профиль второй раз, а отвечает текущим состоянием страницы.
+ */
 export function submitPortion(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
   const profile = loadProfile(context, params["profileId"]);
   if (!profile) return fail(404, "profile_not_found");
@@ -181,6 +194,11 @@ export function submitPortion(context: Context, params: Record<string, string>, 
   if (parsed.some((answer) => portionOf(answer.questionId) !== portion)) return fail(400, "bad_request");
 
   const state = context.db.transaction(() => {
+    // Повтор той же отправки: ответы уже записаны, профиль уже пересчитан.
+    if (findSubmission(context.db, profile.profileId, requestId)) {
+      return page(context, profile);
+    }
+
     saveAnswers(
       context.db,
       profile.profileId,
@@ -195,7 +213,15 @@ export function submitPortion(context: Context, params: Record<string, string>, 
       profileId: profile.profileId,
       payload: { portion, answers: parsed.length },
     });
-    return withVersion(context, profile, "portion");
+
+    const version = revise(context, profile, "portion");
+    insertSubmission(context.db, profile.profileId, {
+      requestId,
+      portion,
+      answerCount: parsed.length,
+      profileVersion: version,
+    });
+    return currentPage(context, profile.profileId);
   });
 
   return { status: 200, body: state };
@@ -223,7 +249,8 @@ export function editAnswer(context: Context, params: Record<string, string>, raw
     // Купленные и сгенерированные блоки не переписываются: на них отметка о расхождении.
     markBlocksStale(context.db, profile.profileId);
     recordEvent(context.db, "answer.edited", { profileId: profile.profileId, payload: { portion } });
-    return withVersion(context, profile, "answer_edit");
+    revise(context, profile, "answer_edit");
+    return currentPage(context, profile.profileId);
   });
 
   return { status: 200, body: state };
@@ -312,15 +339,72 @@ export function generationStatus(context: Context, params: Record<string, string
   return { status: 200, body };
 }
 
-/** Пересчёт профиля и свежее состояние страницы после него. */
-function withVersion(
-  context: Context,
-  profile: ProfileRecord,
-  reason: "portion" | "answer_edit",
-): PageStateResponse {
+/** Пересчёт профиля: новая версия и снимок. Возвращает номер версии. */
+function revise(context: Context, profile: ProfileRecord, reason: "portion" | "answer_edit"): number {
   const { internal } = assemble({ db: context.db, profile, publicOrigin: context.config.publicOrigin });
-  recordProfileVersion(context.db, profile.profileId, reason, internal.internalProfile);
+  return recordProfileVersion(context.db, profile.profileId, reason, internal.internalProfile);
+}
 
-  const updated = findProfile(context.db, profile.profileId) ?? profile;
-  return assemble({ db: context.db, profile: updated, publicOrigin: context.config.publicOrigin }).page;
+/** Состояние страницы по свежей записи профиля: версия и время уже обновлены. */
+function currentPage(context: Context, profileId: string): PageStateResponse {
+  const profile = findProfile(context.db, profileId);
+  if (!profile) throw new Error(`profile-vanished:${profileId}`);
+  return page(context, profile);
+}
+
+// ── Публичный вид и токен шеринга ─────────────────────────────────────────────
+
+/** «Поделиться». Повторное нажатие отдаёт тот же токен, а не плодит ссылки. */
+export function share(context: Context, params: Record<string, string>): HandlerResult {
+  const profile = loadProfile(context, params["profileId"]);
+  if (!profile) return fail(404, "profile_not_found");
+
+  const body = context.db.transaction(() => {
+    const existing = findActiveShareToken(context.db, profile.profileId);
+    const token = existing ?? insertShareToken(context.db, profile.profileId, newShareToken());
+    if (!existing) recordEvent(context.db, "share.enabled", { profileId: profile.profileId });
+
+    const response: ShareResponse = {
+      share: { url: shareUrl(context.config.publicOrigin, token.token), createdAt: token.createdAt },
+      page: page(context, profile),
+    };
+    return response;
+  });
+
+  return { status: 200, body };
+}
+
+/** Отзыв публичной ссылки: выданный адрес перестаёт работать. */
+export function revokeShare(context: Context, params: Record<string, string>): HandlerResult {
+  const profile = loadProfile(context, params["profileId"]);
+  if (!profile) return fail(404, "profile_not_found");
+
+  const body = context.db.transaction(() => {
+    const revoked = revokeShareTokens(context.db, profile.profileId);
+    if (revoked) recordEvent(context.db, "share.revoked", { profileId: profile.profileId, payload: { revoked } });
+    const response: ShareResponse = { share: null, page: page(context, profile) };
+    return response;
+  });
+
+  return { status: 200, body };
+}
+
+/**
+ * Публичный вид по токену.
+ *
+ * Пока человек не нажал «Поделиться», токена не существует, поэтому любая
+ * публичная ссылка отвечает отказом; отозванный токен не находится тем же
+ * запросом. Отказ один и тот же, чтобы по коду ответа нельзя было отличить
+ * «не было» от «отозвано».
+ */
+export function publicPage(context: Context, params: Record<string, string>): HandlerResult {
+  const token = params["token"];
+  if (!token || !isValidId(token)) return fail(404, "not_found");
+
+  const profile = findProfileByShareToken(context.db, token);
+  if (!profile) return fail(404, "not_found");
+
+  const full = context.db.transaction(() => page(context, profile));
+  const body: PublicPageResponse = assemblePublic(full);
+  return { status: 200, body };
 }

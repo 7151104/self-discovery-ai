@@ -5,7 +5,7 @@
  * эндпоинт мимо контракта нельзя — маршрут просто неоткуда взять.
  */
 
-import { API, PAGE_PATH, type OperationName } from "../contract/index.js";
+import { API, PAGE_PATH, PUBLIC_PAGE_PATH, type OperationName } from "../contract/index.js";
 
 export interface RouteMatch {
   name: OperationName;
@@ -52,4 +52,11 @@ export function matchPage(pathname: string): { profileId: string } | null {
   const params = matchTemplate(PAGE_PATH, pathname);
   const profileId = params?.["profileId"];
   return profileId === undefined ? null : { profileId };
+}
+
+/** Адрес публичного вида `/s/{token}`. */
+export function matchPublicPage(pathname: string): { token: string } | null {
+  const params = matchTemplate(PUBLIC_PAGE_PATH, pathname);
+  const token = params?.["token"];
+  return token === undefined ? null : { token };
 }

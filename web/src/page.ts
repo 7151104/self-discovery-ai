@@ -335,6 +335,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         formatPrice: labels.route.formatPrice,
         notes: doorNotes(page, labels),
         label: labels.route.label,
+        strict: false,
       }),
     );
   }
@@ -345,7 +346,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         "div",
         { class: "page__own" },
         h("p", { class: "page__own-hint" }, labels.public.makeOwnHint),
-        h("button", { class: "page__own-action", type: "button", onClick: options.onOwn }, labels.public.makeOwn),
+        h("button", { class: "missing__action", type: "button", onClick: options.onOwn }, labels.public.makeOwn),
       ),
     );
   }

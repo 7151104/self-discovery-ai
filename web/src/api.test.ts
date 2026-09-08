@@ -101,9 +101,9 @@ test("клиент включает и отзывает публичную сс�
   const view = await loadPublic(token, transport);
   assert.equal(view.ok, true);
   if (!view.ok) return;
-  assert.equal(
-    view.page.blocks.some((item) => item.id === "step3" || item.id === "step4"),
-    false,
+  assert.deepEqual(
+    view.page.blocks.map((item) => item.id),
+    ["step1", "step2"],
   );
   assert.equal("profileId" in view.page, false);
 

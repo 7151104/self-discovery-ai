@@ -104,8 +104,8 @@ const nestedPage = (body: unknown): unknown => (isRecord(body) && "page" in body
 const shareFrom = (body: unknown): ShareDto | null => {
   if (!isRecord(body)) return null;
   const share = body["share"];
-  if (!isRecord(share) || typeof share["url"] !== "string") return null;
-  return share as ShareDto;
+  if (!isRecord(share) || typeof share["url"] !== "string" || typeof share["createdAt"] !== "string") return null;
+  return { url: share["url"], createdAt: share["createdAt"] };
 };
 
 /** Состояние страницы по постоянной ссылке. */

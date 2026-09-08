@@ -166,7 +166,6 @@ test("у каждого нажимаемого элемента есть сос�
     "share-panel__save",
     "share-panel__open",
     "share-panel__close",
-    "page__own-action",
   ]) {
     const rule = new RegExp(`\\.?${name}[^{]*:hover`);
     assert.ok(rule.test(css), `${name}: нет состояния наведения`);

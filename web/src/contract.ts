@@ -26,6 +26,7 @@ export type {
   OfferDto,
   PageStateDto,
   PageStateName,
+  PortionDto,
   PublicPageDto,
   PurchaseRequest,
   QuestionDto,

@@ -101,7 +101,12 @@ const currentQuestion = (session: Session): QuestionDto | null => {
 const ownerPage = (session: Session): PageStateDto | null => {
   if (session.page === null) return null;
   if (session.offerDeclined && session.page.offer !== null) {
-    return { ...session.page, offer: null };
+    const slice = session.page.offer.slice;
+    return {
+      ...session.page,
+      offer: null,
+      doors: session.page.doors.map((door) => (door.slice === slice ? { ...door, price: null } : door)),
+    };
   }
   return session.page;
 };

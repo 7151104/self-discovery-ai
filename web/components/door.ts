@@ -100,11 +100,19 @@ export interface RouteProps {
   /** Имя списка для скринридера. */
   label: string;
   onSelect?: (door: DoorDto) => void;
+  /**
+   * Витрина роняет отрисовку при нарушении правил. Живая страница — нет:
+   * после ступени 4 бесплатной следующей двери нет, и отказ от оплаты
+   * оставляет закрытые платные двери без цены предложения.
+   */
+  strict?: boolean;
 }
 
 export function renderRoute(props: RouteProps): VNode {
-  const violations = routeViolations(props.doors, props.context);
-  if (violations.length > 0) throw new Error(`маршрут нарушает правила: ${violations.join(", ")}`);
+  if (props.strict !== false) {
+    const violations = routeViolations(props.doors, props.context);
+    if (violations.length > 0) throw new Error(`маршрут нарушает правила: ${violations.join(", ")}`);
+  }
 
   return h(
     "ul",

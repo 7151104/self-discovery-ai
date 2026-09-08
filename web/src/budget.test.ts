@@ -61,17 +61,21 @@ function moduleGraph(entry: string): Graph {
 
 const gzipKb = (source: string | Buffer): number => gzipSync(source).length / 1024;
 
-const entry = () => join(webRoot, "dist", "showcase", "showcase.js");
+const showcaseEntry = () => join(webRoot, "dist", "showcase", "showcase.js");
+const pageEntry = () => join(webRoot, "dist", "src", "app.js");
 
-test("точка входа собрана: без неё бюджет не проверить", () => {
-  assert.ok(existsSync(entry()), "нет web/dist/showcase/showcase.js — сначала npm run build:web");
+test("точки входа собраны: без них бюджет не проверить", () => {
+  assert.ok(existsSync(showcaseEntry()), "нет web/dist/showcase/showcase.js — сначала npm run build:web");
+  assert.ok(existsSync(pageEntry()), "нет web/dist/src/app.js — сначала npm run build:web");
 });
 
 test("вес скриптов первой загрузки укладывается в бюджет 150 КБ", () => {
-  const graph = moduleGraph(entry());
-  const sources = graph.files.map((file) => readFileSync(file, "utf8")).join("\n");
-  const weight = gzipKb(sources);
-  assert.ok(weight <= SCRIPT_BUDGET_KB, `скрипты ${weight.toFixed(1)} КБ при бюджете ${SCRIPT_BUDGET_KB} КБ`);
+  for (const entry of [pageEntry(), showcaseEntry()]) {
+    const graph = moduleGraph(entry);
+    const sources = graph.files.map((file) => readFileSync(file, "utf8")).join("\n");
+    const weight = gzipKb(sources);
+    assert.ok(weight <= SCRIPT_BUDGET_KB, `${entry}: скрипты ${weight.toFixed(1)} КБ при бюджете ${SCRIPT_BUDGET_KB} КБ`);
+  }
 });
 
 test("вес стилей первой загрузки укладывается в бюджет 30 КБ", () => {
@@ -81,14 +85,24 @@ test("вес стилей первой загрузки укладывается
 });
 
 test("рантайм-зависимостей нет: ни одного голого импорта в графе клиента", () => {
-  const graph = moduleGraph(entry());
-  assert.deepEqual(graph.bare, [], `клиент тянет чужой рантайм: ${graph.bare.join(", ")}`);
+  for (const entry of [pageEntry(), showcaseEntry()]) {
+    const graph = moduleGraph(entry);
+    assert.deepEqual(graph.bare, [], `${entry}: клиент тянет чужой рантайм: ${graph.bare.join(", ")}`);
+  }
 });
 
 test("в граф клиента не попадает ни сервер, ни движок", () => {
-  const graph = moduleGraph(entry());
-  const outsiders = graph.files.filter((file) => file.includes(`${"server"}/dist`) || file.includes(`${"engine"}/dist`));
-  assert.deepEqual(outsiders, [], "серверный код уехал бы в браузер");
+  for (const entry of [pageEntry(), showcaseEntry()]) {
+    const graph = moduleGraph(entry);
+    const outsiders = graph.files.filter((file) => file.includes(`${"server"}/dist`) || file.includes(`${"engine"}/dist`));
+    assert.deepEqual(outsiders, [], `${entry}: серверный код уехал бы в браузер`);
+  }
+});
+
+test("живая страница не тащит витрину", () => {
+  const graph = moduleGraph(pageEntry());
+  const showcase = graph.files.filter((file) => file.includes(`${"showcase"}/`));
+  assert.deepEqual(showcase, [], "витрина уехала бы в первую загрузку страницы");
 });
 
 test("страница витрины подключает ровно одну таблицу стилей продукта", () => {
@@ -96,4 +110,10 @@ test("страница витрины подключает ровно одну �
   const links = [...page.matchAll(/<link[^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(links.includes("../dist/app.css"), "витрина обязана грузить собранные стили продукта");
   assert.equal(links.filter((href) => href?.endsWith("app.css")).length, 1);
+});
+
+test("живая страница подключает собранные стили и свой модуль", () => {
+  const page = readFileSync(join(webRoot, "page", "index.html"), "utf8");
+  assert.ok(page.includes("../dist/app.css"), "страница обязана грузить собранные стили продукта");
+  assert.ok(page.includes("../dist/src/app.js"), "страница обязана грузить живой клиент");
 });

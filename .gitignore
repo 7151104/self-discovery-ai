@@ -8,6 +8,10 @@ Thumbs.db
 # Env / secrets
 .env
 .env.*
+!.env.example
+
+# Локальная база сервера
+server/.data/
 
 # IDE
 .idea/

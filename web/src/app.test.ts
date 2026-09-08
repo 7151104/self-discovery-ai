@@ -202,3 +202,23 @@ test("порция по объявленным стилям помещается
   const height = pad + lead + progress + question + choiceGap + options + back + gap * 2;
   assert.ok(height <= BASE_VIEWPORT_HEIGHT_PX, `порция ${height.toFixed(0)} px выше экрана ${BASE_VIEWPORT_HEIGHT_PX}`);
 });
+
+test("отметка согласия не стирает набранное имя и дату", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const app = createPageApp(hostOf(server.origin, "/"));
+  t.after(() => app.stop());
+  await app.start();
+
+  // Человек набирает поля первыми, а отметку ставит потом: поле имени стоит
+  // выше. Перерисовка от отметки не должна возвращать пустую форму.
+  app.introInput("name", "Кирилл");
+  app.introInput("birthDate", "1990-05-05");
+  app.consent(true);
+
+  const fields = findAll(app.tree(), "input");
+  const name = fields.find((item) => item.attrs["name"] === "name");
+  const birth = fields.find((item) => item.attrs["name"] === "birth");
+  assert.equal(name?.attrs["value"], "Кирилл", "имя стёрлось отметкой согласия");
+  assert.equal(birth?.attrs["value"], "1990-05-05", "дата стёрлась отметкой согласия");
+});

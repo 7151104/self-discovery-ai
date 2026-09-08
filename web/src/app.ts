@@ -67,6 +67,7 @@ import {
   replacePage,
   setDisagreeing,
   setDraft,
+  setIntroValue,
   setNameError,
   showIntro,
   showMissing,
@@ -102,6 +103,8 @@ export interface PageApp {
   draft: (value: string) => void;
   intro: (name: string, birthDate: string | null) => Promise<void>;
   consent: (checked: boolean) => void;
+  /** Набранное на входе кладётся в состояние, чтобы перерисовка его не стёрла. */
+  introInput: (field: "name" | "birthDate", value: string) => void;
   goOwn: () => void;
   openDisagree: (blockId: string) => void;
   pickDisagree: (blockId: string, kind: DisagreementKind) => Promise<void>;
@@ -199,6 +202,7 @@ export function renderSession(
   session: Session,
   handlers: {
     onIntro?: (name: string, birthDate: string | null) => void;
+    onIntroInput?: (field: "name" | "birthDate", value: string) => void;
     onOwn?: () => void;
     onAnswer?: (event: Event) => void;
     onBack?: () => void;
@@ -233,6 +237,7 @@ export function renderSession(
       nameError: session.nameError,
       consent: handlers.consent,
       submitDisabled: handlers.submitDisabled,
+      onInput: handlers.onIntroInput,
       onSubmit: (value) => handlers.onIntro?.(value.name, value.birthDate),
     });
   }
@@ -460,6 +465,7 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
           onIntro: (name, birthDate) => {
             void app.intro(name, birthDate);
           },
+          onIntroInput: (field, value) => app.introInput(field, value),
           onOwn: () => app.goOwn(),
           onAnswer: (event) => {
             const question = currentQuestion(session);
@@ -564,6 +570,11 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
     consent: (checked) => {
       consented = checked;
       paint();
+    },
+    // Без перерисовки: поле уже содержит набранное, а состояние нужно тому
+    // перерисовыванию, которое случится дальше — например от отметки согласия.
+    introInput: (field, value) => {
+      session = setIntroValue(session, field, value);
     },
     goOwn: () => {
       stopWatch();

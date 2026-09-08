@@ -232,6 +232,14 @@ export function setNameError(session: Session, error: string | null): Session {
   return { ...session, nameError: error };
 }
 
+/**
+ * Введённое на входе имя и дата. Держатся в состоянии, а не только в поле:
+ * страница перерисовывается целиком, и отметка согласия стирала бы набранное.
+ */
+export function setIntroValue(session: Session, field: "name" | "birthDate", value: string): Session {
+  return field === "name" ? { ...session, introName: value } : { ...session, introDate: value };
+}
+
 export function setDisagreeing(session: Session, blockId: string | null): Session {
   return { ...session, disagreeing: blockId };
 }

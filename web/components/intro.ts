@@ -32,8 +32,17 @@ export interface IntroProps {
   submitDisabled?: boolean;
   /** Отметка согласия внутри формы, без модального окна. */
   consent?: VNode;
+  /** Набранное поднимается наверх сразу: перерисовка формы иначе его теряет. */
+  onInput?: (field: "name" | "birthDate", value: string) => void;
   onSubmit?: (value: { name: string; birthDate: string | null }) => void;
 }
+
+const fieldInput =
+  (props: IntroProps, field: "name" | "birthDate") =>
+  (event: Event): void => {
+    const target = event.currentTarget as { value?: unknown } | null;
+    props.onInput?.(field, typeof target?.value === "string" ? target.value : "");
+  };
 
 export function introPayload(name: string, birthDate: string): { ok: true; name: string; birthDate: string | null } | { ok: false } {
   const trimmed = name.trim();
@@ -81,6 +90,8 @@ export function renderIntro(props: IntroProps): VNode {
         placeholder: props.labels.namePlaceholder,
         value: name,
         disabled,
+        onInput: fieldInput(props, "name"),
+        onChange: fieldInput(props, "name"),
       }),
       props.nameError ? h("p", { class: "intro__error", role: "alert" }, props.nameError) : null,
     ),
@@ -96,6 +107,8 @@ export function renderIntro(props: IntroProps): VNode {
         autocomplete: "bday",
         value: birthDate,
         disabled,
+        onInput: fieldInput(props, "birthDate"),
+        onChange: fieldInput(props, "birthDate"),
       }),
       h("p", { class: "intro__hint" }, props.labels.dateHint),
     ),

@@ -60,6 +60,8 @@ test("тестовый режим невозможно включить в ра�
     SDAI_PUBLIC_ORIGIN: "https://example.com",
     SDAI_ENCRYPTION_KEY: TEST_KEY,
     SDAI_PAYMENT_WEBHOOK_SECRET: "секрет",
+    SDAI_DB_PATH: "/var/lib/sdai/production.db",
+    SDAI_BACKUP_DIR: "/var/backups/sdai/production",
   };
 
   assert.throws(

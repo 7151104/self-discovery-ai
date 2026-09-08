@@ -51,12 +51,14 @@ export async function startTestServer(env: NodeJS.ProcessEnv = {}): Promise<Test
   const config: ServerConfig = loadConfig({
     SDAI_ENCRYPTION_KEY: TEST_KEY,
     SDAI_PAYMENT_WEBHOOK_SECRET: TEST_WEBHOOK_SECRET,
+    SDAI_BUILD_VERSION: "test",
+    SDAI_BUILD_COMMIT: "test-commit",
     ...env,
   });
   const db = openDatabase({ path: ":memory:", keys: config.keys });
   up(db);
 
-  const server = createHttpServer({ db, config, version: "test" });
+  const server = createHttpServer({ db, config });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 

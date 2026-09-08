@@ -5,21 +5,11 @@
  * создаётся при первом старте, миграции применяются сами.
  */
 
-import { readFileSync } from "node:fs";
 import { ConfigError, loadConfig, type ServerConfig } from "./config.js";
 import { openDatabase } from "./db/sqlite.js";
 import { up } from "./db/migrate.js";
 import { createHttpServer } from "./http/server.js";
 import { log } from "./log.js";
-
-function packageVersion(): string {
-  try {
-    const raw = readFileSync(new URL("../../package.json", import.meta.url), "utf8");
-    return (JSON.parse(raw) as { version?: string }).version ?? "0.0.0";
-  } catch {
-    return "0.0.0";
-  }
-}
 
 /**
  * Без обязательной переменной сервер не стартует и называет её. Значение
@@ -53,7 +43,7 @@ if (config.autoMigrate) {
   if (applied.length) log("migrate.up", { versions: applied.join(",") });
 }
 
-const server = createHttpServer({ db, config, version: packageVersion() });
+const server = createHttpServer({ db, config });
 
 server.listen(config.port, config.host, () => {
   log("server.started", {
@@ -64,6 +54,9 @@ server.listen(config.port, config.host, () => {
     rateLimit: config.rateLimit.enabled,
     payments: config.payments.provider,
     encryption: config.keys.active?.id ?? "off",
+    // Версия сборки в первой же строке журнала: по ней видно, что развёрнуто.
+    version: config.build.version,
+    commit: config.build.commit,
   });
 });
 

@@ -13,6 +13,9 @@ Thumbs.db
 # Локальная база сервера
 server/.data/
 
+# Локальные резервные копии базы
+server/.backups/
+
 # IDE
 .idea/
 .vscode/

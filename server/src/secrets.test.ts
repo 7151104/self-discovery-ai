@@ -32,6 +32,8 @@ test("без обязательной переменной конфигурац�
       "SDAI_PUBLIC_ORIGIN",
       "SDAI_ENCRYPTION_KEY",
       "SDAI_PAYMENT_WEBHOOK_SECRET",
+      "SDAI_DB_PATH",
+      "SDAI_BACKUP_DIR",
     ]);
     // В сообщении имена переменных, а не их значения.
     assert.match(error.message, /SDAI_PUBLIC_ORIGIN/);
@@ -43,11 +45,66 @@ test("без обязательной переменной конфигурац�
     SDAI_ENCRYPTION_KEY: TEST_KEY,
     SDAI_PAYMENT_WEBHOOK_SECRET: "секрет-из-окружения",
     SDAI_PAYMENT_PROVIDER: "будущий-провайдер",
+    SDAI_DB_PATH: "/var/lib/sdai/production.db",
+    SDAI_BACKUP_DIR: "/var/backups/sdai/production",
   });
   assert.equal(production.environment, "production");
   assert.equal(production.publicOrigin, "https://example.com");
 
-  assert.throws(() => loadConfig({ SDAI_ENV: "staging" }), /config:expected-development-or-production:SDAI_ENV/);
+  assert.throws(
+    () => loadConfig({ SDAI_ENV: "предварительное" }),
+    /config:expected-development-staging-or-production:SDAI_ENV/,
+  );
+});
+
+test("предварительное окружение требует того же набора переменных и своих данных (E10-01)", () => {
+  // Тот же набор обязательных: предварительное окружение — не облегчённая
+  // разработка, у него свои ключи, своя база и свои копии.
+  assert.throws(() => loadConfig({ SDAI_ENV: "staging" }), /config:missing-required:SDAI_PUBLIC_ORIGIN/);
+
+  const staging = loadConfig({
+    SDAI_ENV: "staging",
+    SDAI_PUBLIC_ORIGIN: "https://staging.example.com",
+    SDAI_ENCRYPTION_KEY: TEST_KEY,
+    SDAI_PAYMENT_WEBHOOK_SECRET: "секрет-из-окружения",
+    SDAI_DB_PATH: "/var/lib/sdai/staging.db",
+    SDAI_BACKUP_DIR: "/var/backups/sdai/staging",
+  });
+  assert.equal(staging.environment, "staging");
+  // Поддельный провайдер здесь разрешён: платный путь проходится без денег.
+  assert.equal(staging.payments.provider, "fake");
+  assert.equal(staging.databasePath, "/var/lib/sdai/staging.db");
+  assert.equal(staging.backup.directory, "/var/backups/sdai/staging");
+
+  // В рабочем окружении тот же провайдер несовместим с запуском (E8-09).
+  assert.throws(
+    () =>
+      loadConfig({
+        SDAI_ENV: "production",
+        SDAI_PUBLIC_ORIGIN: "https://example.com",
+        SDAI_ENCRYPTION_KEY: TEST_KEY,
+        SDAI_PAYMENT_WEBHOOK_SECRET: "секрет-из-окружения",
+        SDAI_DB_PATH: "/var/lib/sdai/production.db",
+        SDAI_BACKUP_DIR: "/var/backups/sdai/production",
+      }),
+    /fake-provider-forbidden-in-production/,
+  );
+});
+
+test("версия сборки читается из окружения, без неё — версия из package.json (E10-03)", () => {
+  const local = loadConfig({});
+  assert.match(local.build.version, /^\d+\.\d+\.\d+$/);
+  assert.equal(local.build.commit, "unknown");
+  assert.equal(local.build.builtAt, null);
+
+  const released = loadConfig({
+    SDAI_BUILD_VERSION: "2026-09-08-3",
+    SDAI_BUILD_COMMIT: "0123456789abcdef",
+    SDAI_BUILD_AT: "2026-09-08T10:00:00.000Z",
+  });
+  assert.equal(released.build.version, "2026-09-08-3");
+  assert.equal(released.build.commit, "0123456789abcdef");
+  assert.equal(released.build.builtAt, "2026-09-08T10:00:00.000Z");
 });
 
 test("пример окружения перечисляет все читаемые переменные и не содержит значений", () => {

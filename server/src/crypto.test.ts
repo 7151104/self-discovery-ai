@@ -171,7 +171,13 @@ test("база без ключа читается, новые записи ши�
 
 test("рабочее окружение не стартует без ключа шифрования", () => {
   try {
-    loadConfig({ SDAI_ENV: "production", SDAI_PUBLIC_ORIGIN: "https://example.com", SDAI_PAYMENT_WEBHOOK_SECRET: "s" });
+    loadConfig({
+      SDAI_ENV: "production",
+      SDAI_PUBLIC_ORIGIN: "https://example.com",
+      SDAI_PAYMENT_WEBHOOK_SECRET: "s",
+      SDAI_DB_PATH: "/var/lib/sdai/production.db",
+      SDAI_BACKUP_DIR: "/var/backups/sdai/production",
+    });
     assert.fail("собралось без ключа");
   } catch (error) {
     assert.ok(error instanceof ConfigError);

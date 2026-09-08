@@ -13,17 +13,31 @@ import { buildStep1Block, buildStep2Block, buildStep3Block, buildStep4Task, step
 import { buildMap } from "./map.js";
 import { applyNodes } from "./nodes.js";
 import { buildDoors, selectOffer } from "./offers.js";
-import { buildProfile, type ProfileOptions } from "./scoring.js";
-import type { Block, LadderAnswers, PageState, Portion, Question, Step0Card, Step0Input } from "./types.js";
+import { applyDisagreements, buildProfile, type ProfileOptions } from "./scoring.js";
+import type {
+  Block,
+  Disagreement,
+  LadderAnswers,
+  PageState,
+  Portion,
+  Question,
+  Step0Card,
+  Step0Input,
+} from "./types.js";
 
 export * from "./types.js";
 export {
+  applyDisagreement,
+  applyDisagreements,
+  blockCoordinates,
   buildProfile,
   buildProfileFromBank,
   bandFromMean,
   reverseScale,
   scoreCoordinate,
   unknownCoordinates,
+  DISAGREEMENT_RULES,
+  LADDER_CAP,
 } from "./scoring.js";
 export { applyNodes, NODE_RULES, fallbackNodeText } from "./nodes.js";
 export { buildMap, BAR_DEFINITIONS } from "./map.js";
@@ -95,13 +109,23 @@ export function completedStep(answers: LadderAnswers): 0 | 1 | 2 | 3 | 4 {
   return completed;
 }
 
+export interface PageOptions extends ProfileOptions {
+  /**
+   * Несогласия с уже показанными блоками. Понижают уверенность в координатах
+   * блока и не трогают его текст (content/scoring-rules.md, «Несогласие с блоком»).
+   */
+  disagreements?: Disagreement[];
+}
+
 /**
  * Полное состояние страницы по текущим ответам: публичная половина в `view`,
  * профиль и задание для LLM — в `internal`. Наружу уходит только `view`.
  */
-export function buildPage(input: Step0Input, answers: LadderAnswers, options: ProfileOptions = {}): PageState {
+export function buildPage(input: Step0Input, answers: LadderAnswers, options: PageOptions = {}): PageState {
   const step = completedStep(answers);
-  const profile = applyNodes(buildProfile(answers, options), answers);
+  // Несогласие применяется после узлов: сработавший узел от него не меняется,
+  // а значит, и текст блока ступени 3 остаётся прежним.
+  const profile = applyDisagreements(applyNodes(buildProfile(answers, options), answers), options.disagreements ?? []);
 
   const blocks: Block[] = [];
   if (step >= 1) {

@@ -16,6 +16,8 @@ import type {
   BankAnswers,
   Confidence,
   CoordinateState,
+  Disagreement,
+  DisagreementKind,
   LadderAnswers,
   Profile,
 } from "./types.js";
@@ -407,7 +409,7 @@ export interface ProfileOptions {
 }
 
 /** Потолки confidence лестницы (content/scoring-rules.md, «Что лестница закрывает и что нет»). */
-const LADDER_CAP: Record<number, Confidence> = {
+export const LADDER_CAP: Record<number, Confidence> = {
   2: "medium",
   3: "medium",
   4: "low",
@@ -1002,6 +1004,67 @@ export function stanceOfStressCode(code: string): "active" | "passive" | "other"
 
 /** Куда смотрит полоса: та же таблица, по которой считается направление. */
 export const pointerOfBand = (band: Band | null): Pointer => (band ? BAND_POINTER[band] : 0);
+
+// ── Несогласие с блоком ───────────────────────────────────────────────────────
+
+/**
+ * Что делает несогласие с блоком: content/scoring-rules.md, раздел «Несогласие с
+ * блоком: точные правила». Текст блока не трогается ни в одном варианте — меняется
+ * только уверенность в координатах, из которых блок собран.
+ */
+export const DISAGREEMENT_RULES: Record<DisagreementKind, { cap: Confidence; flag: (coordinate: number) => string }> = {
+  "это не про меня": { cap: "low", flag: (coordinate) => `disagreed_${coordinate}` },
+  частично: { cap: "medium", flag: (coordinate) => `disagreed_${coordinate}` },
+  "слишком общо": { cap: "medium", flag: (coordinate) => `too_general_${coordinate}` },
+};
+
+/**
+ * Координаты, из которых собран блок ступени. Ступени 1, 2 и 4 — координаты
+ * вопросов той же ступени; ступень 3 — координаты сработавшего узла, потому что
+ * её текст берётся из узла, а не из ответов напрямую.
+ */
+export function blockCoordinates(profile: Profile, step: 1 | 2 | 3 | 4): number[] {
+  const ids =
+    step === 3
+      ? (profile.nodes[0]?.coordinates ?? [])
+      : rawContent.questions.filter((question) => question.step === step).flatMap((question) => question.coordinates);
+  return [...new Set(ids)].sort((left, right) => left - right);
+}
+
+/**
+ * Несогласие как данные. Возвращает новый профиль: затронутые координаты теряют
+ * `high` (полоса карты становится предположительной), появляются флаги координат
+ * и флаг ступени. Блоки сюда не передаются вовсе — переписать их эта функция
+ * не может по устройству.
+ */
+export function applyDisagreement(profile: Profile, disagreement: Disagreement): Profile {
+  const rule = DISAGREEMENT_RULES[disagreement.kind];
+  const coordinates = { ...profile.coordinates };
+
+  for (const id of blockCoordinates(profile, disagreement.step)) {
+    const state = coordinates[id];
+    // Закрытая координата терять нечего: она и так пустая полоса.
+    if (!state || !state.sources.length) continue;
+    const flag = rule.flag(id);
+    coordinates[id] = {
+      ...state,
+      confidence: capConfidence(state.confidence, rule.cap),
+      flags: state.flags.includes(flag) ? state.flags : [...state.flags, flag],
+    };
+  }
+
+  const flags = [
+    ...profile.flags,
+    `disagreement_step_${disagreement.step}`,
+    ...Object.values(coordinates).flatMap((coordinate) => coordinate.flags),
+  ];
+
+  return { ...profile, coordinates, flags: [...new Set(flags)] };
+}
+
+/** Несколько несогласий подряд: потолки складываются, вниз и только вниз. */
+export const applyDisagreements = (profile: Profile, disagreements: Disagreement[]): Profile =>
+  disagreements.reduce(applyDisagreement, profile);
 
 /** Координаты, по которым вход не даёт ничего: это и есть закрытые двери. */
 export function unknownCoordinates(profile: Profile): CoordinateState[] {

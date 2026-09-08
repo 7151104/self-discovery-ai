@@ -109,6 +109,19 @@ export interface SliceThreshold {
   blocked: string | null;
 }
 
+/**
+ * Три варианта «не согласен с этим» из docs/11-ui-page-spec.md. Формулировки те же,
+ * что видит человек: словарь один и для интерфейса, и для правил скоринга.
+ */
+export type DisagreementKind = "это не про меня" | "частично" | "слишком общо";
+
+/** Несогласие с блоком: данные, а не жалоба (content/scoring-rules.md). */
+export interface Disagreement {
+  /** Ступень блока, с которым человек не согласился. */
+  step: 1 | 2 | 3 | 4;
+  kind: DisagreementKind;
+}
+
 export interface Step0Input {
   name: string;
   /** ISO-дата. Можно не указывать: тогда карточки периода не будет. */

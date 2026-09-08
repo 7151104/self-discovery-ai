@@ -20,6 +20,13 @@ const URL_BASE = `/p/${PROFILE}`;
 /** Время последнего обновления страницы. Фиксировано: снимки должны совпадать. */
 export const UPDATED_AT = "2026-03-01T12:00:00.000Z";
 
+/**
+ * Позиции полос, которые в моках закрыты: как только полоса открывается,
+ * сервер присылает вместе с ней и положение маркера. Закрытая полоса приходит
+ * с `position: null` — значения закрытой координаты клиент не знает вовсе.
+ */
+const OPENED_POSITIONS: Record<string, number> = { structure: 0.35, holding: 0.62 };
+
 const bar = (id: string, fill: MapBarDto["fill"]): MapBarDto => {
   const source = mock.mapBars.find((item) => item.id === id);
   if (source === undefined) throw new Error(`нет полосы ${id}`);
@@ -31,7 +38,7 @@ const bar = (id: string, fill: MapBarDto["fill"]): MapBarDto => {
       category: source.category === null ? null : { options: source.category.options, selected: null },
     };
   }
-  return { ...source, fill };
+  return { ...source, fill, position: source.position ?? OPENED_POSITIONS[id] ?? null };
 };
 
 /** Полосы карты по ступеням: 0 → 2 → 5 → 7 заполненных (`docs/11`). */

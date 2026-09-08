@@ -273,6 +273,29 @@ export const BORDERS: BorderToken[] = [
   { name: "border-heavy", px: 3, purpose: "левая линейка сшивки: сильнее абзацев без цвета" },
 ];
 
+export interface ZoneToken {
+  name: string;
+  /** Доля ширины дорожки, в процентах. */
+  percent: number;
+  purpose: string;
+}
+
+/**
+ * Семь именованных положений маркера полосы. Число живёт здесь и только здесь:
+ * его читают и стили карты, и генератор шеринговой картинки. Точная позиция от
+ * сервера до этих значений не доходит — она сводится к зоне (`web/components/map.ts`),
+ * поэтому по картинке значение координаты не восстанавливается.
+ */
+export const ZONE_POSITIONS: ZoneToken[] = [
+  { name: "zone-far-low", percent: 6, purpose: "маркер у левого края дорожки" },
+  { name: "zone-low", percent: 20, purpose: "маркер слева" },
+  { name: "zone-mid-low", percent: 35, purpose: "маркер левее середины" },
+  { name: "zone-center", percent: 50, purpose: "маркер посередине" },
+  { name: "zone-mid-high", percent: 65, purpose: "маркер правее середины" },
+  { name: "zone-high", percent: 80, purpose: "маркер справа" },
+  { name: "zone-far-high", percent: 94, purpose: "маркер у правого края дорожки" },
+];
+
 export interface SizeToken {
   name: string;
   rem: number;
@@ -310,6 +333,7 @@ export const TOKENS: Record<string, string> = {
   ...Object.fromEntries(SHADOWS.map((token) => [token.name, token.value])),
   ...Object.fromEntries(DURATIONS.map((token) => [token.name, `${token.ms}ms`])),
   ...Object.fromEntries(BORDERS.map((token) => [token.name, `${token.px}px`])),
+  ...Object.fromEntries(ZONE_POSITIONS.map((token) => [token.name, `${token.percent}%`])),
   ...Object.fromEntries(SIZES.map((token) => [token.name, `${token.rem}rem`])),
   "font-family": '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif',
 };
@@ -327,6 +351,7 @@ export const TOKEN_GROUPS = [
   { title: "Тени", items: SHADOWS.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
   { title: "Длительности", items: DURATIONS.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
   { title: "Границы", items: BORDERS.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
+  { title: "Зоны маркера", items: ZONE_POSITIONS.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
   { title: "Размеры", items: SIZES.map((t) => ({ name: t.name, value: TOKENS[t.name] ?? "", purpose: t.purpose })) },
 ];
 

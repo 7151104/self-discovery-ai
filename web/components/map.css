@@ -179,35 +179,36 @@
 }
 
 /* ── Зоны маркера ──────────────────────────────────────────────────────────
-   Семь именованных положений. Число живёт в стилях, одинаковых для всех,
-   и не сообщает о человеке ничего. */
+   Семь именованных положений. Сами числа живут в токенах: их читает и эта
+   таблица стилей, и генератор шеринговой картинки, чтобы карта на странице
+   и карта на картинке не разъехались. Человеку они не сообщают ничего. */
 
 .bar__marker[data-zone="far-low"] {
-  --marker-left: 6%;
+  --marker-left: var(--zone-far-low);
 }
 
 .bar__marker[data-zone="low"] {
-  --marker-left: 20%;
+  --marker-left: var(--zone-low);
 }
 
 .bar__marker[data-zone="mid-low"] {
-  --marker-left: 35%;
+  --marker-left: var(--zone-mid-low);
 }
 
 .bar__marker[data-zone="center"] {
-  --marker-left: 50%;
+  --marker-left: var(--zone-center);
 }
 
 .bar__marker[data-zone="mid-high"] {
-  --marker-left: 65%;
+  --marker-left: var(--zone-mid-high);
 }
 
 .bar__marker[data-zone="high"] {
-  --marker-left: 80%;
+  --marker-left: var(--zone-high);
 }
 
 .bar__marker[data-zone="far-high"] {
-  --marker-left: 94%;
+  --marker-left: var(--zone-far-high);
 }
 
 /* ── Приезд маркера ────────────────────────────────────────────────────────

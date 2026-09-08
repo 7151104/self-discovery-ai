@@ -667,15 +667,100 @@ function parseDisclaimers() {
   return out;
 }
 
+/**
+ * Реестр запрещённых формулировок (E5-01). Группа — раздел `### ID · Название`,
+ * под ним строка со степенью и областью, затем таблица форм.
+ *
+ * Степень и область живут у группы, а не у строки: иначе одна и та же форма
+ * получает два разных запрета в разных строках, и линтер перестаёт быть правилом.
+ */
+function parseForbidden() {
+  const file = "content/forbidden.md";
+  const src = lines(read(file));
+  const registry = src.findIndex((line) => line.startsWith("## Реестр"));
+  if (registry < 0) throw new Error(`${file}: не найден раздел «Реестр»`);
+
+  const splitForms = (cell) =>
+    cell
+      .split("·")
+      .map((part) => unwrap(part.trim()))
+      .filter((part) => part && part !== "—");
+
+  const DEGREES = ["жёсткий", "по контексту", "подозрение"];
+  const SCOPES = ["разбор", "вопросы", "интерфейс", "промпты"];
+  const SHORTCUTS = { наружу: ["разбор", "вопросы", "интерфейс"], всюду: SCOPES };
+
+  const groups = [];
+  for (let i = registry + 1; i < src.length; i += 1) {
+    if (src[i].startsWith("## ")) break;
+    const heading = /^### ([A-Z_]+) · (.+)$/.exec(src[i]);
+    if (!heading) continue;
+    const [, id, title] = heading;
+
+    const meta = src.slice(i + 1, i + 6).find((line) => line.includes("**Степень:**"));
+    if (!meta) throw new Error(`${file}: у группы ${id} нет строки со степенью и областью`);
+    const degree = unwrap((/\*\*Степень:\*\*([^·]+)/.exec(meta)?.[1] ?? "").trim());
+    if (!DEGREES.includes(degree)) throw new Error(`${file}: у группы ${id} неизвестная степень «${degree}»`);
+    const scopeCell = (/\*\*Область:\*\*(.+)$/.exec(meta)?.[1] ?? "").trim();
+    const scopes = scopeCell
+      .split("·")
+      .flatMap((part) => SHORTCUTS[part.trim()] ?? [part.trim()])
+      .filter(Boolean);
+    for (const scope of scopes) {
+      if (!SCOPES.includes(scope)) throw new Error(`${file}: у группы ${id} неизвестная область «${scope}»`);
+    }
+
+    const entries = [];
+    for (const cells of tableUnder(src.slice(i), "### ", `${file}: группа ${id}`)) {
+      if (cells[0] === "Форма") continue;
+      const forms = splitForms(cells[0] ?? "");
+      if (!forms.length) throw new Error(`${file}: в группе ${id} строка без форм`);
+      const reason = cells[2] ?? "";
+      if (!reason) throw new Error(`${file}: в группе ${id} форма «${forms[0]}» без обоснования`);
+      const exceptions = splitForms(cells[1] ?? "");
+      if (exceptions.length && degree === "жёсткий")
+        throw new Error(`${file}: у жёсткого запрета «${forms[0]}» не может быть исключений`);
+      // Форма с отрицанием внутри и исключение «отрицание» отменяют друг друга.
+      if (exceptions.includes("отрицание")) {
+        const negated = forms.find((form) => /(^|\s)(не|ни|нет|без)(\s|$)/.test(form.toLowerCase()));
+        if (negated) throw new Error(`${file}: форма «${negated}» содержит отрицание и не может им же оправдываться`);
+      }
+      entries.push({ forms, exceptions, reason });
+    }
+    if (!entries.length) throw new Error(`${file}: группа ${id} пуста`);
+    groups.push({ id, title, degree, scopes, entries });
+  }
+  if (!groups.length) throw new Error(`${file}: в реестре нет групп`);
+
+  const allowed = tableUnder(src, "## Формулировки-исключения", file)
+    .filter((cells) => cells[0] !== "Формулировка")
+    .flatMap((cells) => splitForms(cells[0] ?? ""));
+  if (!allowed.length) throw new Error(`${file}: список формулировок-исключений пуст`);
+
+  const seen = new Map();
+  for (const group of groups) {
+    for (const entry of group.entries) {
+      for (const form of entry.forms) {
+        const key = form.toLowerCase().replace(/ё/g, "е");
+        if (seen.has(key)) throw new Error(`${file}: форма «${form}» повторяется в ${seen.get(key)} и ${group.id}`);
+        seen.set(key, group.id);
+      }
+    }
+  }
+
+  return { groups, allowed };
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
   disclaimers: parseDisclaimers(),
+  forbidden: parseForbidden(),
 };
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md и content/legal/ — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -686,5 +771,7 @@ console.log(
   `content-extra.ts собран: ${extra.interludes.length} промежуточных блоков ` +
     `(${extra.interludes.reduce((sum, item) => sum + item.pairs.length, 0)} пар), ` +
     `${Object.keys(extra.doors.nodes).length} подписей дверей по узлам, ` +
-    `${Object.keys(extra.doors.slices).length} по срезам, ${extra.disclaimers.length} дисклеймеров`,
+    `${Object.keys(extra.doors.slices).length} по срезам, ${extra.disclaimers.length} дисклеймеров, ` +
+    `реестр запретов: ${extra.forbidden.groups.length} групп, ` +
+    `${extra.forbidden.groups.reduce((sum, group) => sum + group.entries.flatMap((entry) => entry.forms).length, 0)} форм`,
 );

@@ -52,8 +52,39 @@ export interface RawDisclaimer {
   where: string[];
 }
 
+/** Степень запрета: см. `content/forbidden.md`, раздел «Как читать реестр». */
+export type ForbiddenDegree = "жёсткий" | "по контексту" | "подозрение";
+
+/** Область, в которой форма запрещена. */
+export type ForbiddenScope = "разбор" | "вопросы" | "интерфейс" | "промпты";
+
+/** Одна строка реестра: формы одного запрета, его исключения и обоснование. */
+export interface RawForbiddenEntry {
+  forms: string[];
+  /** Точные разрешённые формулировки; `отрицание` — особое значение. */
+  exceptions: string[];
+  reason: string;
+}
+
+/** Группа реестра: общая степень и область для своих строк. */
+export interface RawForbiddenGroup {
+  id: string;
+  title: string;
+  degree: ForbiddenDegree;
+  scopes: ForbiddenScope[];
+  entries: RawForbiddenEntry[];
+}
+
+/** Реестр запрещённых формулировок (content/forbidden.md). */
+export interface RawForbidden {
+  groups: RawForbiddenGroup[];
+  /** Формулировки-исключения, общие для всего реестра. */
+  allowed: string[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
   disclaimers: RawDisclaimer[];
+  forbidden: RawForbidden;
 }

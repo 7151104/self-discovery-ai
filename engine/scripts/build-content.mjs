@@ -751,16 +751,92 @@ function parseForbidden() {
   return { groups, allowed };
 }
 
+/**
+ * Кризисные тексты, триггеры и контакты (E5-02). Файл — вход кризисного детектора
+ * (E2-07): триггеры и корпус похожих, но не кризисных формулировок размечены так же,
+ * как формы в реестре запретов, а тексты и контакты лежат отдельными реестрами.
+ */
+function parseCrisis() {
+  const file = "content/crisis.md";
+  const src = lines(read(file));
+  const splitForms = (cell) =>
+    cell
+      .split("·")
+      .map((part) => unwrap(part.trim()))
+      .filter((part) => part && part !== "—");
+
+  const LEVELS = ["кризис", "с оговоркой"];
+  const triggers = [];
+  for (let i = 0; i < src.length; i += 1) {
+    const heading = /^### (CRISIS_[A-Z_]+) · (.+)$/.exec(src[i]);
+    if (!heading) continue;
+    const [, id, title] = heading;
+    const meta = src.slice(i + 1, i + 5).find((line) => line.includes("**Уровень:**"));
+    if (!meta) throw new Error(`${file}: у категории ${id} нет уровня и действия`);
+    const level = unwrap((/\*\*Уровень:\*\*([^·]+)/.exec(meta)?.[1] ?? "").trim());
+    if (!LEVELS.includes(level)) throw new Error(`${file}: у категории ${id} неизвестный уровень «${level}»`);
+    const action = unwrap((/\*\*Действие:\*\*(.+)$/.exec(meta)?.[1] ?? "").trim());
+    if (!action) throw new Error(`${file}: у категории ${id} не описано действие`);
+
+    const forms = [];
+    for (const cells of tableUnder(src.slice(i), "### ", `${file}: категория ${id}`)) {
+      if (cells[0] === "Форма") continue;
+      const row = splitForms(cells[0] ?? "");
+      if (!row.length) throw new Error(`${file}: в категории ${id} строка без форм`);
+      if (!cells[1]) throw new Error(`${file}: в категории ${id} форма «${row[0]}» без обоснования`);
+      forms.push(...row);
+    }
+    if (!forms.length) throw new Error(`${file}: категория ${id} пуста`);
+    triggers.push({ id, title, level, action, forms });
+  }
+  if (!triggers.length) throw new Error(`${file}: не найдено ни одной категории триггеров`);
+
+  const safe = tableUnder(src, "## Похожие формулировки", file)
+    .filter((cells) => cells[0] !== "Формулировка")
+    .flatMap((cells) => splitForms(cells[0] ?? ""));
+  if (!safe.length) throw new Error(`${file}: пуст корпус похожих, но не кризисных формулировок`);
+
+  const texts = [];
+  for (const cells of tableUnder(src, "## Тексты", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^CRISIS_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у ${id} нет текста`);
+    const where = (cells[2] ?? "")
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!where.length) throw new Error(`${file}: у ${id} не указано, где он показывается`);
+    texts.push({ id, text: cells[1], where });
+  }
+  if (!texts.length) throw new Error(`${file}: реестр кризисных текстов пуст`);
+
+  const contacts = [];
+  for (const cells of tableUnder(src, "## Контакты помощи", file)) {
+    const id = unwrap(cells[0] ?? "");
+    if (!/^CRISIS_CONTACT_[A-Z_]+$/.test(id)) continue;
+    if (!cells[1]) throw new Error(`${file}: у контакта ${id} нет описания`);
+    const value = (cells[2] ?? "").trim();
+    const placeholder = /^\{\{([А-ЯЁ_]+)\}\}$/.exec(value);
+    contacts.push({ id, title: cells[1], value, placeholder: placeholder ? placeholder[1] : null });
+  }
+  if (!contacts.length) throw new Error(`${file}: реестр контактов помощи пуст`);
+  if (!src.some((line) => line.startsWith("**Последняя проверка:**")))
+    throw new Error(`${file}: нет строки о последней проверке актуальности контактов`);
+
+  return { triggers, safe, texts, contacts };
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
   disclaimers: parseDisclaimers(),
   forbidden: parseForbidden(),
+  crisis: parseCrisis(),
 };
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,
@@ -773,5 +849,6 @@ console.log(
     `${Object.keys(extra.doors.nodes).length} подписей дверей по узлам, ` +
     `${Object.keys(extra.doors.slices).length} по срезам, ${extra.disclaimers.length} дисклеймеров, ` +
     `реестр запретов: ${extra.forbidden.groups.length} групп, ` +
-    `${extra.forbidden.groups.reduce((sum, group) => sum + group.entries.flatMap((entry) => entry.forms).length, 0)} форм`,
+    `${extra.forbidden.groups.reduce((sum, group) => sum + group.entries.flatMap((entry) => entry.forms).length, 0)} форм, ` +
+    `кризис: ${extra.crisis.triggers.length} категорий триггеров, ${extra.crisis.texts.length} текстов`,
 );

@@ -82,9 +82,46 @@ export interface RawForbidden {
   allowed: string[];
 }
 
+/** Уровень кризисной категории: см. `content/crisis.md`, раздел «Как читать файл». */
+export type CrisisLevel = "кризис" | "с оговоркой";
+
+/** Категория кризисных триггеров: формы речи, уровень и действие детектора. */
+export interface RawCrisisTrigger {
+  id: string;
+  title: string;
+  level: CrisisLevel;
+  action: string;
+  forms: string[];
+}
+
+/** Кризисный текст: что показывается вместо разбора и где. */
+export interface RawCrisisText {
+  id: string;
+  text: string;
+  where: string[];
+}
+
+/** Строка контактов помощи. `placeholder` не пуст, пока номер не заполнен основателем. */
+export interface RawCrisisContact {
+  id: string;
+  title: string;
+  value: string;
+  placeholder: string | null;
+}
+
+/** Кризисный файл целиком (content/crisis.md). */
+export interface RawCrisis {
+  triggers: RawCrisisTrigger[];
+  /** Похожие, но не кризисные формулировки: обязательный корпус для детектора. */
+  safe: string[];
+  texts: RawCrisisText[];
+  contacts: RawCrisisContact[];
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
   disclaimers: RawDisclaimer[];
   forbidden: RawForbidden;
+  crisis: RawCrisis;
 }

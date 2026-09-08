@@ -6,10 +6,10 @@
   "description": "Движок и прототип AI-сервиса самопознания на 16 координатах",
   "scripts": {
     "build:content": "node engine/scripts/build-content.mjs",
-    "build": "npm run build:content && tsc -p tsconfig.json",
+    "build": "npm run build:content && tsc -p tsconfig.json && tsc -p server/tsconfig.json",
     "test": "npm run build && node --test engine/dist/*.test.js",
     "serve": "npm run build && node tools/serve.mjs",
-    "clean": "rm -rf engine/dist engine/src/generated"
+    "clean": "rm -rf engine/dist engine/src/generated server/dist"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",

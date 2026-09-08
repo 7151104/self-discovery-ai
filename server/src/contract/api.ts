@@ -1,0 +1,363 @@
+/**
+ * Контракт API личной страницы. Единственное описание эндпоинтов: сервер
+ * реализует его, клиент (E6/E7) импортирует те же типы. Расхождение ломает сборку.
+ *
+ * Читать этот файл достаточно, чтобы написать клиент: код сервера знать не нужно.
+ *
+ * Правила контракта:
+ *
+ * 1. Наружу уходят только блоки, полосы карты, двери, предложение и следующая
+ *    порция вопросов. Значения координат, `confidence`, машинные коды и имена
+ *    координат остаются на сервере — это проверяет `Wire<>` из `./wire.js`.
+ * 2. Продуктовых текстов в контракте нет: все строки, которые видит человек,
+ *    приходят из `content/*.md` через движок. Коды ошибок и состояний — машинные.
+ * 3. Идентификатор профиля неперебираем и служит адресом страницы `/p/{profileId}`.
+ */
+
+import type { AssertClean, Wire } from "./wire.js";
+
+// ── Общие формы ───────────────────────────────────────────────────────────────
+
+/** Состояние страницы из `docs/11-ui-page-spec.md`, раздел «Состояния страницы». */
+export type PageStateName = "s0" | "s1" | "s2" | "s3" | "s4" | "paid_pending" | "paid_done";
+
+/**
+ * Место блока на странице и одновременно его идентификатор для клиента:
+ * четыре блока бесплатной лестницы и по блоку на купленный срез.
+ */
+export type BlockSlot = "step1" | "step2" | "step3" | "step4" | `slice:${string}`;
+
+/** Тип вопроса. Совпадает с типами из `content/questions-ladder.md`. */
+export type QuestionKind = "выбор" | "шкала" | "открытый";
+
+/** Порция вопросов: ступень бесплатной лестницы или добор платного среза. */
+export type PortionKey = `step:${1 | 2 | 3 | 4}` | `slice:${string}`;
+
+/** Статус асинхронной генерации текста (ступень 4 и платные срезы). */
+export type GenerationStatus = "pending" | "ready" | "failed";
+
+/** Состояние заказа. Переходы описывает E8-02. */
+export type OrderStatus = "created" | "paid" | "failed" | "refunded";
+
+/** Варианты несогласия из `docs/11-ui-page-spec.md`: несогласие — это данные. */
+export type DisagreementKind = "not_about_me" | "partly" | "too_general";
+
+// ── Данные страницы ───────────────────────────────────────────────────────────
+
+/** Карточка входа: имя и тема периода. Дата рождения в выводах не участвует. */
+export interface CardDto {
+  name: string;
+  /** Сезон берётся по текущей дате, а не по дате рождения. */
+  season: string | null;
+  theme: string | null;
+  metaphor: string | null;
+  cta: string;
+}
+
+/**
+ * Полоса визуальной карты. Номера координаты в ней нет: клиент опознаёт полосу
+ * по непрозрачному `id`, а рисует по `position` и `fill`.
+ */
+export interface MapBarDto {
+  /** Устойчивый ключ полосы, например `tempo`. Номером координаты не является. */
+  id: string;
+  label: string;
+  poles: { low: string; high: string } | null;
+  /** Пустая, предположительная или точная — три вида полосы. */
+  fill: "empty" | "approximate" | "precise";
+  /** Позиция маркера 0..1; null — полоса закрыта. */
+  position: number | null;
+  /** Категориальная полоса «Что задевает»: список вариантов и выбранный. */
+  category: { options: string[]; selected: string | null } | null;
+  hint: string;
+}
+
+/** Блок разбора на странице. */
+export interface BlockDto {
+  id: BlockSlot;
+  heading: string;
+  paragraphs: string[];
+  /** Фраза-сшивка: визуально сильнее остальных абзацев. */
+  highlight: string | null;
+  /** Текст ещё пишется; следить за ним через эндпоинт статуса генерации. */
+  generation: { id: string; status: GenerationStatus } | null;
+  /** Человек отметил несогласие с блоком. */
+  disagreed: boolean;
+  /** Блок получен за деньги: при правке ответов не переписывается. */
+  purchased: boolean;
+  /** Ответы изменились после сборки блока — на нём отметка о расхождении. */
+  stale: boolean;
+}
+
+/** Дверь маршрута. Цена приходит только у предложенной двери. */
+export interface DoorDto {
+  id: string;
+  title: string;
+  state: "opens_with_answers" | "paid" | "open";
+  price: number | null;
+  slice: string | null;
+}
+
+/** Одно платное предложение. На экране оплаты их не бывает двух. */
+export interface OfferDto {
+  slice: string;
+  title: string;
+  price: number;
+  promise: string;
+  /** Число вопросов добора строкой: в контенте оно бывает диапазоном. */
+  questionCount: string;
+}
+
+export interface QuestionDto {
+  id: string;
+  kind: QuestionKind;
+  text: string;
+  options: { key: string; text: string }[];
+  scale: { low: string; high: string } | null;
+}
+
+export interface PortionDto {
+  key: PortionKey;
+  /** Подводка к порции: обещание конкретного результата. */
+  lead: string;
+  questions: QuestionDto[];
+}
+
+/** Полное состояние личной страницы. Всё, что клиенту разрешено знать. */
+export interface PageStateDto {
+  profileId: string;
+  /** Постоянная ссылка на страницу. */
+  url: string;
+  state: PageStateName;
+  card: CardDto;
+  hook: string | null;
+  map: MapBarDto[];
+  blocks: BlockDto[];
+  doors: DoorDto[];
+  offer: OfferDto | null;
+  /** Порция, на которой человек остановился. null — свободных вопросов нет. */
+  nextPortion: PortionDto | null;
+  updatedAt: string;
+}
+
+export interface OrderDto {
+  orderId: string;
+  slice: string;
+  price: number;
+  currency: string;
+  status: OrderStatus;
+  /** Куда вести на оплату. Появится в E8; до него null. */
+  payment: { provider: string; url: string } | null;
+}
+
+// ── Запросы ───────────────────────────────────────────────────────────────────
+
+/** Ступень 0. Собираются только имя и дата рождения. */
+export interface CreateProfileRequest {
+  name: string;
+  /** ISO-дата или null. Без даты — без карточки периода. */
+  birthDate: string | null;
+}
+
+/** Один ответ. Форма зависит от типа вопроса, поэтому это размеченное объединение. */
+export type AnswerInput =
+  | { questionId: string; kind: "выбор"; option: string }
+  | { questionId: string; kind: "шкала"; scale: 1 | 2 | 3 | 4 | 5 }
+  | { questionId: string; kind: "открытый"; text: string };
+
+export interface SubmitPortionRequest {
+  portion: PortionKey;
+  answers: AnswerInput[];
+  /**
+   * Ключ отправки: одна и та же порция при повторе даёт один набор ответов.
+   * Защиту от дублей по этому ключу реализует E3-05.
+   */
+  requestId: string;
+}
+
+export interface EditAnswerRequest {
+  answer: AnswerInput;
+}
+
+export interface DisagreementRequest {
+  blockId: BlockSlot;
+  kind: DisagreementKind;
+}
+
+export interface PurchaseRequest {
+  slice: string;
+  requestId: string;
+}
+
+// ── Ответы ────────────────────────────────────────────────────────────────────
+
+export interface HealthDto {
+  status: "ok";
+  /** Версия сборки из `package.json`. */
+  version: string;
+  uptimeMs: number;
+  database: "ok" | "unavailable";
+  /** Номер последней применённой миграции; null — база пуста. */
+  schemaVersion: string | null;
+}
+
+export interface GenerationDto {
+  id: string;
+  blockId: BlockSlot;
+  status: GenerationStatus;
+}
+
+export interface DisagreementDto {
+  disagreementId: string;
+  blockId: BlockSlot;
+  kind: DisagreementKind;
+}
+
+/**
+ * Машинный код отказа. Текст для человека клиент берёт из контента:
+ * русских продуктовых строк в API нет.
+ */
+export type ErrorCode =
+  | "bad_request"
+  | "profile_not_found"
+  | "not_found"
+  | "method_not_allowed"
+  | "unknown_question"
+  | "unknown_slice"
+  | "payload_too_large"
+  | "internal_error";
+
+export interface ErrorDto {
+  error: { code: ErrorCode };
+}
+
+// Формы, которые действительно уходят на клиент. `Wire<>` пропускает только
+// типы без координат: любое запрещённое поле превращает их в тип, которому
+// нельзя присвоить объект, и обработчик перестаёт компилироваться.
+export type HealthResponse = Wire<HealthDto>;
+export type PageStateResponse = Wire<PageStateDto>;
+export type OrderResponse = Wire<{ order: OrderDto; page: PageStateDto }>;
+export type GenerationResponse = Wire<{ generation: GenerationDto }>;
+export type DisagreementResponse = Wire<{ disagreement: DisagreementDto; page: PageStateDto }>;
+
+// Проверка на этапе сборки: DTO чисты. Строка перестаёт компилироваться,
+// как только в любой из форм появится поле координаты.
+const contractIsCoordinateFree: [
+  AssertClean<HealthDto>,
+  AssertClean<PageStateDto>,
+  AssertClean<{ order: OrderDto; page: PageStateDto }>,
+  AssertClean<{ generation: GenerationDto }>,
+  AssertClean<{ disagreement: DisagreementDto; page: PageStateDto }>,
+] = [true, true, true, true, true];
+void contractIsCoordinateFree;
+
+// ── Реестр эндпоинтов ─────────────────────────────────────────────────────────
+
+/**
+ * Полный список эндпоинтов. Ключ — имя операции, значение — метод, шаблон пути,
+ * параметры пути, тело запроса (`null` — тела нет) и форма ответа.
+ */
+export interface ApiEndpoints {
+  /** Здоровье сервиса. */
+  health: {
+    method: "GET";
+    path: "/api/health";
+    params: Record<never, never>;
+    body: null;
+    response: HealthResponse;
+  };
+  /** Ступень 0: профиль создаётся здесь, регистрация не требуется. */
+  createProfile: {
+    method: "POST";
+    path: "/api/profiles";
+    params: Record<never, never>;
+    body: CreateProfileRequest;
+    response: PageStateResponse;
+  };
+  /** Состояние страницы по постоянной ссылке. */
+  pageState: {
+    method: "GET";
+    path: "/api/p/:profileId";
+    params: { profileId: string };
+    body: null;
+    response: PageStateResponse;
+  };
+  /** Отправка порции ответов. */
+  submitPortion: {
+    method: "POST";
+    path: "/api/p/:profileId/portions";
+    params: { profileId: string };
+    body: SubmitPortionRequest;
+    response: PageStateResponse;
+  };
+  /** Правка одного ответа: профиль пересчитывается, блоки переписываются. */
+  editAnswer: {
+    method: "PATCH";
+    path: "/api/p/:profileId/answers/:questionId";
+    params: { profileId: string; questionId: string };
+    body: EditAnswerRequest;
+    response: PageStateResponse;
+  };
+  /** Несогласие с блоком. Это данные, а не жалоба. */
+  disagree: {
+    method: "POST";
+    path: "/api/p/:profileId/disagreements";
+    params: { profileId: string };
+    body: DisagreementRequest;
+    response: DisagreementResponse;
+  };
+  /** Покупка среза. Оплата подключается в E8. */
+  purchase: {
+    method: "POST";
+    path: "/api/p/:profileId/orders";
+    params: { profileId: string };
+    body: PurchaseRequest;
+    response: OrderResponse;
+  };
+  /** Статус генерации текста блока. */
+  generationStatus: {
+    method: "GET";
+    path: "/api/p/:profileId/generations/:generationId";
+    params: { profileId: string; generationId: string };
+    body: null;
+    response: GenerationResponse;
+  };
+}
+
+export type OperationName = keyof ApiEndpoints;
+
+/**
+ * Тот же реестр в виде данных: по нему сервер строит маршрутизатор, а клиент —
+ * адреса запросов. Тип берётся из `ApiEndpoints`, поэтому разойтись они не могут.
+ */
+export const API: {
+  readonly [Name in OperationName]: {
+    readonly method: ApiEndpoints[Name]["method"];
+    readonly path: ApiEndpoints[Name]["path"];
+  };
+} = {
+  health: { method: "GET", path: "/api/health" },
+  createProfile: { method: "POST", path: "/api/profiles" },
+  pageState: { method: "GET", path: "/api/p/:profileId" },
+  submitPortion: { method: "POST", path: "/api/p/:profileId/portions" },
+  editAnswer: { method: "PATCH", path: "/api/p/:profileId/answers/:questionId" },
+  disagree: { method: "POST", path: "/api/p/:profileId/disagreements" },
+  purchase: { method: "POST", path: "/api/p/:profileId/orders" },
+  generationStatus: { method: "GET", path: "/api/p/:profileId/generations/:generationId" },
+} as const;
+
+/** Адрес личной страницы. Один шаблон и для сервера, и для клиента. */
+export const PAGE_PATH = "/p/:profileId";
+
+/** Подстановка параметров в шаблон пути: `/api/p/:profileId` → `/api/p/abc`. */
+export function buildPath<Name extends OperationName>(
+  name: Name,
+  params: ApiEndpoints[Name]["params"],
+): string {
+  const values = params as Record<string, string>;
+  return API[name].path.replace(/:([A-Za-z]+)/g, (_match, key: string) => {
+    const value = values[key];
+    if (value === undefined) throw new Error(`no-path-param:${key}`);
+    return encodeURIComponent(value);
+  });
+}

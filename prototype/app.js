@@ -1,9 +1,12 @@
 // Кликабельный прототип личной страницы. Вся логика — в engine/, здесь только рендер.
 // Порядок блоков и поведение — docs/11-ui-page-spec.md.
 
-import { buildPage } from "/engine/dist/index.js";
+import { buildPage, uiCopy } from "/engine/dist/index.js";
 
 const STORE_KEY = "self-discovery-prototype";
+
+/** Порог открытого ответа: тот же, что в движке (content/questions-ladder.md). */
+const OPEN_MIN_WORDS = 15;
 
 const state = {
   person: null,
@@ -56,40 +59,45 @@ const words = (text) => (text ?? "").trim().split(/\s+/).filter(Boolean).length;
 function renderIntro() {
   const form = el("form", "intro");
   form.append(
-    el("h1", "intro__title", "Здесь появится твоя страница"),
+    el("h1", "intro__title", uiCopy("UI_INTRO_TITLE")),
     el(
       "p",
       "hint",
-      "Имя и дата — для карточки входа. Из даты не делается ни одного вывода о характере: она нужна только для темы периода и визуала.",
+      uiCopy("UI_INTRO_ABOUT"),
     ),
   );
 
   const nameField = el("div", "field");
-  const nameLabel = el("label", null, "Имя");
+  const nameLabel = el("label", null, uiCopy("UI_INTRO_NAME_LABEL"));
   nameLabel.htmlFor = "name";
   const nameInput = el("input");
   nameInput.id = "name";
   nameInput.required = true;
   nameInput.maxLength = 40;
   nameInput.autocomplete = "given-name";
-  nameField.append(nameLabel, nameInput);
+  nameInput.placeholder = uiCopy("UI_INTRO_NAME_PLACEHOLDER");
+  const nameHint = el("span", "hint", "");
+  nameField.append(nameLabel, nameInput, nameHint);
 
   const dateField = el("div", "field");
-  const dateLabel = el("label", null, "Дата рождения — можно пропустить");
+  const dateLabel = el("label", null, uiCopy("UI_INTRO_DATE_LABEL"));
   dateLabel.htmlFor = "birth";
   const dateInput = el("input");
   dateInput.id = "birth";
   dateInput.type = "date";
-  dateField.append(dateLabel, dateInput, el("span", "hint", "Без даты — без карточки периода. На разбор это не влияет."));
+  dateField.append(dateLabel, dateInput, el("span", "hint", uiCopy("UI_INTRO_DATE_HINT")));
 
-  const submit = el("button", "primary", "Три вопроса — и я скажу, как ты работаешь");
+  const submit = el("button", "primary", uiCopy("UI_INTRO_SUBMIT"));
   submit.type = "submit";
 
   form.append(nameField, dateField, submit);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = nameInput.value.trim();
-    if (!name) return;
+    if (!name) {
+      nameHint.textContent = uiCopy("UI_INTRO_NAME_REQUIRED");
+      return;
+    }
     state.person = { name, birthDate: dateInput.value || undefined };
     state.cursor = 0;
     save();
@@ -105,7 +113,7 @@ function renderHead(card) {
   const head = el("header", "head");
   head.append(el("div", "head__name", card.name));
   if (card.theme) {
-    head.append(el("div", "head__theme", `Сейчас у тебя период: ${card.theme.toLowerCase()}`));
+    head.append(el("div", "head__theme", uiCopy("UI_HEAD_PERIOD", { тема: card.theme.toLowerCase() })));
     if (card.metaphor) head.append(el("div", "head__metaphor", card.metaphor));
   }
   return head;
@@ -113,7 +121,7 @@ function renderHead(card) {
 
 function renderMap(bars) {
   const map = el("section", "map");
-  map.append(el("div", "map__title", "Карта"));
+  map.append(el("div", "map__title", uiCopy("UI_MAP_TITLE")));
 
   for (const bar of bars) {
     const row = el("div", `bar bar--${bar.state}`);
@@ -124,7 +132,7 @@ function renderMap(bars) {
     if (bar.category) {
       const chips = el("div", "chips");
       for (const option of bar.category.options) {
-        const short = option.replace(/^когда\s+/i, "");
+        const short = option.replace(new RegExp(`^${uiCopy("UI_MAP_VULNERABILITY_PREFIX")}\\s+`, "i"), "");
         chips.append(el("span", `chip${option === bar.category.selected ? " chip--on" : ""}`, short));
       }
       row.append(chips);
@@ -159,8 +167,7 @@ function renderBlock(block) {
       el(
         "div",
         "block__llm",
-        "Этот блок пишет LLM по content/step4-open-synthesis.md: сюжет твоими словами, механизм круга и обрыв. " +
-          "В прототипе модель не вызывается — готовое задание для неё лежит под кнопкой «Внутреннее».",
+        uiCopy("UI_DEV_STEP4_STUB"),
       ),
     );
   }
@@ -168,7 +175,7 @@ function renderBlock(block) {
   if (block.highlight) section.append(el("p", "block__highlight", block.highlight));
 
   const foot = el("div", "block__foot");
-  const disagree = el("button", "linkish", state.declined.includes(block.step) ? "Учту" : "Не согласен с этим");
+  const disagree = el("button", "linkish", uiCopy(state.declined.includes(block.step) ? "UI_BLOCK_DISAGREE_DONE" : "UI_BLOCK_DISAGREE"));
   disagree.type = "button";
   disagree.disabled = state.declined.includes(block.step);
   disagree.addEventListener("click", () => {
@@ -176,10 +183,10 @@ function renderBlock(block) {
     save();
     render();
   });
-  const share = el("button", "linkish", "Поделиться");
+  const share = el("button", "linkish", uiCopy("UI_BLOCK_SHARE"));
   share.type = "button";
   share.addEventListener("click", () => {
-    share.textContent = "Скриншот крючка и карты";
+    share.textContent = uiCopy("UI_BLOCK_SHARE_DONE");
   });
   foot.append(disagree, share);
   section.append(foot);
@@ -191,7 +198,7 @@ function renderPortion(portion) {
   const card = el("section", "portion");
 
   if (state.collecting) {
-    card.append(el("div", "collecting", "Собираю…"));
+    card.append(el("div", "collecting", uiCopy("UI_WAIT_COLLECTING")));
     return card;
   }
 
@@ -241,7 +248,7 @@ function renderPortion(portion) {
     for (let value = 1; value <= 5; value += 1) {
       const button = el("button", "scale__step", "·".repeat(value));
       button.type = "button";
-      button.setAttribute("aria-label", `${value} из 5`);
+      button.setAttribute("aria-label", uiCopy("UI_PORTION_SCALE_ARIA", { значение: value }));
       button.addEventListener("click", () => answer(value));
       scale.append(button);
     }
@@ -252,24 +259,24 @@ function renderPortion(portion) {
 
   if (question.type === "открытый") {
     const area = el("textarea");
-    area.placeholder = "Своими словами, 2–5 предложений. Не обобщай — опиши, как оно обычно идёт.";
+    area.placeholder = uiCopy("UI_OPEN_PLACEHOLDER");
     const counter = el("div", "hint", "");
-    const submit = el("button", "primary", "Готово");
+    const submit = el("button", "primary", uiCopy("UI_OPEN_SUBMIT"));
     submit.type = "button";
     submit.disabled = true;
 
     area.addEventListener("input", () => {
       const count = words(area.value);
-      counter.textContent = count >= 5 ? `${count} слов, нужно хотя бы 15` : "";
-      if (count >= 15) counter.textContent = `${count} слов`;
-      submit.disabled = count < 15;
+      counter.textContent = count >= 5 ? uiCopy("UI_OPEN_COUNTER_SHORT", { слов: count, минимум: OPEN_MIN_WORDS }) : "";
+      if (count >= OPEN_MIN_WORDS) counter.textContent = uiCopy("UI_OPEN_COUNTER", { слов: count });
+      submit.disabled = count < OPEN_MIN_WORDS;
     });
     submit.addEventListener("click", () => answer(area.value.trim()));
     card.append(area, counter, submit);
   }
 
   if (state.cursor > 0) {
-    const back = el("button", "linkish back", "Назад");
+    const back = el("button", "linkish back", uiCopy("UI_PORTION_BACK"));
     back.type = "button";
     back.addEventListener("click", () => {
       state.cursor -= 1;
@@ -284,18 +291,18 @@ function renderPortion(portion) {
 function renderOffer(offer, name) {
   const card = el("section", "offer");
   card.append(
-    el("p", "offer__text", `${name}, я вижу, откуда замыкается этот круг — но не откуда он пошёл.`),
+    el("p", "offer__text", uiCopy("UI_PAY_LEAD", { имя: name })),
     el("p", "offer__text", offer.promise),
   );
 
-  const button = el("button", "primary", `Открыть — ${offer.price} ₽`);
+  const button = el("button", "primary", uiCopy("UI_PAY_BUTTON", { цена: offer.price }));
   button.type = "button";
   button.addEventListener("click", () => {
-    button.textContent = `Дальше — ${offer.questionCount} вопросов, а не отчёт`;
+    button.textContent = uiCopy("UI_PAY_QUESTIONS", { вопросов: offer.questionCount });
     button.disabled = true;
   });
 
-  const decline = el("button", "linkish offer__decline", "Не сейчас — страница останется");
+  const decline = el("button", "linkish offer__decline", uiCopy("UI_PAY_DECLINE"));
   decline.type = "button";
   decline.addEventListener("click", () => {
     state.offerDeclined = true;
@@ -305,7 +312,7 @@ function renderOffer(offer, name) {
 
   card.append(
     button,
-    el("div", "offer__meta", `Что внутри: механизм · когда включился · три действия под тебя. Вопросов: ${offer.questionCount}.`),
+    el("div", "offer__meta", uiCopy("UI_PAY_QUESTION_COUNT", { вопросов: offer.questionCount })),
     decline,
   );
   return card;
@@ -313,9 +320,13 @@ function renderOffer(offer, name) {
 
 function renderRoute(doors) {
   const route = el("section", "route");
-  route.append(el("div", "route__title", "Маршрут"));
+  route.append(el("div", "route__title", uiCopy("UI_ROUTE_TITLE")));
 
-  const tag = { open: "открыто", opens_with_answers: "открывается ответами", paid: "закрыто" };
+  const tag = {
+    open: uiCopy("UI_ROUTE_TAG_OPEN"),
+    opens_with_answers: uiCopy("UI_ROUTE_TAG_OPENS"),
+    paid: uiCopy("UI_ROUTE_TAG_PAID"),
+  };
   for (const door of doors) {
     const row = el("div", `door door--${door.state}`);
     row.append(el("span", null, door.title));
@@ -327,17 +338,17 @@ function renderRoute(doors) {
 
 function renderInternal(page) {
   const summary = {
-    ступень: page.step,
-    главный_узел: page.internalProfile.dominantNode,
-    следующее_предложение: page.internalProfile.nextPaidOffer,
-    флаги: page.internalProfile.flags,
-    сработавшие_узлы: page.internalProfile.nodes.map((node) => `${node.id} (приоритет ${node.priority})`),
-    координаты: Object.values(page.internalProfile.coordinates).map((coordinate) =>
+    step: page.step,
+    dominant_node: page.internalProfile.dominantNode,
+    next_paid_offer: page.internalProfile.nextPaidOffer,
+    flags: page.internalProfile.flags,
+    nodes: page.internalProfile.nodes.map((node) => `${node.id} (priority ${node.priority})`),
+    coordinates: Object.values(page.internalProfile.coordinates).map((coordinate) =>
       coordinate.sources.length
         ? `${coordinate.id} ${coordinate.name}: ${coordinate.value} · ${coordinate.confidence} · ${coordinate.sources.join(", ")}`
-        : `${coordinate.id} ${coordinate.name}: закрыта`,
+        : `${coordinate.id} ${coordinate.name}: closed`,
     ),
-    задание_LLM: page.llmTask ? `${page.llmTask.prompt.slice(0, 160)}…` : null,
+    llm_task: page.llmTask ? `${page.llmTask.prompt.slice(0, 160)}…` : null,
   };
   return el("pre", "internal", JSON.stringify(summary, null, 2));
 }
@@ -377,6 +388,11 @@ document.querySelector('[data-action="reset"]').addEventListener("click", () => 
   Object.assign(state, { person: null, answers: {}, cursor: 0, declined: [], offerDeclined: false, collecting: false });
   render();
 });
+
+// Разметка тоже без русских строк: текст приходит по идентификатору из data-copy.
+for (const node of document.querySelectorAll("[data-copy]")) {
+  node.textContent = uiCopy(node.dataset.copy);
+}
 
 restore();
 render();

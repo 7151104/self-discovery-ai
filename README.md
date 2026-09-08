@@ -40,7 +40,7 @@ npm run serve   # прототип на localhost:5173
 │   ├── 12-target-state.md  ← что значит «готово на 100%»
 │   ├── 13-roadmap.md       ← ЕДИНСТВЕННЫЙ список задач
 │   └── 14-state.md         ← где мы сейчас, решения, вопросы
-├── content/                ← вопросы, ветви, скоринг (продуктовое ядро)
+├── content/                ← вопросы, ветви, скоринг, тексты (продуктовое ядро)
 │   ├── questions-full-bank.md
 │   ├── questions-ladder.md
 │   ├── scoring-rules.md
@@ -49,6 +49,11 @@ npm run serve   # прототип на localhost:5173
 │   ├── step2-branches.md
 │   ├── step3-contradictions.md
 │   ├── step4-open-synthesis.md
+│   ├── doors.md            ← подписи закрытых дверей под профиль
+│   ├── ui-copy.md          ← вся микрокопия интерфейса по идентификаторам
+│   ├── forbidden.md        ← реестр запрещённых формулировок со степенями
+│   ├── crisis.md           ← кризисные тексты, триггеры детектора, контакты
+│   ├── legal/              ← политика, согласие, оферта, дисклеймеры
 │   └── slices/             ← вопросы-доборы платных срезов
 ├── prompts/                ← промпты для LLM
 │   ├── full-report-assembler.md

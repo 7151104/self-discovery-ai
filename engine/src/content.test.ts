@@ -7,6 +7,8 @@ import test from "node:test";
 import { rawContent } from "./generated/content.js";
 import { NODE_RULES, FALLBACK_NODE_ID } from "./nodes.js";
 import { BAR_DEFINITIONS } from "./map.js";
+// Запрещённые формулировки живут в реестре content/forbidden.md (E5-01), не в регулярках.
+import { scanTexts, describeHit } from "./forbidden.js";
 
 const repoFile = (path: string): string => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
@@ -97,7 +99,6 @@ test("полосы карты совпадают с таблицей в docs/11-
 });
 
 test("тексты для пользователя не содержат названий методик", () => {
-  const forbidden = /\b(MBTI|эннеаграмм|Human Design|астролог|нумеролог|Big Five|соционик)/i;
   const texts = [
     ...Object.values(rawContent.step1.branches).flatMap((branches) => Object.values(branches).map((b) => b.text)),
     ...Object.values(rawContent.step2.branches).flatMap((branches) => Object.values(branches).map((b) => b.text)),
@@ -107,20 +108,23 @@ test("тексты для пользователя не содержат наз�
     ...rawContent.step3.nodes.map((node) => node.text),
     ...rawContent.step0.metaphors.map((metaphor) => metaphor.text),
   ];
-  for (const text of texts) {
-    assert.ok(!forbidden.test(text), `методика в тексте: ${text.slice(0, 60)}`);
-  }
+  const found = scanTexts(texts, "разбор", { group: "FORBIDDEN_METHODS" });
+  assert.deepEqual(
+    found.map(({ text, hit }) => describeHit(text, hit)),
+    [],
+  );
 });
 
 test("запрещённые слова продукта не встречаются в готовых текстах", () => {
-  const forbidden = /(предназначен|вибраци|карм[аеуы]\b|миссия)/i;
   const texts = [
     ...Object.values(rawContent.step1.branches).flatMap((branches) => Object.values(branches).map((b) => b.text)),
     ...Object.values(rawContent.step2.branches).flatMap((branches) => Object.values(branches).map((b) => b.text)),
     ...rawContent.step3.nodes.map((node) => node.text),
     ...rawContent.step0.metaphors.map((metaphor) => metaphor.text),
   ];
-  for (const text of texts) {
-    assert.ok(!forbidden.test(text), `запрещённое слово: ${text.slice(0, 60)}`);
-  }
+  const found = scanTexts(texts, "разбор");
+  assert.deepEqual(
+    found.map(({ text, hit }) => describeHit(text, hit)),
+    [],
+  );
 });

@@ -8,6 +8,7 @@
 
 import { rawContent } from "./generated/content.js";
 import { nextSliceAfter } from "./slices.js";
+import { uiCopy } from "./ui-copy.js";
 import type { Block, Door, Offer, Profile, SliceAnswers } from "./types.js";
 
 const sliceById = (id: string) => rawContent.slices.find((slice) => slice.id === id);
@@ -60,7 +61,7 @@ export function buildDoors(profile: Profile, blocks: Block[], offer: Offer | nul
   if (nextFree) {
     doors.push({
       id: `free_step_${step + 1}`,
-      title: rawContent.leads[String(step + 1)] ?? "Следующая порция",
+      title: rawContent.leads[String(step + 1)] ?? uiCopy("UI_PORTION_TITLE"),
       state: "opens_with_answers",
       price: null,
       slice: null,

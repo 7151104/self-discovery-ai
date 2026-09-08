@@ -262,22 +262,6 @@
         </button>
       </div>
     </article>
-    <section aria-busy="true" aria-live="polite" class="wait" data-enter="off" data-wait="step4">
-      <p class="wait__title">
-        Собираю сюжет по твоим словам
-      </p>
-      <p class="wait__topics">
-        Что уточняется: Темп · Внимание · Структура
-      </p>
-      <p class="wait__note">
-        Сборка продолжилась с того же места
-      </p>
-      <div aria-hidden="true" class="wait__shape">
-        <span class="wait__line" data-line="full"></span>
-        <span class="wait__line" data-line="full"></span>
-        <span class="wait__line" data-line="last"></span>
-      </div>
-    </section>
     <section class="portion" data-index="0" data-kind="choice" data-portion="slice:slice_decisions:1" data-total="10">
       <p class="portion__lead">
         Тебе тяжело от незакрытого, и ты сам его создаёшь. Десять вопросов, и разберём, по какому механизму ты на самом деле выбираешь, где он ломается и как выглядит решение, которое ты не будешь пересматривать полгода.
@@ -383,6 +367,19 @@
           </span>
         </button>
       </li>
+      <li class="door" data-door="door_slice_decisions" data-state="locked_profiled">
+        <div class="door__face" data-static="true">
+          <span aria-hidden="true" class="door__mark"></span>
+          <span class="door__body">
+            <span class="door__title">
+              Как тебе принимать решения
+            </span>
+            <span class="door__note">
+              закрыто
+            </span>
+          </span>
+        </div>
+      </li>
       <li class="door" data-door="door_slice_motivation" data-state="locked_profiled">
         <div class="door__face" data-static="true">
           <span aria-hidden="true" class="door__mark"></span>
@@ -421,22 +418,6 @@
             </span>
           </span>
         </div>
-      </li>
-      <li class="door" data-door="offer_slice_decisions" data-state="offered">
-        <button class="door__face" type="button">
-          <span aria-hidden="true" class="door__mark"></span>
-          <span class="door__body">
-            <span class="door__title">
-              Как тебе принимать решения
-            </span>
-            <span class="door__note">
-              закрыто
-            </span>
-          </span>
-          <span class="door__price">
-            Открыть — 590 ₽
-          </span>
-        </button>
       </li>
     </ul>
   </div>
@@ -779,15 +760,6 @@
   line-height: 1.4;
 }
 
-.door__price {
-  color: #0b0d10;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
 .door__title {
   font-size: 14px;
   font-weight: 400;
@@ -1103,54 +1075,6 @@
   position: absolute;
   white-space: nowrap;
   width: 1px;
-}
-
-.wait {
-  background: #ffffff;
-  border: 1px dashed #b4b5b1;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-}
-
-.wait__line {
-  background: #e8e8e5;
-  border-radius: 999px;
-  height: 12px;
-}
-
-.wait__line[data-line="last"] {
-  width: 60%;
-}
-
-.wait__note {
-  background: #f1f1ef;
-  border-radius: 8px;
-  color: #14161a;
-  font-size: 14px;
-  line-height: 1.4;
-  padding: 8px 12px;
-}
-
-.wait__shape {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.wait__title {
-  color: #0b0d10;
-  font-size: 20px;
-  font-weight: 640;
-  line-height: 1.25;
-}
-
-.wait__topics {
-  color: #4f5563;
-  font-size: 14px;
-  line-height: 1.4;
 }
 
 body {

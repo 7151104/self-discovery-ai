@@ -32,6 +32,7 @@ export const SENSITIVE_FIELDS = [
   "birth_date",
   "body",
   "card",
+  "channel",
   "email",
   "heading",
   "highlight",

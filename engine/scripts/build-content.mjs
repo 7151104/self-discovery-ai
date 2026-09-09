@@ -1568,6 +1568,47 @@ function parsePayScreens(slices, fullMap) {
   return out;
 }
 
+/**
+ * Имя, домен и пути к логотипу. ORIGIN обязан быть https://DOMAIN без пути:
+ * иначе постоянные ссылки и подпись на картинке разъедутся.
+ */
+function parseIdentity() {
+  const file = "content/identity.md";
+  const src = lines(read(file));
+  const map = {};
+  for (const cells of tableUnder(src, "## Реквизиты", file)) {
+    const key = unwrap(cells[0] ?? "");
+    if (!/^[A-Z_]+$/.test(key)) continue;
+    const value = (cells[1] ?? "").trim();
+    if (!value) throw new Error(`${file}: у ${key} нет значения`);
+    map[key] = value;
+  }
+  const required = ["PRODUCT_NAME_RU", "PRODUCT_NAME_EN", "DOMAIN", "ORIGIN", "LOGO_MARK", "LOGO_WORDMARK"];
+  for (const key of required) {
+    if (!map[key]) throw new Error(`${file}: нет ключа ${key}`);
+  }
+  let origin;
+  try {
+    origin = new URL(map.ORIGIN);
+  } catch {
+    throw new Error(`${file}: ORIGIN не является адресом`);
+  }
+  if (origin.protocol !== "https:") throw new Error(`${file}: ORIGIN должен быть https`);
+  if (origin.pathname !== "/" && origin.pathname !== "") throw new Error(`${file}: ORIGIN не должен содержать путь`);
+  if (origin.host !== map.DOMAIN) throw new Error(`${file}: хост ORIGIN обязан совпадать с DOMAIN`);
+  if (!map.LOGO_MARK.startsWith("/web/assets/") || !map.LOGO_WORDMARK.startsWith("/web/assets/")) {
+    throw new Error(`${file}: логотип должен жить в /web/assets/`);
+  }
+  return {
+    nameRu: map.PRODUCT_NAME_RU,
+    nameEn: map.PRODUCT_NAME_EN,
+    domain: map.DOMAIN,
+    origin: map.ORIGIN.replace(/\/+$/, ""),
+    logoMark: map.LOGO_MARK,
+    logoWordmark: map.LOGO_WORDMARK,
+  };
+}
+
 const extra = {
   interludes: parseSliceInterludes(content.slices),
   doors: parseDoorLabels(),
@@ -1580,10 +1621,11 @@ const extra = {
 extra.payScreens = parsePayScreens(content.slices, extra.fullMap);
 extra.emails = parseEmails();
 extra.share = parseShare();
+extra.identity = parseIdentity();
 
 writeFileSync(
   join(outDir, "content-extra.ts"),
-  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md, content/emails.md, content/share.md — не редактировать.\n` +
+  `// СГЕНЕРИРОВАНО из content/slices/*.md, content/doors.md, content/legal/, content/forbidden.md, content/crisis.md, content/ui-copy.md, content/emails.md, content/share.md, content/identity.md — не редактировать.\n` +
     `// Источник правды — markdown. Пересборка: npm run build:content\n\n` +
     `import type { RawExtraContent } from "../content-extra-types.js";\n\n` +
     `export const rawExtraContent: RawExtraContent = ${JSON.stringify(extra, null, 2)};\n`,

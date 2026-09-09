@@ -79,6 +79,7 @@ test("реестр покрывает страницу, оплату, публи
     "regenerate",
     "reportError",
     "revokeShare",
+    "saveContact",
     "share",
     "submitPortion",
     "webhook",

@@ -24,6 +24,7 @@ import {
   loadPublic,
   purchase,
   revokeShare,
+  saveContact,
   submitPortion,
   type Transport,
 } from "./api.js";
@@ -40,6 +41,7 @@ import {
   unfilledLabel,
 } from "./legal-copy.js";
 import {
+  contactTexts,
   errorTexts,
   introLabels,
   introTexts,
@@ -62,10 +64,13 @@ import {
   newRequestId,
   numberAnswer,
   openAnswer,
+  openContactLater,
   openShare,
   portionRequest,
   rememberShown,
   replacePage,
+  setContactDraft,
+  setContactError,
   setDisagreeing,
   setDraft,
   setIntroValue,
@@ -114,6 +119,10 @@ export interface PageApp {
   closePublicLink: () => Promise<void>;
   decline: () => void;
   buy: () => Promise<void>;
+  contactInput: (field: "email" | "channel", value: string) => void;
+  submitContact: (value: { email: string; channel: string }) => Promise<void>;
+  skipContact: () => Promise<void>;
+  laterContact: () => void;
   /** Остановить опрос статуса. Уход со страницы и тесты. */
   stop: () => void;
   /** Дождаться текущего тика опроса. Нужно тестам: сеть внутри тика асинхронна. */
@@ -206,6 +215,10 @@ export function renderSession(
     onShareClose?: () => void;
     onDecline?: () => void;
     onBuy?: () => void;
+    onContactInput?: (field: "email" | "channel", value: string) => void;
+    onContactSubmit?: (value: { email: string; channel: string }) => void;
+    onContactSkip?: () => void;
+    onContactLater?: () => void;
   },
   clock: { now: number } = { now: Date.now() },
 ): VNode {
@@ -276,6 +289,13 @@ export function renderSession(
     onShare: handlers.onShare,
     onDecline: handlers.onDecline,
     onBuy: handlers.onBuy,
+    contactValues: { email: session.contactEmail, channel: session.contactChannel },
+    contactError: session.contactError,
+    contactOpen: session.contactOpen,
+    onContactInput: handlers.onContactInput,
+    onContactSubmit: handlers.onContactSubmit,
+    onContactSkip: handlers.onContactSkip,
+    onContactLater: handlers.onContactLater,
   });
 }
 
@@ -491,6 +511,14 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
           onBuy: () => {
             void app.buy();
           },
+          onContactInput: (field, value) => app.contactInput(field, value),
+          onContactSubmit: (value) => {
+            void app.submitContact(value);
+          },
+          onContactSkip: () => {
+            void app.skipContact();
+          },
+          onContactLater: () => app.laterContact(),
           consent: session.screen === "intro" ? consentSlot() : undefined,
           submitDisabled: session.screen === "intro" ? !consented : undefined,
           },
@@ -625,6 +653,29 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       set(replacePage(session, result.page));
       watchIfNeeded(result.page);
     },
+    contactInput: (field, value) => set(setContactDraft(session, field, value)),
+    submitContact: async (value) => {
+      const page = session.page;
+      if (page === null || page.profileId.length === 0) return;
+      if (value.email.length === 0 && value.channel.length === 0) {
+        set(setContactError(session, contactTexts.error()));
+        return;
+      }
+      const result = await saveContact(page.profileId, { email: value.email, channel: value.channel }, host);
+      if (!result.ok) {
+        set(setContactError(session, contactTexts.error()));
+        return;
+      }
+      set(replacePage({ ...session, contactEmail: "", contactChannel: "", contactError: null, contactOpen: false }, result.page));
+    },
+    skipContact: async () => {
+      const page = session.page;
+      if (page === null || page.profileId.length === 0) return;
+      const result = await saveContact(page.profileId, { skip: true }, host);
+      if (!result.ok) return;
+      set(replacePage({ ...session, contactOpen: false, contactError: null }, result.page));
+    },
+    laterContact: () => set(openContactLater(session)),
     stop: () => {
       pause?.skip();
       pause = null;

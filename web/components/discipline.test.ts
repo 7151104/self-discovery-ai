@@ -26,6 +26,7 @@ import { renderDisclaimerList } from "./disclaimer.js";
 import { renderFooter } from "./footer.js";
 import { renderLegalDoc } from "./legal-doc.js";
 import { renderIntro } from "./intro.js";
+import { renderContactCard } from "./contact.js";
 import { renderMissing } from "./missing.js";
 import { renderSharePanel } from "./share-panel.js";
 import { renderToString, type VNode } from "../src/dom.js";
@@ -206,8 +207,27 @@ const cases: { name: string; node: VNode }[] = [
         dateLabel: "D",
         dateHint: "H",
         submit: "U",
+        wordmarkSrc: "/x.svg",
+        wordmarkAlt: "A",
       },
       values: { name: "Ada", birthDate: "1990-01-01" },
+    }),
+  },
+  {
+    name: "карточка контакта",
+    node: renderContactCard({
+      labels: {
+        title: "T",
+        lead: "L",
+        emailLabel: "E",
+        emailPlaceholder: "P",
+        channelLabel: "C",
+        channelHint: "H",
+        submit: "S",
+        skip: "K",
+        error: "R",
+      },
+      values: { email: "a@b.c", channel: "@a" },
     }),
   },
   { name: "нет профиля", node: renderMissing({ title: "T", text: "X", action: "A" }) },

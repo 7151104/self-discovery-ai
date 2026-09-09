@@ -42,6 +42,11 @@ export interface Session {
   /** Сервер отбил открытый ответ: подсказка поля, не заметка страницы. */
   portionError: string | null;
   missingKind: "missing" | "revoked";
+  contactEmail: string;
+  contactChannel: string;
+  contactError: string | null;
+  /** После пропуска: карточка снова открыта с шапки. */
+  contactOpen: boolean;
 }
 
 export function emptySession(): Session {
@@ -67,6 +72,10 @@ export function emptySession(): Session {
     waitResumed: false,
     portionError: null,
     missingKind: "missing",
+    contactEmail: "",
+    contactChannel: "",
+    contactError: null,
+    contactOpen: false,
   };
 }
 
@@ -164,6 +173,8 @@ export function showPage(session: Session, page: PageStateDto, mode: "load" | "a
     returned,
     waitResumed: mode === "load" && waiting,
     portionError: null,
+    contactError: null,
+    contactOpen: page.contact?.status === "ask" ? false : session.contactOpen,
   };
 }
 
@@ -258,6 +269,20 @@ export function declineOffer(session: Session): Session {
 
 export function markPaymentFailed(session: Session): Session {
   return { ...session, paymentFailed: true };
+}
+
+export function setContactDraft(session: Session, field: "email" | "channel", value: string): Session {
+  return field === "email"
+    ? { ...session, contactEmail: value, contactError: null }
+    : { ...session, contactChannel: value, contactError: null };
+}
+
+export function setContactError(session: Session, error: string | null): Session {
+  return { ...session, contactError: error };
+}
+
+export function openContactLater(session: Session): Session {
+  return { ...session, contactOpen: true, contactError: null };
 }
 
 export function newRequestId(): string {

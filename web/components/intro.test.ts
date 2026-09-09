@@ -45,6 +45,9 @@ test("сначала идея страницы, поля — во втором �
   assert.ok(text.includes(introTexts.title()));
   assert.ok(text.includes(introTexts.lead()));
   assert.ok(text.includes(introTexts.about()));
+  const logo = findAll(node, "img").find((item) => item.attrs["class"] === "intro__logo");
+  assert.equal(logo?.attrs["src"], introTexts.wordmarkSrc());
+  assert.equal(logo?.attrs["alt"], introTexts.wordmarkAlt());
   for (const beat of introTexts.beats()) assert.ok(text.includes(beat), `нет удара «${beat}»`);
   assert.ok(text.includes(introTexts.startTitle()));
   const titleAt = text.indexOf(introTexts.title());

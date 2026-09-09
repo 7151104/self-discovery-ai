@@ -13,6 +13,7 @@ import type {
   BlockDto,
   BlockSlot,
   ClarificationsDto,
+  ContactDto,
   CrisisDto,
   DisagreementKind,
   DoorDto,
@@ -63,6 +64,7 @@ import {
   listAnswers,
   listBlocks,
   listDisagreements,
+  findContact,
   paidSlices,
   type AnswerRecord,
   type BlockRecord,
@@ -401,6 +403,13 @@ export interface AssembleOptions {
   omitStoryline?: boolean;
 }
 
+const contactDto = (state: PageStateName, stored: { status: "saved" | "skipped" } | null): ContactDto => {
+  if (stored?.status === "saved") return { status: "saved" };
+  if (stored?.status === "skipped") return { status: "skipped" };
+  if (state === "s0") return { status: "hidden" };
+  return { status: "ask" };
+};
+
 /** Постоянная ссылка на страницу. */
 export const pageUrl = (publicOrigin: string, profileId: string): string => `${publicOrigin}/p/${profileId}`;
 
@@ -580,6 +589,7 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     crisis,
     clarifications: sliceCrisis ? null : clarifications,
     share: share ? { url: shareUrl(options.publicOrigin, share.token), createdAt: share.createdAt } : null,
+    contact: contactDto(stateName(view.step, blocks, paid), findContact(db, profile.profileId)),
     updatedAt: profile.updatedAt,
   };
 

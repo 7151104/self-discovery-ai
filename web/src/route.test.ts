@@ -14,6 +14,7 @@ import {
   API_PAGE_STATE,
   API_PUBLIC_PAGE,
   API_PURCHASE,
+  API_SAVE_CONTACT,
   API_SHARE,
   API_SUBMIT_PORTION,
   fillPath,
@@ -34,6 +35,7 @@ test("шаблоны адресов совпадают с контрактом",
   assert.equal(API_SUBMIT_PORTION, contract.API.submitPortion.path);
   assert.deepEqual(LEGAL_PATHS, contract.LEGAL_PATHS);
   assert.equal(API_DISAGREE, contract.API.disagree.path);
+  assert.equal(API_SAVE_CONTACT, contract.API.saveContact.path);
   assert.equal(API_SHARE, contract.API.share.path);
   assert.equal(API_PUBLIC_PAGE, contract.API.publicPage.path);
   assert.equal(API_PURCHASE, contract.API.purchase.path);

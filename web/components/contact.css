@@ -1,0 +1,113 @@
+/*
+ * Карточка контакта после первой порции. Та же бумага, что у блока входа:
+ * не модальное окно, не стена. Пропуск — вторая кнопка, без давления.
+ */
+
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+.contact__title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
+  color: var(--color-text-strong);
+}
+
+.contact__lead {
+  max-width: var(--measure-block);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.contact__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.contact__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.contact__input {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  width: 100%;
+  padding: var(--space-3);
+  border: var(--border-strong) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  box-shadow: var(--shadow-inset);
+}
+
+.contact__hint {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+.contact__error {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-alert);
+}
+
+.contact__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.contact__submit {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-strong) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.contact__skip {
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-hair) solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font-size: var(--text-md);
+}
+
+.contact__submit:disabled,
+.contact__skip:disabled,
+.contact__input:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+.contact__saved {
+  max-width: var(--measure-block);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}

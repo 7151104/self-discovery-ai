@@ -76,9 +76,24 @@ test("страница читает markdown и не копирует его в 
   assert.ok(page.html.includes("Какие данные обрабатываются"));
   assert.ok(page.html.includes("data-unfilled=\"ОПЕРАТОР_ИНН\""));
   assert.ok(page.html.includes("{{ОПЕРАТОР_ИНН}}"));
+  assert.ok(page.html.includes("Умная корзина"), "имя продукта должно подставляться из идентичности");
+  assert.ok(page.html.includes("wordpop.ru"), "домен должен подставляться из идентичности");
+  assert.equal(page.unfilled.includes("ДОМЕН"), false);
+  assert.equal(page.unfilled.includes("НАЗВАНИЕ_ПРОДУКТА"), false);
   assert.ok(page.unfilled.includes("ОПЕРАТОР_ИНН"));
   assert.equal(page.html.includes("ООО «Ромашка»"), false);
   assert.equal(page.html.includes("1234567890"), false);
+});
+
+test("заполненный реквизит становится текстом, пустой остаётся подстановкой", () => {
+  const html = renderLegalMarkdown("Сервис {{НАЗВАНИЕ_ПРОДУКТА}} на {{ДОМЕН}}. ИНН {{ОПЕРАТОР_ИНН}}.\n", {
+    unfilledLabel: "не заполнено",
+    values: { НАЗВАНИЕ_ПРОДУКТА: "Умная корзина", ДОМЕН: "wordpop.ru" },
+  });
+  assert.match(html, /Умная корзина/);
+  assert.match(html, /wordpop\.ru/);
+  assert.match(html, /data-unfilled="ОПЕРАТОР_ИНН"/);
+  assert.equal(html.includes("{{ДОМЕН}}"), false);
 });
 
 test("незаполненная подстановка на странице видна и не подменяется", () => {

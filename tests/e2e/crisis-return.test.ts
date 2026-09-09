@@ -113,6 +113,9 @@ test("кризисный путь: нет разбора, предложения
   assert.equal(pageEl.attrs["data-edge"], "crisis");
   assert.equal(kit.byClass(tree, "offer").length, 0);
   assert.ok(kit.visibleText(tree).length > 20, "экран пустой");
+  assert.equal(page.crisis?.publishable, true, "при заполненных линиях текст публикуется");
+  assert.ok(kit.visibleText(tree).includes("112"), "на экране нет экстренного номера");
+  assert.ok(kit.visibleText(tree).includes("2000 122") || kit.visibleText(tree).includes("2000122"), "нет линии доверия");
 });
 
 test("возврат по ссылке: та же порция, заметка return, ответы на месте", async (t) => {

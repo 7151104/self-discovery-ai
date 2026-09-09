@@ -107,6 +107,7 @@ test("удаление профиля уносит ответы, блоки, з�
     "generation_jobs",
     "generation_calls",
     "generation_cache",
+    "profile_contacts",
   ]) {
     const left = server.db.get<{ total: number }>(
       `SELECT COUNT(*) AS total FROM ${table} WHERE profile_id = ?`,

@@ -7,7 +7,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createProfile, disagree, enableShare, loadGeneration, loadPage, loadPublic, revokeShare } from "./api.js";
+import { createProfile, disagree, enableShare, loadGeneration, loadPage, loadPublic, revokeShare, saveContact } from "./api.js";
 import { visibleText } from "./dom.js";
 import { filledBars } from "./page.js";
 import { missingTexts } from "./page-copy.js";
@@ -113,6 +113,25 @@ test("клиент включает и отзывает публичную сс�
   assert.equal(missing.ok, false);
   if (missing.ok) return;
   assert.equal(missing.missing, true);
+});
+
+test("клиент сохраняет контакт после первой порции и не отправляет его на входе", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const transport = { fetch, origin: server.origin };
+
+  const created = await createProfile({ name: "Аня", birthDate: null }, transport);
+  assert.equal(created.ok, true);
+  if (!created.ok) return;
+  const tooEarly = await saveContact(created.page.profileId, { email: "anna@example.com" }, transport);
+  assert.equal(tooEarly.ok, false);
+
+  const s1 = await profileAtStep(server.origin, 1);
+  const saved = await saveContact(s1.profileId, { email: "anna@example.com", channel: "@anna" }, transport);
+  assert.equal(saved.ok, true);
+  if (!saved.ok) return;
+  assert.equal(saved.page.contact?.status, "saved");
+  assert.equal("email" in (saved.page.contact ?? {}), false);
 });
 
 test("клиент читает статус генерации по идентификатору из блока", async (t) => {

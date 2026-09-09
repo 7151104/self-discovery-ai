@@ -21,6 +21,7 @@
     "lint:budget": "npm run build && node --disable-warning=ExperimentalWarning --test web/dist/src/budget.test.js",
     "check:health": "node tools/check-health.mjs",
     "funnel": "node tools/funnel.mjs",
+    "test:coverage:engine": "npm run build && node --disable-warning=ExperimentalWarning --experimental-test-coverage --test-coverage-include=engine/dist/*.js --test-coverage-exclude=engine/dist/*.test.js --test-coverage-exclude=engine/dist/generated/** --test engine/dist/*.test.js",
     "verify": "npm test && npm run lint:content && npm run lint:styles && npm run lint:budget && npm run migrate:check",
     "dev:server": "npm run build && node --disable-warning=ExperimentalWarning server/dist/main.js",
     "migrate": "npm run build && node --disable-warning=ExperimentalWarning server/dist/db/migrate.js",

@@ -80,6 +80,91 @@ export function insertProfile(
   };
 }
 
+export type StoredContactStatus = "saved" | "skipped";
+
+export interface ContactRecord {
+  profileId: string;
+  status: StoredContactStatus;
+  email: string | null;
+  channel: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ContactRow {
+  profile_id: string;
+  email_payload: string | null;
+  email_enc: string;
+  channel_payload: string | null;
+  channel_enc: string;
+  status: StoredContactStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+const toContact = (db: Db, row: ContactRow): ContactRecord => ({
+  profileId: row.profile_id,
+  status: row.status,
+  email: unsealOptional(db.keys, row.email_payload, row.email_enc),
+  channel: unsealOptional(db.keys, row.channel_payload, row.channel_enc),
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export function findContact(db: Db, profileId: string): ContactRecord | null {
+  const row = db.get<ContactRow>(
+    `SELECT profile_id, email_payload, email_enc, channel_payload, channel_enc, status, created_at, updated_at
+       FROM profile_contacts WHERE profile_id = ?`,
+    [profileId],
+  );
+  return row ? toContact(db, row) : null;
+}
+
+export function saveContact(
+  db: Db,
+  input: { profileId: string; status: StoredContactStatus; email: string | null; channel: string | null },
+): ContactRecord {
+  const timestamp = now();
+  const existing = findContact(db, input.profileId);
+  const email = input.email === null || input.email.length === 0 ? null : seal(db.keys, input.email);
+  const channel = input.channel === null || input.channel.length === 0 ? null : seal(db.keys, input.channel);
+  if (existing) {
+    db.run(
+      `UPDATE profile_contacts
+          SET email_payload = ?, email_enc = ?, channel_payload = ?, channel_enc = ?, status = ?, updated_at = ?
+        WHERE profile_id = ?`,
+      [
+        email?.payload ?? null,
+        email?.enc ?? PLAINTEXT,
+        channel?.payload ?? null,
+        channel?.enc ?? PLAINTEXT,
+        input.status,
+        timestamp,
+        input.profileId,
+      ],
+    );
+  } else {
+    db.run(
+      `INSERT INTO profile_contacts
+         (profile_id, email_payload, email_enc, channel_payload, channel_enc, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        input.profileId,
+        email?.payload ?? null,
+        email?.enc ?? PLAINTEXT,
+        channel?.payload ?? null,
+        channel?.enc ?? PLAINTEXT,
+        input.status,
+        timestamp,
+        timestamp,
+      ],
+    );
+  }
+  const stored = findContact(db, input.profileId);
+  if (!stored) throw new Error(`contact-vanished:${input.profileId}`);
+  return stored;
+}
+
 /**
  * Удаляет профиль со всем, что к нему привязано (E9-03).
  *

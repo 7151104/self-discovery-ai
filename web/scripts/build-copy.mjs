@@ -14,7 +14,7 @@
  * человеку в продукте они не показываются.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rawExtraContent } from "../../engine/dist/generated/content-extra.js";
@@ -112,3 +112,27 @@ const legalSource = [
 
 writeFileSync(join(outDir, "legal.ts"), legalSource);
 console.log(`web/src/generated/legal.ts: документов ${catalog.length}, дисклеймеров ${items.length}`);
+
+const identity = rawExtraContent.identity;
+const identitySource = [
+  "// СГЕНЕРИРОВАНО из content/identity.md сборкой web — не редактировать.",
+  "",
+  "export const PRODUCT_IDENTITY = {",
+  `  nameRu: ${literal(identity.nameRu)},`,
+  `  nameEn: ${literal(identity.nameEn)},`,
+  `  domain: ${literal(identity.domain)},`,
+  `  origin: ${literal(identity.origin)},`,
+  `  logoMark: ${literal(identity.logoMark)},`,
+  `  logoWordmark: ${literal(identity.logoWordmark)},`,
+  "} as const;",
+  "",
+].join("\n");
+writeFileSync(join(outDir, "identity.ts"), identitySource);
+console.log(`web/src/generated/identity.ts: ${identity.domain}`);
+
+const assetsSrc = join(webRoot, "assets");
+const assetsDest = join(webRoot, "dist", "assets");
+if (existsSync(assetsSrc)) {
+  mkdirSync(join(webRoot, "dist"), { recursive: true });
+  cpSync(assetsSrc, assetsDest, { recursive: true });
+}

@@ -33,6 +33,14 @@ const TARGETS: Target[] = [
     ],
   },
   {
+    table: "profile_contacts",
+    keyColumns: ["profile_id"],
+    fields: [
+      { payload: "email_payload", enc: "email_enc", optional: true },
+      { payload: "channel_payload", enc: "channel_enc", optional: true },
+    ],
+  },
+  {
     table: "answers",
     keyColumns: ["profile_id", "question_id"],
     fields: [{ payload: "payload", enc: "payload_enc" }],

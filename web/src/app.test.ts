@@ -93,6 +93,9 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.ok(intro.includes(introTexts.lead()));
   assert.ok(intro.includes(introTexts.about()));
   assert.ok(intro.includes("не делается ни одного вывода о характере"));
+  const wordmark = findAll(app.tree(), "img").find((item) => item.attrs["class"] === "intro__logo");
+  assert.ok(wordmark, "на входе нет словознака");
+  assert.equal(wordmark.attrs["src"], introTexts.wordmarkSrc());
   assert.ok(byClass(app.tree(), "consent").length === 1);
   assert.equal(byClass(app.tree(), "consent")[0]?.attrs["data-consent"], "off");
   assert.equal(findAll(app.tree(), "dialog").length, 0);
@@ -143,6 +146,12 @@ test("лестница: вход без даты, порции, карта 3→5
   const s1 = app.session().page;
   assert.ok(s1);
   assert.equal(s1.state, "s1");
+  assert.equal(s1.contact?.status, "ask");
+  assert.ok(visibleText(app.tree()).includes(copy("UI_CONTACT_TITLE")));
+  assert.ok(visibleText(app.tree()).includes(copy("UI_CONTACT_SKIP")));
+  await app.skipContact();
+  assert.equal(app.session().page?.contact?.status, "skipped");
+  assert.ok(visibleText(app.tree()).includes(copy("UI_CONTACT_LATER")));
   assert.equal(filledBars(s1), 3);
   assert.equal(byClass(app.tree(), "hook").length, 1);
   assert.ok(host.scrolled.includes('.block[data-enter="on"]'));

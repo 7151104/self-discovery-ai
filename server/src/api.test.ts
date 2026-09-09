@@ -276,3 +276,47 @@ test("события пишутся без персональных данных
     assert.equal(typeof payload.version, "string", event.type);
   }
 });
+
+test("контакт после первой порции: сохранение, пропуск, на входе рано", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  const s0 = await profileAtStep(server.origin, 0);
+  assert.equal(s0.contact?.status, "hidden");
+  const tooEarly = await call<ErrorDto>(server.origin, "POST", `/api/p/${s0.profileId}/contact`, {
+    email: "anna@example.com",
+  });
+  assert.equal(tooEarly.status, 400);
+
+  const s1 = await profileAtStep(server.origin, 1);
+  assert.equal(s1.contact?.status, "ask");
+
+  const saved = await call<{ page: PageStateDto }>(server.origin, "POST", `/api/p/${s1.profileId}/contact`, {
+    email: "anna@example.com",
+    channel: "@anna",
+  });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.page.contact?.status, "saved");
+  assert.equal("email" in (saved.body.page.contact ?? {}), false);
+
+  const dump = await call<{ contact: { email: string | null; channel: string | null } | null }>(
+    server.origin,
+    "GET",
+    `/api/p/${s1.profileId}/export`,
+  );
+  assert.equal(dump.status, 200);
+  assert.equal(dump.body.contact?.email, "anna@example.com");
+  assert.equal(dump.body.contact?.channel, "@anna");
+
+  const events = listEvents(server.db, s1.profileId).filter((event) => event.type === "contact.saved");
+  assert.equal(events.length, 1);
+  assert.equal(events[0]?.payload.includes("anna@example.com"), false);
+  assert.ok(events[0]?.payload.includes("hasEmail"));
+
+  const skipped = await profileAtStep(server.origin, 1);
+  const skip = await call<{ page: PageStateDto }>(server.origin, "POST", `/api/p/${skipped.profileId}/contact`, {
+    skip: true,
+  });
+  assert.equal(skip.status, 200);
+  assert.equal(skip.body.page.contact?.status, "skipped");
+});

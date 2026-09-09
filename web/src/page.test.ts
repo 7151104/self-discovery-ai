@@ -33,6 +33,8 @@ test("после первой порции на странице карточк�
   assert.equal(byClass(skipped, "contact").length, 0);
   assert.ok(visibleText(skipped).includes(copy("UI_CONTACT_LATER")));
 });
+
+test("витрина реэкспортирует ту же сборку страницы", async () => {
   const showcase = await import("../showcase/page.js");
   assert.equal(showcase.renderPersonalPage, renderPersonalPage);
 });

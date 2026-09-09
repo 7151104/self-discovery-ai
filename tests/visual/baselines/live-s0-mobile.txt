@@ -8,6 +8,9 @@
 <div class="page-shell" data-collecting="off" data-edge="no-date" data-page="s0" data-profiled="false" data-view="owner">
   <div class="page" data-collecting="off" data-edge="no-date" data-page="s0" data-profiled="false" data-view="owner" lang="ru">
     <header class="head">
+      <p class="head__brand">
+        <img alt="Знак Умной корзины" class="head__logo" src="/web/assets/logo-mark.svg">
+      </p>
       <h1 class="head__name">
         Аня
       </h1>
@@ -592,6 +595,16 @@
   padding-top: 16px;
 }
 
+.head__brand {
+  margin: 0;
+}
+
+.head__logo {
+  display: block;
+  height: 36px;
+  width: auto;
+}
+
 .head__name {
   color: #0d0b09;
   font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
@@ -977,6 +990,8 @@ p {
 --size-container: 560px;
 --size-dot: 12px;
 --size-field: 152px;
+--size-logo-mark: 36px;
+--size-logo-wordmark: 72px;
 --size-mark: 20px;
 --size-mark-bar: 48px;
 --size-screen: 360px;

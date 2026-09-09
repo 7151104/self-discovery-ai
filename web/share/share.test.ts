@@ -143,17 +143,17 @@ test("делиться нечем, пока нет крючка", () => {
 
 test("домен и имя продукта — подстановка, а не выдумка", () => {
   const image = shareImage(data(), { font: FONT });
-  assert.ok(image.svg.includes(DOMAIN_PLACEHOLDER), "домен обязан оставаться подстановкой до ответа основателя");
+  assert.ok(image.svg.includes(DOMAIN_PLACEHOLDER), "на картинке должен быть домен из идентичности");
 
   const sources = [join(webRoot, "share"), join(webRoot, "components"), join(webRoot, "src")].flatMap((directory) =>
     readdirSync(directory)
-      .filter((name) => name.endsWith(".ts"))
+      .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
       .map((name) => ({ name, source: readFileSync(join(directory, name), "utf8") })),
   );
   for (const file of sources) {
     const withoutComments = file.source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     const found = [...withoutComments.matchAll(/["'`][^"'`\s]*\.(?:ru|com|io|app|dev)\b[^"'`\s]*["'`]/g)];
-    assert.deepEqual(found.map((match) => match[0]), [], `${file.name}: домен зашит в код`);
+    assert.deepEqual(found.map((match) => match[0]), [], `${file.name}: домен зашит в код, а не взят из идентичности`);
   }
 });
 

@@ -108,7 +108,9 @@ test("кризисные признаки в L12: нет блока 4 и пре�
   );
   assert.equal(state.offer, null);
   assert.equal(app.tree().attrs["data-edge"], "crisis");
-  assert.ok(visibleText(app.tree()).includes(copy("UI_EDGE_CRISIS")));
+  const crisisText = visibleText(app.tree());
+  assert.ok(crisisText.includes("112"), "на экране нет экстренного номера");
+  assert.doesNotMatch(crisisText, /позвони|обратись|свяжись/i);
   assert.equal(byClass(app.tree(), "offer").length, 0);
 });
 

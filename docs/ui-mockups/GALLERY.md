@@ -2,7 +2,11 @@
 
 Картинки в чате агента могут не открыться. Смотри их здесь, на GitHub.
 
-## Усиленный мобильный (смотреть в первую очередь)
+## Выбор стиля: 10 характеров одной страницы
+
+**[Смотреть и выбирать](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/pick-10/GALLERY.md)**
+
+## Усиленный мобильный (воронка кадрами)
 
 **[10 экранов воронки для женской аудитории](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/mobile-strong/GALLERY.md)**
 

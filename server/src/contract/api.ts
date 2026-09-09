@@ -163,6 +163,16 @@ export interface CrisisDto {
   contacts: { title: string; line: string }[];
 }
 
+/**
+ * Сбор контакта после первой порции. Наружу уходит только статус:
+ * почта и мессенджер на клиент не возвращаются.
+ */
+export type ContactStatus = "hidden" | "ask" | "saved" | "skipped";
+
+export interface ContactDto {
+  status: ContactStatus;
+}
+
 /** Уточняющие вопросы, когда порог генерации среза не взят. Строки — из файла среза. */
 export interface ClarificationsDto {
   slice: string;
@@ -195,6 +205,11 @@ export interface PageStateDto {
   clarifications?: ClarificationsDto | null;
   /** Публичная ссылка, если человек нажал «Поделиться». null — страница закрыта. */
   share: ShareDto | null;
+  /**
+   * Сбор контакта. hidden — ещё рано, ask — карточка, skipped — отказ,
+   * saved — контакт есть. Почты в этом поле нет.
+   */
+  contact?: ContactDto;
   updatedAt: string;
 }
 
@@ -251,6 +266,7 @@ export interface ExportDto {
   orders: OrderDto[];
   disagreements: DisagreementDto[];
   share: ShareDto | null;
+  contact: { email: string | null; channel: string | null } | null;
 }
 
 /** Ответ в выгрузке: вопрос и ответ словами, а не идентификаторами вариантов. */
@@ -302,6 +318,16 @@ export interface EditAnswerRequest {
 export interface DisagreementRequest {
   blockId: BlockSlot;
   kind: DisagreementKind;
+}
+
+/**
+ * Контакт после первой порции. skip=true — отказ без данных.
+ * Иначе нужна почта, канал или оба.
+ */
+export interface SaveContactRequest {
+  skip?: boolean;
+  email?: string | null;
+  channel?: string | null;
 }
 
 export interface PurchaseRequest {
@@ -404,6 +430,7 @@ export type OrderResponse = Wire<{ order: OrderDto; page: PageStateDto }>;
 export type GenerationResponse = Wire<{ generation: GenerationDto }>;
 export type DisagreementResponse = Wire<{ disagreement: DisagreementDto; page: PageStateDto }>;
 export type ShareResponse = Wire<{ share: ShareDto | null; page: PageStateDto }>;
+export type ContactResponse = Wire<{ page: PageStateDto }>;
 export type BlockResponse = Wire<{ block: BlockDto }>;
 export type ExportResponse = Wire<ExportDto>;
 export type DeleteResponse = Wire<{ deleted: true }>;
@@ -489,6 +516,14 @@ export interface ApiEndpoints {
     params: { profileId: string };
     body: DisagreementRequest;
     response: DisagreementResponse;
+  };
+  /** Почта или мессенджер после первой порции. Пропуск допустим. */
+  saveContact: {
+    method: "POST";
+    path: "/api/p/:profileId/contact";
+    params: { profileId: string };
+    body: SaveContactRequest;
+    response: ContactResponse;
   };
   /**
    * Покупка среза: заводит заказ и платёж у провайдера. Второй заказ на тот же
@@ -627,6 +662,7 @@ export const API: {
   submitPortion: { method: "POST", path: "/api/p/:profileId/portions" },
   editAnswer: { method: "PATCH", path: "/api/p/:profileId/answers/:questionId" },
   disagree: { method: "POST", path: "/api/p/:profileId/disagreements" },
+  saveContact: { method: "POST", path: "/api/p/:profileId/contact" },
   purchase: { method: "POST", path: "/api/p/:profileId/orders" },
   refund: { method: "POST", path: "/api/p/:profileId/orders/:orderId/refunds" },
   webhook: { method: "POST", path: "/api/payments/:provider/webhook" },

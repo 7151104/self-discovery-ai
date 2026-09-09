@@ -11,6 +11,7 @@ export const API_PAGE_STATE = "/api/p/:profileId";
 export const API_CREATE_PROFILE = "/api/profiles";
 export const API_SUBMIT_PORTION = "/api/p/:profileId/portions";
 export const API_DISAGREE = "/api/p/:profileId/disagreements";
+export const API_SAVE_CONTACT = "/api/p/:profileId/contact";
 export const API_SHARE = "/api/p/:profileId/share";
 export const API_PUBLIC_PAGE = "/api/s/:token";
 export const API_PURCHASE = "/api/p/:profileId/orders";

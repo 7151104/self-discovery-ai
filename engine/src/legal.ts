@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { rawExtraContent } from "./generated/content-extra.js";
 import type { RawDisclaimer } from "./content-extra-types.js";
+import { identityRequisites } from "./identity.js";
 import { renderLegalMarkdown, SUBSTITUTION } from "./legal-markdown.js";
 
 export type { RawDisclaimer } from "./content-extra-types.js";
@@ -136,7 +137,8 @@ const labeled = (section: string, label: string, continued: boolean): string => 
 
 /**
  * Ссылки с подстановкой домена в коротком тексте ведут на постоянные адреса
- * сервиса: публичного домена ещё нет (открытый вопрос 4), выдумывать его нельзя.
+ * сервиса: домен живёт в идентичности, а в потоке ссылки остаются постоянными
+ * путями `/legal/…`, чтобы смена хоста не ломала клики.
  */
 const IN_FLOW_HREF: Record<string, string> = {
   политике: "/legal/privacy",
@@ -205,12 +207,19 @@ export function renderLegalDocument(
 ): RenderedLegalPage {
   const document = legalDocument(id);
   const source = readLegalFile(document.file);
-  const unfilled = [...new Set([...source.matchAll(SUBSTITUTION)].map((match) => match[1] ?? ""))];
+  const values = identityRequisites();
+  const unfilled = [
+    ...new Set(
+      [...source.matchAll(SUBSTITUTION)]
+        .map((match) => match[1] ?? "")
+        .filter((name) => !values[name]),
+    ),
+  ];
   return {
     id,
     path: document.path,
     title: legalTitle(source),
-    html: renderLegalMarkdown(source, { unfilledLabel: options.unfilledLabel }),
+    html: renderLegalMarkdown(source, { unfilledLabel: options.unfilledLabel, values }),
     unfilled,
   };
 }

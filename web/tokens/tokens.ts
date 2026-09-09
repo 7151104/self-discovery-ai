@@ -314,6 +314,8 @@ export const SIZES: SizeToken[] = [
   { name: "size-bar-marker", rem: rem(16), purpose: "маркер полосы карты" },
   { name: "size-dot", rem: rem(12), purpose: "точка категориальной полосы" },
   { name: "size-mark-bar", rem: rem(48), purpose: "высота графического знака на входе" },
+  { name: "size-logo-mark", rem: rem(36), purpose: "знак в шапке живой страницы" },
+  { name: "size-logo-wordmark", rem: rem(72), purpose: "словознак на входе" },
   { name: "size-wait-line", rem: rem(12), purpose: "намётка строки будущего текста на экране ожидания" },
   { name: "size-field", rem: rem(152), purpose: "открытое поле: шесть строк текста" },
   { name: "size-container", rem: rem(560), purpose: "предельная ширина страницы на десктопе" },

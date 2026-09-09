@@ -22,6 +22,8 @@ export interface IntroLabels {
   dateLabel: string;
   dateHint: string;
   submit: string;
+  wordmarkSrc: string;
+  wordmarkAlt: string;
 }
 
 export interface IntroValues {
@@ -83,11 +85,11 @@ export function renderIntro(props: IntroProps): VNode {
     h(
       "header",
       { class: "intro__hero" },
-      h(
-        "div",
-        { class: "intro__mark", "aria-hidden": "true" },
-        ...[1, 2, 3, 4, 5, 6, 7].map((n) => h("span", { class: "intro__mark-bar", "data-n": String(n) })),
-      ),
+      h("img", {
+        class: "intro__logo",
+        src: labels.wordmarkSrc,
+        alt: labels.wordmarkAlt,
+      }),
       h("h1", { class: "intro__title" }, labels.title),
       h("p", { class: "intro__lead" }, labels.lead),
       h("p", { class: "intro__about" }, labels.about),

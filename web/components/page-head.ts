@@ -15,16 +15,33 @@ import type { CardDto } from "../src/contract.js";
 export interface HeadExtras {
   /** Подпись постоянной ссылки. Нет — ссылку не показываем. */
   linkHint?: string | null;
+  /** Знак продукта над именем. Нет — шапка только про человека. */
+  brand?: { src: string; alt: string } | null;
+  laterContact?: { label: string; onSelect: () => void } | null;
 }
 
 export function renderHead(card: CardDto, extras: HeadExtras = {}): VNode {
   return h(
     "header",
     { class: "head" },
+    extras.brand
+      ? h(
+          "p",
+          { class: "head__brand" },
+          h("img", { class: "head__logo", src: extras.brand.src, alt: extras.brand.alt }),
+        )
+      : null,
     h("h1", { class: "head__name" }, card.name),
     card.theme ? h("p", { class: "head__theme" }, card.theme) : null,
     card.metaphor ? h("p", { class: "head__metaphor" }, card.metaphor) : null,
     extras.linkHint ? h("p", { class: "head__link" }, extras.linkHint) : null,
+    extras.laterContact
+      ? h(
+          "button",
+          { class: "head__later", type: "button", onClick: extras.laterContact.onSelect },
+          extras.laterContact.label,
+        )
+      : null,
   );
 }
 

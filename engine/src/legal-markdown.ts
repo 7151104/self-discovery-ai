@@ -12,6 +12,11 @@ export const SUBSTITUTION = /\{\{([А-ЯЁA-Z_]+)\}\}/g;
 export interface MarkdownRenderOptions {
   /** Подпись незаполненного реквизита: из микрокопии, не из этого файла. */
   unfilledLabel: string;
+  /**
+   * Уже известные реквизиты (имя продукта, домен). Остальные остаются
+   * видимой подстановкой: выдумывать ИНН нельзя.
+   */
+  values?: Record<string, string>;
 }
 
 const escape = (text: string): string =>
@@ -29,7 +34,14 @@ const unfilled = (name: string, label: string): string => {
 
 const isSubstitutionHref = (href: string): boolean => /\{\{[А-ЯЁA-Z_]+\}\}/.test(href);
 
-function inline(text: string, unfilledLabel: string): string {
+const filledOf = (name: string, values: Record<string, string> | undefined): string | null => {
+  const value = values?.[name];
+  return value && value.length > 0 ? value : null;
+};
+
+const hrefOf = (value: string): string => (/^https?:\/\//.test(value) ? value : `https://${value}`);
+
+function inline(text: string, options: MarkdownRenderOptions): string {
   const chunks: string[] = [];
   const pattern = /(\{\{[А-ЯЁA-Z_]+\}\})|(`[^`]+`)|(\*\*[^*]+\*\*)|(\[[^\]]+\]\([^)]+\))/g;
   let cursor = 0;
@@ -39,21 +51,28 @@ function inline(text: string, unfilledLabel: string): string {
     const token = match[0];
     if (token.startsWith("{{")) {
       const name = token.slice(2, -2);
-      chunks.push(unfilled(name, unfilledLabel));
+      const filled = filledOf(name, options.values);
+      chunks.push(filled ? escape(filled) : unfilled(name, options.unfilledLabel));
     } else if (token.startsWith("`")) {
       chunks.push(`<code>${escape(token.slice(1, -1))}</code>`);
     } else if (token.startsWith("**")) {
-      chunks.push(`<strong>${inline(token.slice(2, -2), unfilledLabel)}</strong>`);
+      chunks.push(`<strong>${inline(token.slice(2, -2), options)}</strong>`);
     } else {
       const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
       const label = link?.[1] ?? "";
       const href = link?.[2] ?? "";
       if (isSubstitutionHref(href)) {
-        chunks.push(`${inline(label, unfilledLabel)} ${unfilled(href.replace(/^\{\{/, "").replace(/\}\}$/, ""), unfilledLabel)}`);
+        const name = href.replace(/^\{\{/, "").replace(/\}\}$/, "");
+        const filled = filledOf(name, options.values);
+        if (filled) {
+          chunks.push(`<a href="${escape(hrefOf(filled))}">${inline(label, options)}</a>`);
+        } else {
+          chunks.push(`${inline(label, options)} ${unfilled(name, options.unfilledLabel)}`);
+        }
       } else if (/^https?:\/\//.test(href) || href.startsWith("/")) {
-        chunks.push(`<a href="${escape(href)}">${inline(label, unfilledLabel)}</a>`);
+        chunks.push(`<a href="${escape(href)}">${inline(label, options)}</a>`);
       } else {
-        chunks.push(inline(label, unfilledLabel));
+        chunks.push(inline(label, options));
       }
     }
     cursor = index + token.length;
@@ -79,13 +98,13 @@ const tableRow = (line: string): string[] =>
 
 const isRuleRow = (cells: string[]): boolean => cells.every((cell) => /^:?-{2,}:?$/.test(cell));
 
-function renderTable(rows: string[][], unfilledLabel: string): string {
+function renderTable(rows: string[][], options: MarkdownRenderOptions): string {
   if (rows.length === 0) return "";
   const head = rows[0] ?? [];
   const body = rows.slice(1);
-  const th = head.map((cell) => `<th>${inline(cell, unfilledLabel)}</th>`).join("");
+  const th = head.map((cell) => `<th>${inline(cell, options)}</th>`).join("");
   const tr = body
-    .map((cells) => `<tr>${cells.map((cell) => `<td>${inline(cell, unfilledLabel)}</td>`).join("")}</tr>`)
+    .map((cells) => `<tr>${cells.map((cell) => `<td>${inline(cell, options)}</td>`).join("")}</tr>`)
     .join("");
   return `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
 }
@@ -116,7 +135,7 @@ export function renderLegalMarkdown(source: string, options: MarkdownRenderOptio
 
     const head = heading(line);
     if (head) {
-      out.push(`<${head.tag}>${inline(head.text, options.unfilledLabel)}</${head.tag}>`);
+      out.push(`<${head.tag}>${inline(head.text, options)}</${head.tag}>`);
       index += 1;
       continue;
     }
@@ -128,7 +147,7 @@ export function renderLegalMarkdown(source: string, options: MarkdownRenderOptio
         index += 1;
       }
       const rows = block.map(tableRow).filter((cells) => !isRuleRow(cells));
-      out.push(renderTable(rows, options.unfilledLabel));
+      out.push(renderTable(rows, options));
       continue;
     }
 
@@ -138,7 +157,7 @@ export function renderLegalMarkdown(source: string, options: MarkdownRenderOptio
         items.push((lines[index] ?? "").replace(/^\s*[-*]\s+/, ""));
         index += 1;
       }
-      out.push(`<ul>${items.map((item) => `<li>${inline(item, options.unfilledLabel)}</li>`).join("")}</ul>`);
+      out.push(`<ul>${items.map((item) => `<li>${inline(item, options)}</li>`).join("")}</ul>`);
       continue;
     }
 
@@ -154,7 +173,7 @@ export function renderLegalMarkdown(source: string, options: MarkdownRenderOptio
       paragraph.push((lines[index] ?? "").trim());
       index += 1;
     }
-    out.push(`<p>${inline(paragraph.join(" "), options.unfilledLabel)}</p>`);
+    out.push(`<p>${inline(paragraph.join(" "), options)}</p>`);
   }
 
   return out.join("\n");

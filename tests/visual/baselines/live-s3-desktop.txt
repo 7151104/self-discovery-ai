@@ -8,6 +8,9 @@
 <div class="page-shell" data-collecting="off" data-edge="no-date" data-page="s3" data-profiled="true" data-view="owner">
   <div class="page" data-collecting="off" data-edge="no-date" data-page="s3" data-profiled="true" data-view="owner" lang="ru">
     <header class="head">
+      <p class="head__brand">
+        <img alt="Знак Умной корзины" class="head__logo" src="/web/assets/logo-mark.svg">
+      </p>
       <h1 class="head__name">
         Аня
       </h1>
@@ -276,6 +279,37 @@
         </button>
       </div>
     </article>
+    <form class="contact" data-screen="contact">
+      <h2 class="contact__title">
+        Страница уже твоя
+      </h2>
+      <p class="contact__lead">
+        Оставь контакт — пришлю ссылку и напишу, когда появится следующий разбор. Можно пропустить.
+      </p>
+      <label class="contact__field" for="contact-email">
+        <span class="contact__label">
+          Почта
+        </span>
+        <input autocomplete="email" class="contact__input" id="contact-email" inputmode="email" name="email" placeholder="если удобно письмом" type="email" value>
+      </label>
+      <label class="contact__field" for="contact-channel">
+        <span class="contact__label">
+          Telegram или телефон
+        </span>
+        <input autocomplete="tel" class="contact__input" id="contact-channel" name="channel" placeholder="Telegram или телефон" type="text" value>
+        <p class="contact__hint">
+          Необязательно. Так проще, чем письмом.
+        </p>
+      </label>
+      <div class="contact__actions">
+        <button class="contact__submit" type="submit">
+          Оставить контакт
+        </button>
+        <button class="contact__skip" type="button">
+          Пока не сейчас
+        </button>
+      </div>
+    </form>
     <section class="portion" data-index="0" data-kind="open" data-portion="step:4" data-total="1">
       <h2 class="section-title">
         На этой странице
@@ -703,6 +737,102 @@
   border-color: #8a7662;
 }
 
+.contact {
+  background: #fffdf8;
+  border: 1px solid #c1ad93;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(13, 11, 9, 0.06), 0 12px 28px rgba(13, 11, 9, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+}
+
+.contact__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.contact__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact__hint {
+  color: #4c4136;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.contact__input {
+  background: #fffdf8;
+  border: 2px solid #c1ad93;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(13, 11, 9, 0.14);
+  color: #1a1612;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px;
+  width: 100%;
+}
+
+.contact__label {
+  color: #0d0b09;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.contact__lead {
+  color: #1a1612;
+  font-size: 16px;
+  line-height: 1.55;
+  max-width: 36ch;
+}
+
+.contact__skip {
+  background: #fffdf8;
+  border: 1px solid #c1ad93;
+  border-radius: 10px;
+  color: #1a1612;
+  font-size: 16px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 24px;
+}
+
+.contact__submit {
+  background: #0e524c;
+  border: 2px solid #0e524c;
+  border-radius: 10px;
+  color: #fffdf8;
+  font-size: 16px;
+  font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 24px;
+}
+
+.contact__submit:disabled,
+.contact__skip:disabled,
+.contact__input:disabled {
+  color: #6d5c4c;
+  cursor: not-allowed;
+}
+
+.contact__title {
+  color: #0d0b09;
+  font-size: 20px;
+  font-weight: 640;
+  line-height: 1.25;
+}
+
 .disclaimer {
   color: #4c4136;
   font-size: 14px;
@@ -913,11 +1043,21 @@
   padding-top: 16px;
 }
 
+.head__brand {
+  margin: 0;
+}
+
 .head__link {
   color: #4c4136;
   font-size: 14px;
   line-height: 1.4;
   max-width: 36ch;
+}
+
+.head__logo {
+  display: block;
+  height: 36px;
+  width: auto;
 }
 
 .head__name {
@@ -1207,6 +1347,8 @@ p {
 --size-container: 560px;
 --size-dot: 12px;
 --size-field: 152px;
+--size-logo-mark: 36px;
+--size-logo-wordmark: 72px;
 --size-mark: 20px;
 --size-mark-bar: 48px;
 --size-screen: 360px;

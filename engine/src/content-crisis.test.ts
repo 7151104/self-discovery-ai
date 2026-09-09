@@ -101,8 +101,10 @@ test("кризисные тексты проходят реестр запрещ
   );
 });
 
-test("контакты живут в контенте и пока не заполнены", () => {
+test("контакты живут в контенте: заполненные — с номером, пустые — подстановкой", () => {
   assert.ok(contacts.length >= 4, `контактов всего ${contacts.length}`);
+  const filled = contacts.filter((contact) => contact.placeholder === null);
+  assert.ok(filled.length >= 2, "на экране должны быть хотя бы экстренные службы и одна линия помощи");
   for (const contact of contacts) {
     assert.match(contact.id, /^CRISIS_CONTACT_[A-Z_]+$/);
     assert.ok(contact.title.length > 5, `${contact.id}: не описано, что это за линия`);
@@ -111,9 +113,11 @@ test("контакты живут в контенте и пока не запо�
       `${contact.id}: ни номера, ни места для подстановки`,
     );
   }
-  // Правдоподобная заглушка опаснее пустого места: её не видно при публикации.
-  for (const contact of contacts) {
-    assert.ok(!/\d{3,}/.test(contact.value), `${contact.id}: в контент попал выдуманный номер`);
+  for (const contact of contacts.filter((item) => item.placeholder !== null)) {
+    assert.ok(!/\d{3,}/.test(contact.value), `${contact.id}: в пустую подстановку попал номер`);
+  }
+  for (const contact of filled) {
+    assert.match(contact.value, /\d/, `${contact.id}: заполненная линия без номера`);
   }
 });
 

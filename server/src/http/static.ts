@@ -31,6 +31,7 @@ const TYPES: Record<string, string> = {
   ".json": "application/json; charset=utf-8",
   ".map": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".png": "image/png",
   ".html": "text/html; charset=utf-8",
 };
 

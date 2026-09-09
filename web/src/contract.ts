@@ -33,6 +33,7 @@ export type {
   PurchaseRequest,
   QuestionDto,
   QuestionKind,
+  SaveContactRequest,
   ShareDto,
   SubmitPortionRequest,
 } from "../../server/dist/contract/index.js";

@@ -277,14 +277,20 @@ test("две одновременные покупки одного среза �
   assert.equal(first?.body.order.orderId, second?.body.order.orderId);
   assert.equal(listOrders(server.db, page.profileId).length, 1);
 
-  const orderId = first?.body.order.orderId ?? "";
-  const reference = first?.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "";
-  await deliverWebhook(server.origin, {
+  // Проигравший гонку отдаёт тот же заказ, но без адреса оплаты. Уведомление
+  // без payment_id провайдер не разбирает — берём ответ, который заказ создал.
+  const created = [first, second].find((reply) => reply.status === 201);
+  assert.ok(created, "ровно один из двух запросов должен создать заказ");
+  const orderId = created.body.order.orderId;
+  const reference = created.body.order.payment?.url.split("/pay/fake/")[1]?.split("?")[0] ?? "";
+  assert.ok(reference.length > 0, "у созданного заказа нет адреса оплаты");
+  const paid = await deliverWebhook(server.origin, {
     kind: "payment.succeeded",
     orderId,
     reference,
-    amount: first?.body.order.price ?? 0,
+    amount: created.body.order.price,
   });
+  assert.equal(paid.body.result, "applied");
 
   // Уже оплаченный срез второй раз не продаётся.
   const third = await call<OrderResponse>(server.origin, "POST", `/api/p/${page.profileId}/orders`, {

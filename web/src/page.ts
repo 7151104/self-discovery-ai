@@ -17,6 +17,7 @@
 import { h, type Handler, type VNode } from "./dom.js";
 import type { BlockDto, DisagreementKind, DoorDto, PageStateDto, PageStateName, PortionDto, PublicPageDto } from "./contract.js";
 import { blockFromDto, renderBlock, type BlockAction } from "../components/block.js";
+import { renderContactCard, type ContactLabels } from "../components/contact.js";
 import { renderRoute, type RouteContext } from "../components/door.js";
 import { enterFlag } from "./motion.js";
 import { renderMap, type Zone } from "../components/map.js";
@@ -89,6 +90,8 @@ export interface PageViewLabels {
   head: { period: (theme: string) => string; noPeriod: string; linkHint: string; emptyHook: string };
   reading: { title: string; empty: string };
   public?: { makeOwn: string; makeOwnHint: string; title?: string };
+  brand?: { src: string; alt: string };
+  contact?: ContactLabels & { saved: string; later: string };
 }
 
 export interface PageViewOptions {
@@ -121,6 +124,13 @@ export interface PageViewOptions {
   onBuy?: Handler;
   onOwn?: Handler;
   sharePanel?: SharePanelProps | null;
+  contactValues?: { email: string; channel: string };
+  contactError?: string | null;
+  contactOpen?: boolean;
+  onContactInput?: (field: "email" | "channel", value: string) => void;
+  onContactSubmit?: (value: { email: string; channel: string }) => void;
+  onContactSkip?: () => void;
+  onContactLater?: () => void;
 }
 
 const routeContext = (page: PageStateDto): RouteContext => ({
@@ -209,6 +219,7 @@ export function pageFromPublic(view: PublicPageDto): PageStateDto {
     offer: null,
     nextPortion: null,
     share: null,
+    contact: { status: "hidden" },
     updatedAt: "",
   };
 }
@@ -235,9 +246,21 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
 
   const owner = options.publicView !== true;
   const afterFirstPortion = page.state !== "s0" && page.url.length > 0;
+  const contactStatus = page.contact?.status ?? "hidden";
+  const showContactCard =
+    owner &&
+    labels.contact !== undefined &&
+    (contactStatus === "ask" || (contactStatus === "skipped" && options.contactOpen === true));
+  const showLater =
+    owner && contactStatus === "skipped" && options.contactOpen !== true && options.onContactLater !== undefined;
   const children: VNode[] = [
     renderHead(card, {
       linkHint: owner && afterFirstPortion ? labels.head.linkHint : null,
+      brand: labels.brand ?? null,
+      laterContact:
+        showLater && labels.contact
+          ? { label: labels.contact.later, onSelect: options.onContactLater as () => void }
+          : null,
     }),
   ];
   if (options.notice) children.push(...renderNotices(options.notice));
@@ -326,8 +349,23 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
             }
           : null,
         entering: enterFlag(block.id, seenBlocks) === "on",
+      }      ),
+    );
+  }
+
+  if (showContactCard && labels.contact) {
+    children.push(
+      renderContactCard({
+        labels: labels.contact,
+        values: options.contactValues,
+        error: options.contactError,
+        onInput: options.onContactInput,
+        onSubmit: options.onContactSubmit,
+        onSkip: options.onContactSkip,
       }),
     );
+  } else if (owner && contactStatus === "saved" && labels.contact) {
+    children.push(h("p", { class: "contact__saved", "data-screen": "contact-saved" }, labels.contact.saved));
   }
 
   if (options.collecting === true) {

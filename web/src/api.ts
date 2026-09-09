@@ -10,6 +10,7 @@ import type {
   GenerationDto,
   PageStateDto,
   PublicPageDto,
+  SaveContactRequest,
   ShareDto,
   SubmitPortionRequest,
 } from "./contract.js";
@@ -20,6 +21,7 @@ import {
   API_PAGE_STATE,
   API_PUBLIC_PAGE,
   API_PURCHASE,
+  API_SAVE_CONTACT,
   API_SHARE,
   API_SUBMIT_PORTION,
   fillPath,
@@ -237,6 +239,21 @@ export async function loadGeneration(
     const generation = isRecord(reply.body) ? reply.body["generation"] : null;
     if (!isGeneration(generation)) return { ok: false, missing: false, code: "internal_error" };
     return { ok: true, generation };
+  } catch {
+    return { ok: false, missing: false, code: "internal_error" };
+  }
+}
+
+/** Почта или мессенджер после первой порции. Пропуск — skip: true. */
+export async function saveContact(
+  profileId: string,
+  payload: SaveContactRequest,
+  transport: Transport,
+): Promise<PageResult> {
+  try {
+    const path = fillPath(API_SAVE_CONTACT, { profileId });
+    const reply = await send(transport, "POST", path, payload);
+    return toResult(reply.status, nestedPage(reply.body));
   } catch {
     return { ok: false, missing: false, code: "internal_error" };
   }

@@ -17,7 +17,24 @@ import { BASE_VIEWPORT_HEIGHT_PX } from "../tokens/tokens.js";
 const draw = (key: keyof typeof pageStates, extra: Parameters<typeof renderPersonalPage>[2] = {}) =>
   renderPersonalPage(pageStates[key], viewLabels(pageStates[key]), extra);
 
-test("витрина и живая страница собирают одну функцию", async () => {
+test("после первой порции на странице карточка контакта, на входе её нет", () => {
+  const s0 = draw("s0");
+  assert.equal(byClass(s0, "contact").length, 0);
+  const s1 = draw("s1");
+  assert.equal(byClass(s1, "contact").length, 1);
+  const text = visibleText(s1);
+  assert.ok(text.includes(copy("UI_CONTACT_TITLE")));
+  assert.ok(text.includes(copy("UI_CONTACT_SKIP")));
+  const skipped = renderPersonalPage(
+    { ...pageStates.s1, contact: { status: "skipped" } },
+    viewLabels(pageStates.s1),
+    { onContactLater: () => undefined },
+  );
+  assert.equal(byClass(skipped, "contact").length, 0);
+  assert.ok(visibleText(skipped).includes(copy("UI_CONTACT_LATER")));
+});
+
+test("витрина реэкспортирует ту же сборку страницы", async () => {
   const showcase = await import("../showcase/page.js");
   assert.equal(showcase.renderPersonalPage, renderPersonalPage);
 });

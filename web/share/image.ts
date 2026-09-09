@@ -22,15 +22,16 @@
  */
 
 import { escapeHtml } from "../src/dom.js";
+import { PRODUCT_IDENTITY } from "../src/generated/identity.js";
 import { TOKENS } from "../tokens/tokens.js";
 import type { PageStateDto } from "../src/contract.js";
 import { FORMATS, shareLayout, type ShareData, type ShareFormat, type ShareLayout } from "./layout.js";
 
 /**
- * Имя продукта и домен основателем не названы (`docs/14-state.md`, вопрос 4).
- * До ответа в картинку идёт подстановка — так же, как в юридических текстах.
+ * Домен на картинке. Берётся из `content/identity.md`. Старое имя оставлено,
+ * чтобы тесты и вызовы не переписывать дважды.
  */
-export const DOMAIN_PLACEHOLDER = "{{ДОМЕН}}";
+export const DOMAIN_PLACEHOLDER = PRODUCT_IDENTITY.domain;
 
 /** Шрифт, вшиваемый в документ: имя семейства и данные файла в base64. */
 export interface EmbeddedFont {

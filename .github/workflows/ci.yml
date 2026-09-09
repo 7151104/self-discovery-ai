@@ -57,6 +57,11 @@ jobs:
       - name: Тесты
         run: npm test
 
+      # Покрытие engine/src по строкам. Замер идёт по собранному dist без
+      # generated и без самих тестов. Ниже 90% — отказ, не предупреждение.
+      - name: Покрытие движка
+        run: npm run test:coverage:engine
+
       - name: Линтер контента
         run: npm run lint:content
 

@@ -10,6 +10,9 @@ import type { PageStateDto } from "../src/contract.js";
 import { SUBMIT_FROM_WORDS } from "../components/open-field.js";
 import {
   blockTexts,
+  brandTexts,
+  contactLabels,
+  contactTexts,
   disagreeTexts,
   headTexts,
   offerTexts,
@@ -87,6 +90,15 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
       makeOwn: publicTexts.makeOwn(),
       makeOwnHint: publicTexts.makeOwnHint(),
       title: publicTexts.title(page.card.name),
+    },
+    brand: {
+      src: brandTexts.markSrc(),
+      alt: brandTexts.alt(),
+    },
+    contact: {
+      ...contactLabels(),
+      saved: contactTexts.saved(),
+      later: contactTexts.later(),
     },
   };
 }

@@ -13,6 +13,7 @@
  */
 
 import { copy } from "./copy.js";
+import { PRODUCT_IDENTITY } from "./generated/identity.js";
 import type { DisagreementKind, MapBarDto, PageStateDto, PublicPageDto } from "./contract.js";
 import { ZONES, type Zone } from "../components/map.js";
 import { waitTopics, type WaitState } from "../components/wait.js";
@@ -79,6 +80,8 @@ export const introTexts = {
   dateLabel: (): string => copy("UI_INTRO_DATE_LABEL"),
   dateHint: (): string => copy("UI_INTRO_DATE_HINT"),
   submit: (): string => copy("UI_INTRO_SUBMIT"),
+  wordmarkSrc: (): string => PRODUCT_IDENTITY.logoWordmark,
+  wordmarkAlt: (): string => copy("UI_BRAND_ALT"),
 };
 
 /** Готовый набор подписей входа: все строки из реестра, ни одной на месте. */
@@ -95,6 +98,8 @@ export const introLabels = (): {
   dateLabel: string;
   dateHint: string;
   submit: string;
+  wordmarkSrc: string;
+  wordmarkAlt: string;
 } => ({
   title: introTexts.title(),
   lead: introTexts.lead(),
@@ -108,6 +113,49 @@ export const introLabels = (): {
   dateLabel: introTexts.dateLabel(),
   dateHint: introTexts.dateHint(),
   submit: introTexts.submit(),
+  wordmarkSrc: introTexts.wordmarkSrc(),
+  wordmarkAlt: introTexts.wordmarkAlt(),
+});
+
+export const brandTexts = {
+  markSrc: (): string => PRODUCT_IDENTITY.logoMark,
+  alt: (): string => copy("UI_BRAND_ALT"),
+};
+
+export const contactTexts = {
+  title: (): string => copy("UI_CONTACT_TITLE"),
+  lead: (): string => copy("UI_CONTACT_LEAD"),
+  emailLabel: (): string => copy("UI_CONTACT_EMAIL_LABEL"),
+  emailPlaceholder: (): string => copy("UI_CONTACT_EMAIL_PLACEHOLDER"),
+  channelLabel: (): string => copy("UI_CONTACT_CHANNEL_LABEL"),
+  channelHint: (): string => copy("UI_CONTACT_CHANNEL_HINT"),
+  submit: (): string => copy("UI_CONTACT_SUBMIT"),
+  skip: (): string => copy("UI_CONTACT_SKIP"),
+  saved: (): string => copy("UI_CONTACT_SAVED"),
+  error: (): string => copy("UI_CONTACT_ERROR"),
+  later: (): string => copy("UI_CONTACT_LATER"),
+};
+
+export const contactLabels = (): {
+  title: string;
+  lead: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  channelLabel: string;
+  channelHint: string;
+  submit: string;
+  skip: string;
+  error: string;
+} => ({
+  title: contactTexts.title(),
+  lead: contactTexts.lead(),
+  emailLabel: contactTexts.emailLabel(),
+  emailPlaceholder: contactTexts.emailPlaceholder(),
+  channelLabel: contactTexts.channelLabel(),
+  channelHint: contactTexts.channelHint(),
+  submit: contactTexts.submit(),
+  skip: contactTexts.skip(),
+  error: contactTexts.error(),
 });
 
 /**

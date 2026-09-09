@@ -208,7 +208,7 @@ export interface RawPayScreen {
 
 /**
  * Письмо (content/emails.md). `withoutEmail` — место на странице, которое говорит то же
- * самое: почта не основной носитель, и её может не быть вовсе (открытый вопрос 6).
+ * самое: почта не основной носитель, и её можно не оставлять (вопрос 6).
  */
 export interface RawEmail {
   id: string;
@@ -243,7 +243,8 @@ export interface RawShareLayer {
 
 /**
  * Подпись на картинке. `placeholders` — имена реквизитов основателя в двойных скобках;
- * пока хотя бы один не заполнен, картинка не собирается (открытый вопрос 4).
+ * пока хотя бы один не заполнен, картинка не собирается. Имя и домен — в
+ * `content/identity.md`.
  */
 export interface RawShareCaption {
   id: string;
@@ -266,6 +267,19 @@ export interface RawShare {
   formats: RawShareFormat[];
 }
 
+/**
+ * Имя, домен и пути к логотипу (`content/identity.md`). Смена домена —
+ * две строки в том файле плюс `SDAI_PUBLIC_ORIGIN`.
+ */
+export interface RawIdentity {
+  nameRu: string;
+  nameEn: string;
+  domain: string;
+  origin: string;
+  logoMark: string;
+  logoWordmark: string;
+}
+
 export interface RawExtraContent {
   interludes: RawSliceInterlude[];
   doors: RawDoorLabels;
@@ -277,4 +291,5 @@ export interface RawExtraContent {
   payScreens: RawPayScreen[];
   emails: RawEmails;
   share: RawShare;
+  identity: RawIdentity;
 }

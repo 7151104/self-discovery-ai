@@ -11,6 +11,7 @@ import type {
   AnswerInput,
   BlockResponse,
   BlockSlot,
+  ContactResponse,
   DeleteResponse,
   DisagreementKind,
   DisagreementResponse,
@@ -54,6 +55,7 @@ import {
   findActiveShareToken,
   findBlockById,
   findConsent,
+  findContact,
   findDelivery,
   findJob,
   findOrder,
@@ -79,6 +81,7 @@ import {
   releaseActiveJob,
   revokeShareTokens,
   saveAnswers,
+  saveContact,
   transitionOrder,
   type OrderRecord,
   type ProfileRecord,
@@ -450,6 +453,45 @@ export function disagree(context: Context, params: Record<string, string>, raw: 
   return result === null ? fail(404, "not_found") : { status: 201, body: result };
 }
 
+const looksLikeEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+/**
+ * Контакт после первой порции. На входе не спрашиваем: ценность уже получена.
+ * Пропуск допустим. В журнал воронки уходит только факт, не адрес.
+ */
+export function saveContactHandler(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
+  const profile = loadProfile(context, params["profileId"]);
+  if (!profile) return fail(404, "profile_not_found");
+
+  const current = page(context, profile);
+  if (current.contact?.status === "hidden") return fail(400, "bad_request");
+
+  const body = asObject(raw) ?? {};
+  const skip = body["skip"] === true;
+  const email = asString(body["email"])?.trim() ?? "";
+  const channel = asString(body["channel"])?.trim() ?? "";
+  if (!skip && email.length === 0 && channel.length === 0) return fail(400, "bad_request");
+  if (email.length > 0 && !looksLikeEmail(email)) return fail(400, "bad_request");
+
+  const stored = context.db.transaction(() => {
+    saveContact(context.db, {
+      profileId: profile.profileId,
+      status: skip ? "skipped" : "saved",
+      email: skip ? null : email.length > 0 ? email : null,
+      channel: skip ? null : channel.length > 0 ? channel : null,
+    });
+    funnel(context, skip ? "contact.skipped" : "contact.saved", {
+      profileId: profile.profileId,
+      step: stepFromPage(current.state),
+      payload: skip ? {} : { hasEmail: email.length > 0, hasChannel: channel.length > 0 },
+    });
+    const response: ContactResponse = { page: page(context, profile) };
+    return response;
+  });
+
+  return { status: 200, body: stored };
+}
+
 /** Проекция заказа в контракт. Платёжный адрес держится только у живого заказа. */
 const projectOrder = (context: Context, order: OrderRecord, url: string | null): OrderDto => ({
   orderId: order.orderId,
@@ -769,8 +811,19 @@ export function exportProfile(context: Context, params: Record<string, string>):
       kind: record.kind,
     })),
     share: share ? { url: shareUrl(context.config.publicOrigin, share.token), createdAt: share.createdAt } : null,
+    contact: exportContact(context, profile.profileId),
   };
   return { status: 200, body };
+}
+
+/** В выгрузке — то, что человек оставил. Пропуск и отсутствие — одно: данных нет. */
+function exportContact(
+  context: Context,
+  profileId: string,
+): ExportResponse["contact"] {
+  const stored = findContact(context.db, profileId);
+  if (!stored || stored.status !== "saved") return null;
+  return { email: stored.email, channel: stored.channel };
 }
 
 /** Формулировка вопроса из контента: в выгрузке человек читает вопрос, а не его код. */

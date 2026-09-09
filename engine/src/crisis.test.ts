@@ -174,18 +174,15 @@ test("состав кризисных текстов сверен с колон�
   );
 });
 
-test("без заполненных контактов кризисный текст не публикуется", () => {
-  // Пока номера линий не подтверждены (`content/crisis.md`, «Проверка актуальности»),
-  // публиковать текст без них нельзя — и это состояние проверяется, а не обходится.
-  assert.deepEqual(crisisContacts(), [], "контакты заполнены — проверку публикации нужно переписать");
-  assert.equal(crisisPublishable(), false);
+test("с заполненными контактами кризисный текст публикуется", () => {
+  assert.ok(crisisContacts().length >= 2, "на экране меньше двух линий");
+  assert.equal(crisisPublishable(), true);
 
   const notice = crisisNotice("ladder", detectCrisis(inAnswer(formOf("CRISIS_SUICIDE"))));
-  assert.equal(notice.publishable, false);
-  assert.deepEqual(notice.texts, [], "текст без номеров хуже отсутствия текста");
-  assert.deepEqual(notice.contacts, []);
+  assert.equal(notice.publishable, true);
+  assert.ok(notice.texts.some((item) => item.id === "CRISIS_SUPPORT"));
+  assert.ok(notice.contacts.some((item) => item.value.includes("112")));
   assert.deepEqual(notice.categories, ["CRISIS_SUICIDE"]);
-  assert.ok(contacts.length >= 4, "реестр контактов на месте, заполнить его — решение основателя");
 });
 
 // ── Страница ──────────────────────────────────────────────────────────────────

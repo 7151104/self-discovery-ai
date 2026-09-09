@@ -130,6 +130,12 @@ export {
   type RenderedLegalPage,
 } from "./legal.js";
 export { renderLegalMarkdown, SUBSTITUTION } from "./legal-markdown.js";
+export {
+  identityRequisites,
+  productDomain,
+  productIdentity,
+  productOrigin,
+} from "./identity.js";
 export { wordCount, words, unwrapLines } from "./words.js";
 export {
   collectCorpus,

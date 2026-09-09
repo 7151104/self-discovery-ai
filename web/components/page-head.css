@@ -39,6 +39,28 @@
   color: var(--color-text-soft);
 }
 
+.head__brand {
+  margin: 0;
+}
+
+.head__logo {
+  display: block;
+  height: var(--size-logo-mark);
+  width: auto;
+}
+
+.head__later {
+  align-self: flex-start;
+  min-height: var(--size-target);
+  min-width: var(--size-target);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+}
+
 .hook {
   max-width: var(--measure-hook);
   padding: var(--space-6) 0 var(--space-5);

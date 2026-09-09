@@ -61,6 +61,7 @@ export interface PageViewLabels {
     actions: BlockAction[];
     updated: string;
     diverged: string;
+    stitch?: string;
     disagreeDone?: string;
     disagreeTitle?: string;
     disagreeEffect?: string;
@@ -253,6 +254,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     (contactStatus === "ask" || (contactStatus === "skipped" && options.contactOpen === true));
   const showLater =
     owner && contactStatus === "skipped" && options.contactOpen !== true && options.onContactLater !== undefined;
+  const catalogTitle = (text: string): VNode => h("h2", { class: "section-title visually-hidden" }, text);
   const children: VNode[] = [
     renderHead(card, {
       linkHint: owner && afterFirstPortion ? labels.head.linkHint : null,
@@ -264,40 +266,38 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     }),
   ];
   if (options.notice) children.push(...renderNotices(options.notice));
-  if (page.hook) children.push(renderHook(page.hook));
-  else children.push(renderHook(labels.head.emptyHook, { empty: true }));
 
   children.push(
-    renderMap({
-      bars: page.map,
-      label: labels.map.label,
-      note: labels.map.note,
-      zoneLabel: labels.map.zoneLabel,
-      fillLabels: labels.map.fillLabels,
-      animated: options.seenBars,
-    }),
+    h(
+      "div",
+      { class: "page__portrait" },
+      page.hook ? renderHook(page.hook) : renderHook(labels.head.emptyHook, { empty: true }),
+      renderMap({
+        bars: page.map,
+        label: labels.map.label,
+        note: labels.map.note,
+        zoneLabel: labels.map.zoneLabel,
+        fillLabels: labels.map.fillLabels,
+        animated: options.seenBars,
+      }),
+    ),
   );
 
   if (options.sharePanel) children.push(renderSharePanel(options.sharePanel));
 
   const readingBlocks = orderedBlocks(visibleBlocks);
+  const shareHostId = [...readingBlocks]
+    .reverse()
+    .find((block) => !isInterlude(block) && block.generation?.status !== "pending")?.id;
+  const readingChildren: VNode[] = [catalogTitle(labels.reading.title)];
   if (readingBlocks.length === 0 && owner) {
-    children.push(
-      h(
-        "div",
-        { class: "reading", "data-empty": "true" },
-        h("h2", { class: "section-title" }, labels.reading.title),
-        h("p", { class: "section-note" }, labels.reading.empty),
-      ),
-    );
-  } else if (readingBlocks.length > 0) {
-    children.push(h("p", { class: "section-title" }, labels.reading.title));
+    readingChildren.push(h("p", { class: "section-note" }, labels.reading.empty));
   }
 
   for (const block of readingBlocks) {
     if (block.generation?.status === "pending") {
       if (wait !== null) {
-        children.push(
+        readingChildren.push(
           renderWait({
             title: labels.wait.title(wait),
             topics: labels.wait.topics(page),
@@ -312,19 +312,21 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     }
     if (block.generation?.status === "failed") continue;
     const picking = options.disagreeing === block.id && kinds.length > 0;
-    const blockActionsFor = actions.map((action) => {
-      if (action.id === "disagree") {
-        return {
-          ...action,
-          label: block.disagreed ? (labels.block.disagreeDone ?? action.label) : action.label,
-          onSelect: () => options.onDisagree?.(block.id),
-        };
-      }
-      if (action.id === "share") {
-        return { ...action, onSelect: options.onShare };
-      }
-      return action;
-    });
+    const blockActionsFor = actions
+      .filter((action) => action.id !== "share" || block.id === shareHostId)
+      .map((action) => {
+        if (action.id === "disagree") {
+          return {
+            ...action,
+            label: block.disagreed ? (labels.block.disagreeDone ?? action.label) : action.label,
+            onSelect: () => options.onDisagree?.(block.id),
+          };
+        }
+        if (action.id === "share") {
+          return { ...action, onSelect: options.onShare };
+        }
+        return action;
+      });
     const visibleActions = isInterlude(block)
       ? []
       : picking
@@ -332,10 +334,11 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         : blockActionsFor;
     const staleNote = blockNote(block, labels);
     const note = staleNote ?? (block.disagreed ? (labels.block.acknowledged ?? null) : null);
-    children.push(
+    readingChildren.push(
       renderBlock({
         ...blockFromDto(block, { actions: visibleActions, note }),
         note,
+        stitchLabel: labels.block.stitch,
         actions: visibleActions,
         picker: picking
           ? {
@@ -349,23 +352,18 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
             }
           : null,
         entering: enterFlag(block.id, seenBlocks) === "on",
-      }      ),
+      }),
     );
   }
 
-  if (showContactCard && labels.contact) {
+  if (owner || readingBlocks.length > 0) {
     children.push(
-      renderContactCard({
-        labels: labels.contact,
-        values: options.contactValues,
-        error: options.contactError,
-        onInput: options.onContactInput,
-        onSubmit: options.onContactSubmit,
-        onSkip: options.onContactSkip,
-      }),
+      h(
+        "section",
+        { class: "reading", "data-empty": readingBlocks.length === 0 ? "true" : "false" },
+        ...readingChildren,
+      ),
     );
-  } else if (owner && contactStatus === "saved" && labels.contact) {
-    children.push(h("p", { class: "contact__saved", "data-screen": "contact-saved" }, labels.contact.saved));
   }
 
   if (options.collecting === true) {
@@ -413,6 +411,21 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
         onDecline: options.onDecline,
       }),
     );
+  }
+
+  if (showContactCard && labels.contact) {
+    children.push(
+      renderContactCard({
+        labels: labels.contact,
+        values: options.contactValues,
+        error: options.contactError,
+        onInput: options.onContactInput,
+        onSubmit: options.onContactSubmit,
+        onSkip: options.onContactSkip,
+      }),
+    );
+  } else if (owner && contactStatus === "saved" && labels.contact) {
+    children.push(h("p", { class: "contact__saved", "data-screen": "contact-saved" }, labels.contact.saved));
   }
 
   if (page.doors.length > 0 && options.publicView !== true) {

@@ -19,6 +19,21 @@
   letter-spacing: -0.03em;
 }
 
+.page:not([data-page="s0"]) .head {
+  padding-top: var(--space-2);
+  gap: var(--space-1);
+}
+
+.page:not([data-page="s0"]) .head__name {
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+}
+
+.page:not([data-page="s0"]) .head__theme,
+.page:not([data-page="s0"]) .head__metaphor {
+  font-size: var(--text-sm);
+}
+
 .head__theme {
   font-size: var(--text-md);
   line-height: var(--leading-snug);
@@ -74,9 +89,6 @@
 }
 
 .hook[data-empty="true"] {
-  font-family: var(--font-family);
-  font-size: var(--text-md);
-  font-weight: var(--weight-regular);
+  padding: var(--space-4) 0 var(--space-3);
   color: var(--color-text-soft);
-  letter-spacing: 0;
 }

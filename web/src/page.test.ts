@@ -162,6 +162,23 @@ test("«Поделиться» появляется с s2, не раньше", (
   assert.ok(visibleText(draw("s2")).includes(share));
 });
 
+test("на странице один портрет и одно «Поделиться», блоки — главы чтения", () => {
+  const node = draw("s3");
+  assert.equal(byClass(node, "page__portrait").length, 1);
+  assert.equal(byClass(node, "reading").length, 1);
+  const shares = findAll(node, "button").filter((item) => item.attrs["data-action"] === "share");
+  assert.equal(shares.length, 1);
+  assert.equal(byClass(node, "contact").length, 0);
+});
+
+test("карточка контакта стоит после порции, не между блоком и вопросами", () => {
+  const markup = renderToString(draw("s1"));
+  const portion = markup.indexOf('class="portion"');
+  const contact = markup.indexOf('class="contact"');
+  assert.ok(portion >= 0 && contact >= 0);
+  assert.ok(portion < contact);
+});
+
 test("пауза «собираю» стоит на месте порции", () => {
   const node = draw("s0", { collecting: true });
   assert.equal(node.attrs["data-collecting"], "on");

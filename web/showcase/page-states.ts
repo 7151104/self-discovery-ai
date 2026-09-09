@@ -176,7 +176,7 @@ const page = (state: PageStateDto["state"], parts: Partial<PageStateDto>): PageS
   offer: null,
   nextPortion: null,
   share: null,
-  contact: state === "s0" ? { status: "hidden" } : { status: "ask" },
+  contact: state === "s0" ? { status: "hidden" } : state === "s1" ? { status: "ask" } : { status: "skipped" },
   updatedAt: UPDATED_AT,
   ...parts,
 });

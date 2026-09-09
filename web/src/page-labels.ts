@@ -44,6 +44,7 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
       actions: blockTexts.actions(),
       updated: blockTexts.updated(),
       diverged: blockTexts.diverged(),
+      stitch: blockTexts.stitch(),
       disagreeDone: blockTexts.disagreeDone(),
       disagreeTitle: disagreeTexts.title(),
       disagreeEffect: disagreeTexts.effect(),

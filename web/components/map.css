@@ -93,6 +93,10 @@
 /* ── Пустая полоса ─────────────────────────────────────────────────────────
    Контур и ничего внутри. Строка кликабельна и объясняет, чем откроется. */
 
+.bar[data-fill="empty"] .bar__poles {
+  display: none;
+}
+
 .bar[data-fill="empty"] .bar__track {
   border-style: dashed;
   border-width: var(--border-strong);

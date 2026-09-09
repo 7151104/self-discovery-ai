@@ -44,6 +44,7 @@ export function viewLabels(page: PageStateDto): PageViewLabels {
       actions: mock.blockActions,
       updated: mock.staleNote,
       diverged: blockTexts.diverged(),
+      stitch: blockTexts.stitch(),
       disagreeDone: blockTexts.disagreeDone(),
       disagreeTitle: disagreeTexts.title(),
       disagreeEffect: disagreeTexts.effect(),

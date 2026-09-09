@@ -72,6 +72,16 @@
   box-shadow: var(--shadow-card);
 }
 
+.portion .option {
+  background: transparent;
+  box-shadow: none;
+}
+
+.portion .option[data-state="selected"] {
+  background: var(--color-accent-quiet);
+  box-shadow: none;
+}
+
 /* Выбранное различимо в градациях серого: кружок залит, а не подкрашен. */
 .option[data-state="selected"] .option__mark {
   border-color: var(--color-accent);

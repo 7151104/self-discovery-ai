@@ -136,7 +136,7 @@ export function renderMap(props: MapProps): VNode {
   return h(
     "section",
     { class: "map", "aria-label": props.label },
-    h("p", { class: "section-title" }, props.label),
+    h("p", { class: "section-title visually-hidden" }, props.label),
     props.note ? h("p", { class: "section-note" }, props.note) : null,
     h(
       "ul",

@@ -75,12 +75,14 @@ const REFINES: Record<string, string> = {
   // Координата 11: где рвётся «решил — сделал».
   pre_show_polish: "at_80",
   pre_show_drop: "at_80",
+  pre_show_plan: "at_80",
   safe_witness_only: "at_80",
   post_feedback_stall: "at_80",
   // Координата 7: сила и длительность реакции.
   fast_short: "releases",
   fast_long: "holds_long",
   slow_long: "holds_long",
+  slow_short: "releases",
   // Координата 14: банк и срез называли одно и то же разными словами.
   analytic: "analysis",
   dialogic: "discussion",
@@ -246,6 +248,7 @@ const SLICE_RULES: SliceRules[] = [
     owns: {
       pre_show_polish: 11,
       pre_show_drop: 11,
+      pre_show_plan: 11,
       safe_witness_only: 11,
       post_feedback_stall: 11,
       never_finished: 11,
@@ -256,6 +259,7 @@ const SLICE_RULES: SliceRules[] = [
       return firstMatch(11, [
         { code: "pre_show_polish", when: s1 === "A" && oneOf(s2, "A", "B"), questions: ["S1", "S2"] },
         { code: "pre_show_drop", when: s1 === "A" && oneOf(s2, "C", "E"), questions: ["S1", "S2"] },
+        { code: "pre_show_plan", when: s1 === "A" && s2 === "D", questions: ["S1", "S2"] },
         { code: "safe_witness_only", when: s1 === "B", questions: ["S1"] },
         { code: "post_feedback_stall", when: s1 === "C", questions: ["S1"] },
         { code: "never_finished", when: s1 === "D", questions: ["S1"] },
@@ -343,14 +347,16 @@ const SLICE_RULES: SliceRules[] = [
   },
   {
     slice: "slice_stress",
-    owns: { no_outlet: 12, learned_self_reliance: 12, has_outlet: 12, cant_refuse: 12 },
+    owns: { no_outlet: 12, unused_outlet: 12, learned_self_reliance: 12, has_outlet: 12, cant_refuse: 12 },
     refine: (a) => {
       const s2 = choice(a, "S2");
       const s3 = choice(a, "S3");
       const refusal = atLeast(numbers(a, "S5")[0], 4) && atLeast(scale(a, "S4"), 4);
       return firstMatch(12, [
         { code: "no_outlet", when: oneOf(s2, "A", "B", "E") && s3 === "D", questions: ["S2", "S3"] },
-        { code: "learned_self_reliance", when: oneOf(s2, "A", "B") && s3 === "C", questions: ["S2", "S3"] },
+        { code: "unused_outlet", when: oneOf(s2, "A", "B", "E") && s3 === "A", questions: ["S2", "S3"] },
+        { code: "learned_self_reliance", when: oneOf(s2, "A", "B") && oneOf(s3, "B", "C"), questions: ["S2", "S3"] },
+        { code: "learned_self_reliance", when: s2 === "E" && oneOf(s3, "B", "C"), questions: ["S2", "S3"] },
         { code: "has_outlet", when: oneOf(s2, "C", "D"), questions: ["S2"] },
         { code: "cant_refuse", when: refusal, questions: ["S5", "S4"] },
       ]);
@@ -424,6 +430,7 @@ const SLICE_RULES: SliceRules[] = [
       fast_short: 7,
       fast_long: 7,
       slow_long: 7,
+      slow_short: 7,
       unrecognized: 7,
     },
     refine: (a) => {
@@ -442,6 +449,7 @@ const SLICE_RULES: SliceRules[] = [
           { code: "fast_short", when: oneOf(s8, "A", "B") && oneOf(s3, "A", "B"), questions: ["S8", "S3"] },
           { code: "fast_long", when: oneOf(s8, "A", "B") && oneOf(s3, "C", "D"), questions: ["S8", "S3"] },
           { code: "slow_long", when: s8 === "C" && oneOf(s3, "C", "D"), questions: ["S8", "S3"] },
+          { code: "slow_short", when: s8 === "C" && oneOf(s3, "A", "B"), questions: ["S8", "S3"] },
           { code: "unrecognized", when: s8 === "D", questions: ["S8"] },
         ]),
       ];
@@ -477,8 +485,12 @@ const SLICE_RULES: SliceRules[] = [
       return [
         ...firstMatch(14, [
           { code: "analytic", when: oneOf(s2, "A", "D") && s3 === "C", questions: ["S3", "S2"] },
+          { code: "analytic", when: oneOf(s2, "B", "C", "E") && s3 === "C", questions: ["S3", "S2"] },
           { code: "dialogic", when: s2 === "B" && s3 === "E", questions: ["S3", "S2"] },
           { code: "incubation", when: oneOf(s2, "C", "E") && s3 === "D", questions: ["S3", "S2"] },
+          { code: "incubation", when: s2 === "A" && s3 === "D", questions: ["S3", "S2"] },
+          { code: "incubation", when: oneOf(s2, "B", "D") && s3 === "D", questions: ["S3", "S2"] },
+          { code: "pressure_gated", when: oneOf(s2, "A", "C", "D", "E") && s3 === "E", questions: ["S3", "S2"] },
           { code: "pressure_gated", when: oneOf(s3, "A", "B"), questions: ["S3"] },
         ]),
         ...(structure ? [{ coordinate: 5, code: structure, questions: ["S1"] }] : []),

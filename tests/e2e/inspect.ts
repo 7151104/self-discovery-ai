@@ -46,15 +46,27 @@ function slotOf(node: VNode): string | null {
   return null;
 }
 
-/** Слоты прямых детей `.page` — порядок экрана из схемы. */
-export function screenSlots(tree: Child, kit: Kit): string[] {
-  const page = pageNode(tree, kit);
-  const slots: string[] = [];
-  for (const child of page.children) {
+function isWrapper(node: VNode): boolean {
+  const classes = classesOf(node);
+  return classes.includes("page__portrait") || classes.includes("reading");
+}
+
+function collectSlots(nodes: Child[], slots: string[]): void {
+  for (const child of nodes) {
     if (!isNode(child)) continue;
+    if (isWrapper(child)) {
+      collectSlots(child.children, slots);
+      continue;
+    }
     const kind = slotOf(child);
     if (kind) slots.push(kind);
   }
+}
+
+/** Слоты экрана в визуальном порядке. Обёртки портрета и чтения прозрачны. */
+export function screenSlots(tree: Child, kit: Kit): string[] {
+  const slots: string[] = [];
+  collectSlots(pageNode(tree, kit).children, slots);
   return slots;
 }
 

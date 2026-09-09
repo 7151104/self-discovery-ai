@@ -179,6 +179,30 @@ test("карточка контакта стоит после порции, не
   assert.ok(portion < contact);
 });
 
+test("открытая панель шеринга стоит между портретом и чтением", () => {
+  const node = draw("s2", {
+    sharePanel: {
+      imageReady: "ready",
+      imageOnly: "only",
+      saveLabel: "save",
+      svg: "<svg></svg>",
+      privacy: null,
+      live: "live",
+      openLabel: "open",
+      publicOn: null,
+      link: null,
+      closeLabel: "close",
+      closed: null,
+    },
+  });
+  const markup = renderToString(node);
+  const portrait = markup.indexOf('class="page__portrait"');
+  const panel = markup.indexOf('class="share-panel"');
+  const reading = markup.indexOf('class="reading"');
+  assert.ok(portrait >= 0 && panel >= 0 && reading >= 0);
+  assert.ok(portrait < panel && panel < reading);
+});
+
 test("пауза «собираю» стоит на месте порции", () => {
   const node = draw("s0", { collecting: true });
   assert.equal(node.attrs["data-collecting"], "on");

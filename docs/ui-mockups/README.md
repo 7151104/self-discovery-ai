@@ -1,6 +1,8 @@
 # UI-концепты: 10 экранов
 
-**Смотреть картинки:** [GALLERY.md](./GALLERY.md) · [**усиленный мобильный**](./mobile-strong/GALLERY.md) · [прогон прототипа](./prototype-run/GALLERY.md) · [10 кабинетов](./cabinet-styles/GALLERY.md) · [мобильные системы](./mobile-10/GALLERY.md)
+**Смотреть:** [**реальные каркасы**](./real-ia/GALLERY.md) · [GALLERY.md](./GALLERY.md) · [прогон прототипа](./prototype-run/GALLERY.md)
+
+Каркас страницы: [`docs/12-page-ia.md`](../12-page-ia.md)
 
 Кликабельная воронка: [`prototype/`](../../prototype/)
 

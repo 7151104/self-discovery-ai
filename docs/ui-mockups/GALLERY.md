@@ -2,6 +2,11 @@
 
 Картинки в чате агента могут не открыться. Смотри их здесь, на GitHub.
 
+## Реальные каркасы (смотреть в первую очередь)
+
+**[10 прикладных экранов с правильными блоками](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/real-ia/GALLERY.md)**  
+Каркас: [`docs/12-page-ia.md`](../12-page-ia.md)
+
 ## Выбор стиля: 10 характеров одной страницы
 
 **[Смотреть и выбирать](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/pick-10/GALLERY.md)**

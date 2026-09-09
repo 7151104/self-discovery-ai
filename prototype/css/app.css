@@ -1,8 +1,8 @@
 :root {
   --ivory: #f6efe6;
   --ivory-2: #efe4d6;
-  --ink: #2a1f28;
-  --ink-soft: #5a4450;
+  --ink: #241820;
+  --ink-soft: #3f2e36;
   --rose: #c4786a;
   --rose-deep: #a85b50;
   --champagne: #d4b896;
@@ -179,23 +179,27 @@ input:focus, textarea:focus { outline: 2px solid var(--rose); border-color: tran
 .t1 { background: #c4786a; }
 .t2 { background: #8b4d44; }
 .t3 { background: #6d7a62; }
-.t4 { background: #d4b896; color: var(--ink); }
+.t4 { background: #b8894c; color: #fff; }
 .t5 { background: #3d4a5c; }
 .t6 { background: #2a1f28; }
 
 .story {
   min-height: 100%;
   background:
-    linear-gradient(180deg, rgba(42, 31, 40, 0.15), rgba(42, 31, 40, 0.62)),
-    radial-gradient(800px 500px at 80% 10%, #e8b8a8, #6b3d48 60%, #2a1f28);
+    linear-gradient(180deg, rgba(28, 16, 22, 0.35), rgba(28, 16, 22, 0.82)),
+    radial-gradient(800px 500px at 80% 10%, #c4786a, #5a2d38 55%, #1c1016);
   color: #fff7f2;
   margin: -22px -22px calc(-92px - var(--safe));
   padding: 28px 24px calc(40px + var(--safe));
   display: flex;
   flex-direction: column;
 }
-.story p, .story .hint { color: #f3ddd4; }
+.story p, .story .hint { color: #f6e6dc; }
 .story h1 { color: #fff7f2; font-size: 2.15rem; }
+.story .btn.secondary {
+  color: #fff7f2;
+  border-color: rgba(255, 247, 242, 0.45);
+}
 .bars { display: flex; gap: 6px; margin-bottom: 22px; }
 .bars i { flex: 1; height: 3px; background: rgba(255,255,255,.28); border-radius: 99px; }
 .bars i.on { background: #fff; }

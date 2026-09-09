@@ -26,22 +26,34 @@ import type {
   PublicBlockDto,
   PublicPageDto,
   PublicSlot,
+  QuestionKind,
 } from "./contract/index.js";
 import type { Db } from "./db/driver.js";
 import {
   applySlice,
   buildDoors,
+  buildFullMapInterlude,
+  buildFullMapProfile,
   buildMap,
   buildPage,
   buildSliceInterludeBlock,
   checkThreshold,
   crisisNotice,
   detectCrisis,
+  fullMap,
+  fullMapPortions,
+  fullMapThreshold,
+  fullMapThresholdBeforeSynthesis,
+  nextFullMapPortion,
   payScreen,
   rawContent,
   selectOfferAfterSlice,
   SCORED_SLICES,
+  sliceDelivered,
   slicePortions,
+  type BankAnswers,
+  type FullMapInput,
+  type FullMapSlice,
 } from "./engine.js";
 import type {
   CrisisDecision,
@@ -64,6 +76,7 @@ import {
   listAnswers,
   listBlocks,
   listDisagreements,
+  listEvents,
   findContact,
   paidSlices,
   type AnswerRecord,
@@ -146,12 +159,20 @@ const sliceContent = (slice: string) => rawContent.slices.find((candidate) => ca
  * `content.questions`: обязательный вход среза выдаётся вопросом первой порции
  * и в таблице доборов его нет.
  */
-export const sliceQuestion = (slice: string, questionId: string) =>
-  sliceContent(slice)?.file
+export const sliceQuestion = (slice: string, questionId: string) => {
+  if (slice === "slice_full_map") {
+    for (const portion of fullMapPortions()) {
+      const found = portion.questions.find((candidate) => candidate.id === questionId);
+      if (found) return { ...found, portion: portion.number, type: found.type as QuestionKind };
+    }
+    return null;
+  }
+  return sliceContent(slice)?.file
     ? (slicePortions(slice)
         .flatMap((portion) => portion.questions)
         .find((candidate) => candidate.id === questionId) ?? null)
     : null;
+};
 
 /**
  * Контракт говорит машинными кодами, движок — формулировками из
@@ -285,7 +306,7 @@ const projectPortion = (page: PageView, answered: Set<string>): PortionDto | nul
  */
 function projectSlicePortion(slice: string, answered: Set<string>): PortionDto | null {
   const content = sliceContent(slice);
-  if (!content) return null;
+  if (!content?.file) return null;
 
   // Состав порции считает движок: обязательный вход среза выдаётся вопросом
   // первой порции, и второй такой же список здесь его бы потерял.
@@ -300,7 +321,7 @@ function projectSlicePortion(slice: string, answered: Set<string>): PortionDto |
         id: sliceQuestionId(slice, question.id),
         kind: question.type,
         text: question.text,
-        options: question.options,
+        options: question.type === "число" ? numericFieldOptions(question.text, question.options) : question.options,
         // Полюсов у шкал добора в контенте нет: подписи стоят в тексте вопроса.
         scale: null,
       })),
@@ -309,6 +330,44 @@ function projectSlicePortion(slice: string, answered: Set<string>): PortionDto |
   }
 
   return null;
+}
+
+/**
+ * Подписи двух величин числового вопроса. В контракте отдельного поля нет:
+ * компонент читает `options` (вопрос 37). Строки берутся из текста вопроса,
+ * не из микрокопии.
+ */
+function numericFieldOptions(
+  text: string,
+  existing: { key: string; text: string }[],
+): { key: string; text: string }[] {
+  if (existing.length > 0) return existing;
+  const cleaned = text.replace(/[?]+$/u, "").trim();
+  const fromThem = /^(.+?)\s+и сколько из них\s+(.+)$/iu.exec(cleaned);
+  if (fromThem) {
+    return [
+      { key: "first", text: magnitudeLabel(fromThem[1]!) },
+      { key: "second", text: magnitudeLabel(fromThem[2]!) },
+    ];
+  }
+  const dashed = /^(.+?)\s+[—–-]\s+и\s+(.+)$/iu.exec(cleaned);
+  if (dashed) {
+    return [
+      { key: "first", text: magnitudeLabel(dashed[1]!) },
+      { key: "second", text: magnitudeLabel(dashed[2]!) },
+    ];
+  }
+  return [];
+}
+
+function magnitudeLabel(clause: string): string {
+  const stripped = clause
+    .replace(/^сколько(?:\s+\S+)*?\s+ты\s+/iu, "")
+    .replace(/^сколько\s+/iu, "")
+    .replace(/^скольким\s+/iu, "")
+    .trim();
+  const words = stripped.split(/\s+/).filter(Boolean);
+  return words.slice(0, 4).join(" ");
 }
 
 function projectBlocks(
@@ -416,6 +475,57 @@ export const pageUrl = (publicOrigin: string, profileId: string): string => `${p
 /** Адрес публичного вида. Строится из токена, а не из идентификатора профиля. */
 export const shareUrl = (publicOrigin: string, token: string): string => `${publicOrigin}/s/${token}`;
 
+export function toFullMapInput(stored: AnswerRecord[], ladder: LadderAnswers, paid: string[]): FullMapInput {
+  const bank = toSliceAnswers(stored, "slice_full_map") as BankAnswers;
+  const slices: FullMapSlice[] = [];
+  for (const slice of paid) {
+    if (slice === "slice_full_map" || !SCORED_SLICES.includes(slice)) continue;
+    const sliceAnswers = toSliceAnswers(stored, slice);
+    if (!sliceDelivered(slice, sliceAnswers)) continue;
+    slices.push({ slice, answers: sliceAnswers, findings: findingsForSlice(slice, sliceAnswers) });
+  }
+  return { ladder, bank, slices };
+}
+
+function projectFullMapPortion(input: FullMapInput, answered: Set<string>): PortionDto | null {
+  const remaining = nextFullMapPortion(input);
+  if (!remaining) return null;
+  const ids = remaining.questions.map((question) => sliceQuestionId("slice_full_map", question.id));
+  return {
+    key: slicePortionKey("slice_full_map", remaining.number),
+    lead: fullMap().promise,
+    questions: remaining.questions.map((question) => ({
+      id: sliceQuestionId("slice_full_map", question.id),
+      kind: question.type as QuestionKind,
+      text: question.text,
+      options:
+        question.type === "число"
+          ? numericFieldOptions(question.text, question.options)
+          : question.options,
+      scale: null,
+    })),
+    answered: ids.filter((id) => answered.has(id)),
+  };
+}
+
+function latestOfferDecline(db: Db, profileId: string): { slice: string; profileVersion: number } | null {
+  let latest: { slice: string; profileVersion: number } | null = null;
+  for (const event of listEvents(db, profileId)) {
+    if (event.type !== "offer.declined") continue;
+    let payload: { slice?: unknown; profileVersion?: unknown };
+    try {
+      payload = JSON.parse(event.payload) as { slice?: unknown; profileVersion?: unknown };
+    } catch {
+      continue;
+    }
+    if (typeof payload.slice !== "string" || typeof payload.profileVersion !== "number") continue;
+    if (!latest || payload.profileVersion >= latest.profileVersion) {
+      latest = { slice: payload.slice, profileVersion: payload.profileVersion };
+    }
+  }
+  return latest;
+}
+
 /**
  * Состояние страницы целиком. Возвращает и внутренний результат движка —
  * он нужен для снимка версии профиля и наружу не уходит.
@@ -477,6 +587,52 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
   let workingProfile = enginePage.internal.profile;
 
   for (const slice of paid) {
+    if (slice === "slice_full_map") {
+      const input = toFullMapInput(stored, answers, paid);
+      const remaining = nextFullMapPortion(input);
+      const sliceAnswers = toSliceAnswers(stored, slice);
+      const open = openAnswersOf(slice, sliceAnswers);
+      const crisis = detectCrisis(open.map((item) => item.text).join("\n"));
+      if (crisis.blocked) {
+        sliceCrisis ??= crisisNotice("paid_slice", crisis);
+        continue;
+      }
+      if (remaining) {
+        slicePortion ??= projectFullMapPortion(input, answered);
+        const previous = remaining.number - 1;
+        const interlude = previous >= 1 ? buildFullMapInterlude(previous, input) : null;
+        if (interlude) interludeBlocks.push(interludeDto(interlude));
+        continue;
+      }
+
+      const periodTask = findLatestJob(db, profile.profileId, "slice:slice_full_map")?.result?.periodTask;
+      const options = {
+        ...(storyline ? { storyline } : {}),
+        ...(periodTask ? { periodTask } : {}),
+      };
+      const mapProfile = buildFullMapProfile(input, options);
+      const threshold = periodTask
+        ? fullMapThreshold(input, mapProfile, options)
+        : fullMapThresholdBeforeSynthesis(input, options);
+      if (!threshold.passed) {
+        clarifications ??= { slice, questions: threshold.followUps };
+        continue;
+      }
+      workingProfile = mapProfile;
+
+      ensureBlock(db, profile.profileId, {
+        slot: `slice:${slice}`,
+        profileVersion: profile.version,
+        status: "pending",
+        origin: "llm",
+        purchased: true,
+        heading: sliceContent(slice)?.title ?? fullMap().title,
+        paragraphs: [],
+        highlight: null,
+      });
+      continue;
+    }
+
     const remaining = projectSlicePortion(slice, answered);
     const sliceAnswers = toSliceAnswers(stored, slice);
     const open = openAnswersOf(slice, sliceAnswers);
@@ -556,6 +712,11 @@ export function assemble(options: AssembleOptions): { page: PageStateDto; intern
     nextOffer = view.offer;
   } else if (!hidePaid && !slicePortion && !clarifications && allPaidReady && lastReady) {
     nextOffer = selectOfferAfterSlice(lastReady, workingProfile, toSliceAnswers(stored, lastReady), paid);
+  }
+
+  const declined = latestOfferDecline(db, profile.profileId);
+  if (declined && declined.profileVersion >= profile.version) {
+    nextOffer = null;
   }
 
   const sliceDoors = (): DoorDto[] =>

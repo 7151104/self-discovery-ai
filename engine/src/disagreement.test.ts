@@ -8,10 +8,14 @@ import {
   applyDisagreement,
   applyDisagreements,
   blockCoordinates,
+  buildDoors,
   buildPage,
   buildProfile,
   BAR_DEFINITIONS,
   DISAGREEMENT_RULES,
+  rejectedNodeSlice,
+  rawContent,
+  selectOffer,
 } from "./index.js";
 import { applyNodes } from "./nodes.js";
 import type { Disagreement, DisagreementKind, LadderAnswers } from "./types.js";
@@ -162,6 +166,36 @@ test("несогласия копятся: два блока подряд даю
 
   assert.ok(profile.flags.includes("disagreement_step_1"));
   assert.ok(profile.flags.includes("disagreement_step_2"));
+});
+
+test("несогласие со ступенью 3 не продаёт срез отвергнутого узла", () => {
+  const before = profileOf();
+  assert.equal(before.dominantNode, "NODE_FINISH_FEAR");
+  assert.equal(before.nextPaidOffer, "slice_node_finish");
+  assert.ok(before.nodes.length > 1, "для проверки нужна вторая сработавшая дверь");
+
+  const after = applyDisagreement(before, { step: 3, kind: "это не про меня" });
+  assert.equal(after.dominantNode, before.dominantNode, "несогласие не меняет сработавший узел");
+  const nextNode = before.nodes.find((node) => node.id !== before.dominantNode);
+  assert.ok(nextNode, "должен остаться другой сработавший узел");
+  const nextSlice = rawContent.step3.offers[nextNode.id];
+  assert.ok(nextSlice);
+  assert.notEqual(after.nextPaidOffer, "slice_node_finish");
+  assert.equal(after.nextPaidOffer, nextSlice);
+  assert.equal(rejectedNodeSlice(after), "slice_node_finish");
+
+  const offer = selectOffer(after);
+  assert.ok(offer);
+  assert.equal(offer.slice, nextSlice);
+  assert.notEqual(offer.slice, "slice_node_finish");
+
+  const doors = buildDoors(after, [], offer, 4);
+  const finish = doors.find((door) => door.slice === "slice_node_finish");
+  assert.ok(finish, "дверь отвергнутого узла остаётся на карте");
+  assert.equal(finish.price, null, "отвергнутый узел не получает цену");
+  const priced = doors.filter((door) => door.price !== null);
+  assert.equal(priced.length, 1);
+  assert.equal(priced[0]?.slice, nextSlice);
 });
 
 test("закрытая координата от несогласия ничего не теряет", () => {

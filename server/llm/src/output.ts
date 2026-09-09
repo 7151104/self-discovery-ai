@@ -47,6 +47,8 @@ export interface ModelOutput {
   statements: Statement[];
   /** `null` — срез: сюжет координаты 15 пишет финал лестницы, не отчёт среза. */
   storyline: Storyline | null;
+  /** `null` — не полная карта: задача периода (координата 16) пишется только там. */
+  periodTask: Storyline | null;
 }
 
 /** Почему машинный выход отклонён. */
@@ -77,6 +79,7 @@ const FIELD = {
   kind: "вид",
   coordinate: "координата",
   storyline: "сюжет",
+  periodTask: "задача_периода",
   value: "значение",
   code: "код",
   confidence: "уверенность",
@@ -88,9 +91,10 @@ const FIELD = {
  */
 export function outputContractText(
   coordinates: number[],
-  options: { storyline?: "required" | "optional" } = {},
+  options: { storyline?: "required" | "optional"; periodTask?: "required" | "optional" } = {},
 ): string {
   const storyline = options.storyline ?? "required";
+  const periodTask = options.periodTask ?? "optional";
   const storylineLines =
     storyline === "required"
       ? [
@@ -100,6 +104,15 @@ export function outputContractText(
           `  · «${FIELD.confidence}» — ${CONFIDENCES.join(" | ")}.`,
         ]
       : [`- «${FIELD.storyline}» — не заполнять: сюжет координаты 15 этому отчёту не нужен.`];
+  const periodLines =
+    periodTask === "required"
+      ? [
+          `- «${FIELD.periodTask}» — задача периода из открытого О3 для координаты 16:`,
+          `  · «${FIELD.value}» — формулировка одной строкой, не длиннее 120 знаков;`,
+          `  · «${FIELD.code}» — машинный код латиницей через подчёркивание;`,
+          `  · «${FIELD.confidence}» — ${CONFIDENCES.join(" | ")}.`,
+        ]
+      : [`- «${FIELD.periodTask}» — не заполнять: задача периода этому отчёту не нужна.`];
 
   return [
     `Ответ — один объект JSON и ничего кроме него. Ни пояснений, ни разметки, ни заголовка.`,
@@ -111,6 +124,7 @@ export function outputContractText(
     `  · «${FIELD.kind}» — один из: ${KINDS.map((kind) => `«${kind}»`).join(", ")};`,
     `  · «${FIELD.coordinate}» — номер координаты, о которой фраза; у видов «цитата» и «неизвестное» — null.`,
     ...storylineLines,
+    ...periodLines,
     ``,
     `Вид фразы означает регистр речи:`,
     `- «утверждение» — только о координате с confidence high;`,
@@ -134,9 +148,9 @@ function extractJson(raw: string): unknown {
   return JSON.parse(body) as unknown;
 }
 
-function parseStoryline(value: unknown, problems: OutputProblem[]): Storyline | null {
+function parseNamedStory(value: unknown, field: string, problems: OutputProblem[]): Storyline | null {
   if (!isRecord(value)) {
-    problems.push({ kind: "нет поля", detail: FIELD.storyline });
+    problems.push({ kind: "нет поля", detail: field });
     return null;
   }
 
@@ -144,6 +158,7 @@ function parseStoryline(value: unknown, problems: OutputProblem[]): Storyline | 
   const code = value[FIELD.code];
   const confidence = value[FIELD.confidence];
 
+  const started = problems.length;
   if (typeof text !== "string" || !text.trim() || text.trim().length > 120)
     problems.push({ kind: "сюжет", detail: `${FIELD.value}: строка от 1 до 120 знаков` });
   if (typeof code !== "string" || !/^[a-z][a-z0-9_]{2,39}$/.test(code))
@@ -151,7 +166,7 @@ function parseStoryline(value: unknown, problems: OutputProblem[]): Storyline | 
   if (typeof confidence !== "string" || !CONFIDENCES.includes(confidence as Confidence))
     problems.push({ kind: "сюжет", detail: `${FIELD.confidence}: ${CONFIDENCES.join(" | ")}` });
 
-  if (problems.some((problem) => problem.kind === "сюжет")) return null;
+  if (problems.length > started) return null;
   return { value: (text as string).trim(), code: code as string, confidence: confidence as Confidence };
 }
 
@@ -160,6 +175,7 @@ export interface ParseOptions {
   knownCoordinates: number[];
   /** По умолчанию обязателен: финал лестницы без сюжета не закрывает координату 15. */
   storyline?: "required" | "optional";
+  periodTask?: "required" | "optional";
   /** По умолчанию обязателен. У среза в тестах можно принять текст без разметки. */
   statements?: "required" | "optional";
 }
@@ -182,7 +198,7 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
   const problems: OutputProblem[] = [];
 
   for (const extra of Object.keys(envelope)) {
-    if (extra !== FIELD.text && extra !== FIELD.statements && extra !== FIELD.storyline)
+    if (extra !== FIELD.text && extra !== FIELD.statements && extra !== FIELD.storyline && extra !== FIELD.periodTask)
       problems.push({ kind: "лишнее поле", detail: extra });
   }
 
@@ -191,6 +207,7 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
 
   const statementsRequired = options.statements ?? "required";
   const storylineRequired = options.storyline ?? "required";
+  const periodRequired = options.periodTask ?? "optional";
 
   const rawStatements = envelope[FIELD.statements];
   const statements: Statement[] = [];
@@ -240,9 +257,16 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
   const storyline =
     envelope[FIELD.storyline] === undefined || envelope[FIELD.storyline] === null
       ? null
-      : parseStoryline(envelope[FIELD.storyline], problems);
+      : parseNamedStory(envelope[FIELD.storyline], FIELD.storyline, problems);
   if (storylineRequired === "required" && !storyline && !problems.some((problem) => problem.kind === "сюжет" || problem.kind === "нет поля"))
     problems.push({ kind: "нет поля", detail: FIELD.storyline });
+
+  const periodTask =
+    envelope[FIELD.periodTask] === undefined || envelope[FIELD.periodTask] === null
+      ? null
+      : parseNamedStory(envelope[FIELD.periodTask], FIELD.periodTask, problems);
+  if (periodRequired === "required" && !periodTask && !problems.some((problem) => problem.detail === FIELD.periodTask))
+    problems.push({ kind: "нет поля", detail: FIELD.periodTask });
 
   if (typeof text === "string" && statements.length) {
     for (const statement of statements) {
@@ -261,7 +285,8 @@ export function parseModelOutput(raw: string, options: ParseOptions): ParsedOutp
 
   if (problems.length || typeof text !== "string") return { ok: false, problems };
   if (storylineRequired === "required" && !storyline) return { ok: false, problems };
-  return { ok: true, output: { text, statements, storyline } };
+  if (periodRequired === "required" && !periodTask) return { ok: false, problems };
+  return { ok: true, output: { text, statements, storyline, periodTask } };
 }
 
 export const describeProblem = (problem: OutputProblem): string => `${problem.kind}: ${problem.detail}`;

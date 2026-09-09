@@ -267,3 +267,18 @@ test("скрипт печатает воронку и метрики табли�
     assert.ok(!printed.stdout.includes(secret), `скрипт: утекло «${secret}»`);
   }
 });
+
+test("отказ от предложения пишет offer.declined без почты", async (t) => {
+  const server = await startTestServer(ADMIN_ENV);
+  t.after(() => server.close());
+  const page = await profileAtStep(server.origin, 4);
+  assert.ok(page.offer);
+  await call(server.origin, "POST", `/api/p/${page.profileId}/offer-decline`, { slice: page.offer.slice });
+  const events = listEvents(server.db, page.profileId).filter((event) => event.type === "offer.declined");
+  assert.equal(events.length, 1);
+  const payload = JSON.parse(events[0]!.payload) as Record<string, unknown>;
+  assert.equal(payload.slice, page.offer.slice);
+  assert.equal(typeof payload.profileVersion, "number");
+  assert.equal("email" in payload, false);
+  assertClean(events[0]!.payload, "отказ от предложения");
+});

@@ -16,6 +16,8 @@ export const API_SHARE = "/api/p/:profileId/share";
 export const API_PUBLIC_PAGE = "/api/s/:token";
 export const API_PURCHASE = "/api/p/:profileId/orders";
 export const API_GENERATION_STATUS = "/api/p/:profileId/generations/:generationId";
+export const API_DECLINE_OFFER = "/api/p/:profileId/offer-decline";
+export const API_RECORD_CONSENT = "/api/p/:profileId/consent";
 
 /** Постоянные адреса документов: копия `LEGAL_PATHS` контракта. */
 export const LEGAL_PATHS = {

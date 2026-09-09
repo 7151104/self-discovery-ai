@@ -5,22 +5,26 @@
 
 import type {
   CreateProfileRequest,
+  DeclineOfferRequest,
   DisagreementKind,
   ErrorCode,
   GenerationDto,
   PageStateDto,
   PublicPageDto,
+  RecordConsentRequest,
   SaveContactRequest,
   ShareDto,
   SubmitPortionRequest,
 } from "./contract.js";
 import {
   API_CREATE_PROFILE,
+  API_DECLINE_OFFER,
   API_DISAGREE,
   API_GENERATION_STATUS,
   API_PAGE_STATE,
   API_PUBLIC_PAGE,
   API_PURCHASE,
+  API_RECORD_CONSENT,
   API_SAVE_CONTACT,
   API_SHARE,
   API_SUBMIT_PORTION,
@@ -264,6 +268,36 @@ export async function purchase(profileId: string, slice: string, requestId: stri
   try {
     const path = fillPath(API_PURCHASE, { profileId });
     const reply = await send(transport, "POST", path, { slice, requestId });
+    return toResult(reply.status, nestedPage(reply.body));
+  } catch {
+    return { ok: false, missing: false, code: "internal_error" };
+  }
+}
+
+/** Отказ от предложения: событие профиля, не сессия вкладки. */
+export async function declinePaidOffer(
+  profileId: string,
+  payload: DeclineOfferRequest,
+  transport: Transport,
+): Promise<PageResult> {
+  try {
+    const path = fillPath(API_DECLINE_OFFER, { profileId });
+    const reply = await send(transport, "POST", path, payload);
+    return toResult(reply.status, nestedPage(reply.body));
+  } catch {
+    return { ok: false, missing: false, code: "internal_error" };
+  }
+}
+
+/** Новая строка согласия при смене отпечатка документа. */
+export async function recordConsent(
+  profileId: string,
+  payload: RecordConsentRequest,
+  transport: Transport,
+): Promise<PageResult> {
+  try {
+    const path = fillPath(API_RECORD_CONSENT, { profileId });
+    const reply = await send(transport, "POST", path, payload);
     return toResult(reply.status, nestedPage(reply.body));
   } catch {
     return { ok: false, missing: false, code: "internal_error" };

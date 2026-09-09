@@ -9,14 +9,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DEFAULTS } from "./config.js";
-import { assemblerPrompt, reportTypeOfSlice, sliceOverlay, volumeOf } from "./content.js";
-import { applySlice, rawContent, SCORED_SLICES, scanText, type Profile, type SliceAnswers } from "./engine.js";
+import { assemblerPrompt, readRepoFile, reportTypeOfSlice, sliceOverlay, volumeOf } from "./content.js";
+import { applySlice, fullMapQuestions, rawContent, SCORED_SLICES, scanText, type BankAnswers, type Profile, type ScaleAnswer, type SliceAnswers } from "./engine.js";
 import { answering } from "./fake-provider.js";
-import { sliceEnvelope, textOfVolume } from "./fixtures.js";
+import { DEMO_ANSWERS, sliceEnvelope, textOfVolume } from "./fixtures.js";
 import { buildSlicePrompt, instructionOf } from "./prompt.js";
-import { generatePaidSlice, sliceTaskOf } from "./slice.js";
+import { generatePaidSlice, fullMapTaskOf, sliceTaskOf } from "./slice.js";
 import { validateText } from "./validator.js";
-import { demoProfile, sliceAnswers } from "../../../engine/dist/slice-fixtures.js";
+import { demoProfile, sliceAnswers, textLonger } from "../../../engine/dist/slice-fixtures.js";
+import { StubProvider } from "./stub-provider.js";
 
 const base = {
   retry: { ...DEFAULTS.retry, timeoutMs: 50 },
@@ -143,4 +144,67 @@ test("в надстройке среза нет названий методик 
       `${slice}: в надстройке название методики`,
     );
   }
+});
+
+test("slice_full_map не входит в SCORED_SLICES", () => {
+  assert.equal(SCORED_SLICES.includes("slice_full_map"), false);
+});
+
+const MAP_STORY = {
+  value: "тащит один и бросает у финиша",
+  code: "solo_then_drop",
+  confidence: "medium" as const,
+};
+
+function demoMapBank(open: { О2?: string; О3?: string } = {}): BankAnswers {
+  const closed: BankAnswers = {};
+  const source = readRepoFile("examples/demo-person-answers.md");
+  for (const line of source.split("\n")) {
+    const row = /^\|\s*(\d+)\s*\|\s*([A-G]|[1-5])\s*\|$/.exec(line.trim());
+    if (!row) continue;
+    const value = row[2] ?? "";
+    closed[`Q${row[1]}`] = /^[1-5]$/.test(value) ? (Number(value) as ScaleAnswer) : value;
+  }
+  const bank: BankAnswers = {};
+  for (const question of fullMapQuestions()) {
+    if (question.type === "открытый") {
+      bank[question.id] = question.id === "О3" ? (open.О3 ?? textLonger(20)) : (open.О2 ?? textLonger(20));
+      continue;
+    }
+    bank[question.id] = closed[question.id];
+  }
+  return bank;
+}
+
+const mapTask = (bank: BankAnswers = demoMapBank()) =>
+  fullMapTaskOf({ ladder: DEMO_ANSWERS, bank }, { storyline: MAP_STORY });
+
+test("slice_full_map: короткий О3 не вызывает провайдера", async () => {
+  const provider = answering(sliceEnvelope(textOfVolume(1500, 2500)));
+  const outcome = await generatePaidSlice({
+    ...base,
+    task: mapTask(demoMapBank({ О3: "мало слов" })),
+    provider,
+  });
+  assert.equal(outcome.ok, false);
+  if (!outcome.ok) assert.equal(outcome.reason, "порог");
+  assert.equal(provider.callCount, 0);
+});
+
+test("slice_full_map: задача периода в том же вызове, applySlice не вызывается", async () => {
+  const provider = new StubProvider();
+  const outcome = await generatePaidSlice({ ...base, task: mapTask(), provider });
+  assert.ok(outcome.ok, outcome.ok ? "" : outcome.details.join("; "));
+  if (!outcome.ok) return;
+  assert.ok(outcome.periodTask);
+  assert.ok(outcome.periodTask.value.length > 0);
+  const type = reportTypeOfSlice("slice_full_map");
+  const verdict = validateText(outcome.paragraphs.join("\n\n"), { type });
+  assert.ok(verdict.ok, verdict.ok ? "" : verdict.violations.map((item) => item.detail).join("; "));
+});
+
+test("промпт полной карты требует задачу_периода", () => {
+  const prompt = buildSlicePrompt(mapTask());
+  assert.ok(instructionOf(prompt).includes("задача_периода"));
+  assert.equal(/не заполнять: задача периода/.test(instructionOf(prompt)), false);
 });

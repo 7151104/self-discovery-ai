@@ -57,6 +57,8 @@ const BUCKETS: Partial<Record<OperationName, Bucket>> = {
   editAnswer: "portion",
   regenerate: "portion",
   saveContact: "portion",
+  declineOffer: "portion",
+  recordConsent: "portion",
   pageState: "state",
   publicPage: "state",
   reportError: "errors",
@@ -364,6 +366,10 @@ function run(
       return handlers.editAnswer(context, params, body.value);
     case "disagree":
       return handlers.disagree(context, params, body.value);
+    case "declineOffer":
+      return handlers.declineOffer(context, params, body.value);
+    case "recordConsent":
+      return handlers.recordConsent(context, params, body.value);
     case "saveContact":
       return handlers.saveContactHandler(context, params, body.value);
     case "purchase":

@@ -107,3 +107,17 @@ test("контракт для промпта собирается из тех ж
   }
   assert.ok(contract.includes(known.join(", ")), "модель обязана знать список доступных координат");
 });
+
+test("задача периода разбирается так же, как сюжет, и обязательна по флагу", () => {
+  const period = { value: "выход в видимость", code: "visibility", confidence: "medium" as const };
+  const parsed = parseModelOutput(envelope({ extra: { задача_периода: { значение: period.value, код: period.code, уверенность: period.confidence } } }), {
+    knownCoordinates: known,
+    periodTask: "required",
+  });
+  assert.ok(parsed.ok, parsed.ok ? "" : parsed.problems.map(describeProblem).join("; "));
+  if (!parsed.ok) return;
+  assert.deepEqual(parsed.output.periodTask, period);
+
+  const missing = parseModelOutput(envelope(), { knownCoordinates: known, periodTask: "required", storyline: "optional" });
+  assert.equal(missing.ok, false);
+});

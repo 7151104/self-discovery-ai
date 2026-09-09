@@ -335,6 +335,16 @@ export interface PurchaseRequest {
   requestId: string;
 }
 
+/** Отказ от предложения: событие профиля, не сессия вкладки (вопрос 20). */
+export interface DeclineOfferRequest {
+  slice: string;
+}
+
+/** Новая строка согласия при смене отпечатка документа (вопрос 40). */
+export interface RecordConsentRequest {
+  consentVersion: string;
+}
+
 /** Ручная регенерация блока. Ключ отправки ловит повтор того же нажатия. */
 export interface RegenerateRequest {
   requestId: string;
@@ -632,6 +642,28 @@ export interface ApiEndpoints {
     response: PublicPageResponse;
   };
   /**
+   * Отказ от предложения. Пишет `offer.declined` с срезом и версией профиля;
+   * почты в событии нет.
+   */
+  declineOffer: {
+    method: "POST";
+    path: "/api/p/:profileId/offer-decline";
+    params: { profileId: string };
+    body: DeclineOfferRequest;
+    response: PageStateResponse;
+  };
+  /**
+   * Новая отметка согласия. Старая строка не затирается: при смене хеша
+   * документа человек отмечает заново, ответы на месте.
+   */
+  recordConsent: {
+    method: "POST";
+    path: "/api/p/:profileId/consent";
+    params: { profileId: string };
+    body: RecordConsentRequest;
+    response: PageStateResponse;
+  };
+  /**
    * Клиентская ошибка. Сервер чистит и прокидывает в тот же приёмник,
    * что и серверные падения (E10-06).
    */
@@ -662,6 +694,8 @@ export const API: {
   submitPortion: { method: "POST", path: "/api/p/:profileId/portions" },
   editAnswer: { method: "PATCH", path: "/api/p/:profileId/answers/:questionId" },
   disagree: { method: "POST", path: "/api/p/:profileId/disagreements" },
+  declineOffer: { method: "POST", path: "/api/p/:profileId/offer-decline" },
+  recordConsent: { method: "POST", path: "/api/p/:profileId/consent" },
   saveContact: { method: "POST", path: "/api/p/:profileId/contact" },
   purchase: { method: "POST", path: "/api/p/:profileId/orders" },
   refund: { method: "POST", path: "/api/p/:profileId/orders/:orderId/refunds" },

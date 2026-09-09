@@ -21,6 +21,7 @@ import {
   loadLlmConfig,
   openAnswersOf,
   sliceTaskOf,
+  fullMapTaskOf,
   crisisGate,
   type GenerationProvider,
   type GenerationResult,
@@ -34,13 +35,15 @@ import type { Db } from "./db/driver.js";
 import {
   applySlice,
   checkThreshold,
+  fullMapThresholdBeforeSynthesis,
+  nextFullMapPortion,
   SCORED_SLICES,
   sliceDelivered,
   type Block,
   type LlmTask,
 } from "./engine.js";
 import { log } from "./log.js";
-import { assemble, toSliceAnswers } from "./page.js";
+import { assemble, toFullMapInput, toLadderAnswers, toSliceAnswers } from "./page.js";
 import {
   deferJob,
   failJob,
@@ -218,6 +221,21 @@ function ladderShownBlocks(context: GenerationContext, profile: ProfileRecord): 
 }
 
 function currentSliceTask(context: GenerationContext, profile: ProfileRecord, slice: string): SliceTask | null {
+  if (slice === "slice_full_map") {
+    const stored = listAnswers(context.db, profile.profileId);
+    const input = toFullMapInput(stored, toLadderAnswers(stored), paidSlices(context.db, profile.profileId));
+    if (nextFullMapPortion(input)) return null;
+    const open = openAnswersOf(slice, toSliceAnswers(stored, slice));
+    if (crisisGate(open.map((item) => item.text).join("\n")) === "skip") return null;
+    const storyline = findLatestJob(context.db, profile.profileId, "step4")?.result?.storyline;
+    const options = storyline ? { storyline } : {};
+    const threshold = fullMapThresholdBeforeSynthesis(input, options);
+    if (!threshold.passed) return null;
+    return fullMapTaskOf(input, {
+      shownBlocks: ladderShownBlocks(context, profile),
+      ...(storyline ? { storyline } : {}),
+    });
+  }
   if (!SCORED_SLICES.includes(slice)) return null;
   const assembled = assemble({ db: context.db, profile, publicOrigin: "" });
   const answers = toSliceAnswers(listAnswers(context.db, profile.profileId), slice);
@@ -498,6 +516,7 @@ type JobOutcome =
       paragraphs: string[];
       highlight: string | null;
       storyline?: GenerationResultBody["storyline"];
+      periodTask?: GenerationResultBody["periodTask"];
       costKopecks: number;
       attempts: number;
     }
@@ -611,6 +630,7 @@ async function runJob(context: GenerationContext, generationId: string, signal: 
           heading: generated.heading,
           paragraphs: generated.paragraphs,
           highlight: generated.highlight,
+          ...(generated.periodTask ? { periodTask: generated.periodTask } : {}),
           costKopecks: generated.costKopecks,
           attempts: generated.attempts,
         }
@@ -630,6 +650,7 @@ async function runJob(context: GenerationContext, generationId: string, signal: 
         paragraphs: outcome.paragraphs,
         highlight: outcome.highlight,
         ...(outcome.storyline ? { storyline: outcome.storyline } : {}),
+        ...(outcome.periodTask ? { periodTask: outcome.periodTask } : {}),
       };
       applyResult(context, listed, result, true, profile.version);
       if (listed.slot === "step4") enqueuePaidSlices(context, profile);

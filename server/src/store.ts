@@ -211,26 +211,41 @@ const toConsent = (row: ConsentRow): ConsentRecord => ({
   consentedAt: row.consented_at,
 });
 
-/** Записывает отметку согласия. Повтор обновляет версию и время. */
+/** Записывает отметку согласия. Та же версия обновляет время; другая — новая строка. */
 export function insertConsent(db: Db, profileId: string, version: string): ConsentRecord {
   const timestamp = now();
   db.run(
     `INSERT INTO consents (profile_id, version, consented_at)
      VALUES (?, ?, ?)
-     ON CONFLICT (profile_id) DO UPDATE SET
-       version = excluded.version,
+     ON CONFLICT (profile_id, version) DO UPDATE SET
        consented_at = excluded.consented_at`,
     [profileId, version, timestamp],
   );
   return { profileId, version, consentedAt: timestamp };
 }
 
+/** Последняя отметка согласия профиля. */
 export function findConsent(db: Db, profileId: string): ConsentRecord | null {
   const row = db.get<ConsentRow>(
-    "SELECT profile_id, version, consented_at FROM consents WHERE profile_id = ?",
+    `SELECT profile_id, version, consented_at FROM consents
+      WHERE profile_id = ?
+      ORDER BY consented_at DESC, rowid DESC
+      LIMIT 1`,
     [profileId],
   );
   return row ? toConsent(row) : null;
+}
+
+/** Все отметки согласия профиля: старые редакции не затираются. */
+export function listConsents(db: Db, profileId: string): ConsentRecord[] {
+  return db
+    .all<ConsentRow>(
+      `SELECT profile_id, version, consented_at FROM consents
+        WHERE profile_id = ?
+        ORDER BY consented_at, rowid`,
+      [profileId],
+    )
+    .map(toConsent);
 }
 
 // ── Ответы ────────────────────────────────────────────────────────────────────
@@ -1001,6 +1016,7 @@ export interface GenerationResultBody {
   paragraphs: string[];
   highlight: string | null;
   storyline?: { value: string; code: string; confidence: "low" | "medium" | "high" };
+  periodTask?: { value: string; code: string; confidence: "low" | "medium" | "high" };
 }
 
 export interface GenerationJobRecord {

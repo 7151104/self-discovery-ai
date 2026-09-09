@@ -13,6 +13,7 @@ export * from "./types.js";
 export {
   applyDisagreement,
   applyDisagreements,
+  offerSkippingRejectedNode,
   bankAnswersFromLadder,
   blockCoordinates,
   buildProfile,
@@ -38,7 +39,7 @@ export {
   detectCrisis,
   CRISIS_PLACES,
 } from "./crisis.js";
-export { selectOffer, selectOfferAfterSlice, buildDoors } from "./offers.js";
+export { selectOffer, selectOfferAfterSlice, buildDoors, rejectedNodeSlice } from "./offers.js";
 export {
   applySlice,
   checkThreshold,
@@ -71,6 +72,7 @@ export {
   fullMapRemaining,
   fullMapReport,
   fullMapThreshold,
+  fullMapThresholdBeforeSynthesis,
   nextFullMapPortion,
   FULL_MAP_SUBTYPES,
   type FullMapInput,

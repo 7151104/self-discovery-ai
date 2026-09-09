@@ -17,12 +17,14 @@ import { h, mount, type VNode } from "./dom.js";
 import type { AnswerInput, DisagreementKind, PageStateDto, QuestionDto } from "./contract.js";
 import {
   createProfile,
+  declinePaidOffer,
   disagree,
   enableShare,
   loadGeneration,
   loadPage,
   loadPublic,
   purchase,
+  recordConsent,
   revokeShare,
   saveContact,
   submitPortion,
@@ -414,6 +416,7 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       onChange: (value) => {
         consented = value;
         paint();
+        if (value && session.needsConsent) void renewConsent();
       },
     });
   };
@@ -456,6 +459,10 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
     if (!result.ok) {
       pause?.skip();
       pause = null;
+      if (!result.missing && result.code === "consent_required") {
+        set({ ...session, collecting: false, needsConsent: true, pendingPortion: payload });
+        return;
+      }
       const open = session.answers.find((answer) => answer.kind === "открытый");
       const draft = open && open.kind === "открытый" ? open.text : session.draft;
       const portionError = !result.missing && result.code === "answer_too_short" ? errorTexts.tooShort() : null;
@@ -466,10 +473,29 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
     if (pause === null || pause.done) reveal();
   };
 
+  const renewConsent = async () => {
+    const page = session.page;
+    const pending = session.pendingPortion;
+    if (page === null || page.profileId.length === 0 || pending === null) return;
+    const saved = await recordConsent(page.profileId, { consentVersion: consentVersionOf() }, host);
+    if (!saved.ok) return;
+    set({ ...session, needsConsent: false, pendingPortion: null, collecting: true });
+    const result = await submitPortion(page.profileId, pending, host);
+    if (!result.ok) {
+      set({
+        ...session,
+        collecting: false,
+        needsConsent: !result.missing && result.code === "consent_required",
+        pendingPortion: !result.missing && result.code === "consent_required" ? pending : null,
+      });
+      return;
+    }
+    revealPage(result.page, "advance");
+  };
+
   const app: PageApp = {
-    tree: () =>
-      chrome(
-        renderSession(
+    tree: () => {
+      const view = renderSession(
           session,
           {
           onIntro: (name, birthDate) => {
@@ -523,8 +549,12 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
           submitDisabled: session.screen === "intro" ? !consented : undefined,
           },
           { now: now() },
-        ),
-      ),
+        );
+      if (session.needsConsent && session.screen === "page") {
+        return chrome(h("div", { class: "page", "data-consent-renew": "on" }, consentSlot(), view));
+      }
+      return chrome(view);
+    },
     session: () => session,
     start: async () => {
       stopWatch();
@@ -636,7 +666,17 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       if (!result.ok) return;
       set(markShareClosed(replacePage({ ...session, shareOpen: true }, result.page)));
     },
-    decline: () => set(declineOffer(session)),
+    decline: () => {
+      const page = session.page;
+      const slice = page?.offer?.slice;
+      set(declineOffer(session));
+      if (page !== null && slice !== undefined && page.profileId.length > 0) {
+        void declinePaidOffer(page.profileId, { slice }, host).then((result) => {
+          if (!result.ok) return;
+          set(replacePage({ ...session, offerDeclined: true }, result.page));
+        });
+      }
+    },
     buy: async () => {
       const page = session.page;
       const slice = page?.offer?.slice;

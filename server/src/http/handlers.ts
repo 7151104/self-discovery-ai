@@ -291,9 +291,12 @@ export function createProfile(context: Context, raw: unknown): HandlerResult {
   return { status: 201, body: page(context, profile) };
 }
 
-/** Без отметки согласия ответы не пишутся: имя уже лежит в профиле, ответов нет. */
-const refuseWithoutConsent = (context: Context, profileId: string): HandlerResult | null =>
-  findConsent(context.db, profileId) ? null : fail(403, "consent_required");
+/** Без отметки текущего документа ответы не пишутся. Старые ответы не трогаем. */
+const refuseWithoutConsent = (context: Context, profileId: string): HandlerResult | null => {
+  const consent = findConsent(context.db, profileId);
+  if (!consent || consent.version !== documentConsentVersion()) return fail(403, "consent_required");
+  return null;
+};
 
 export function pageState(context: Context, params: Record<string, string>): HandlerResult {
   const profile = loadProfile(context, params["profileId"]);
@@ -451,6 +454,48 @@ export function disagree(context: Context, params: Record<string, string>, raw: 
   });
 
   return result === null ? fail(404, "not_found") : { status: 201, body: result };
+}
+
+/**
+ * Отказ от предложения в этот пересчёт профиля. Почта в событие не входит.
+ * Повтор до новых ответов прячет предложение на сборке страницы.
+ */
+export function declineOffer(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
+  const profile = loadProfile(context, params["profileId"]);
+  if (!profile) return fail(404, "profile_not_found");
+
+  const body = asObject(raw);
+  const slice = body ? asString(body["slice"]) : null;
+  if (!slice || !rawContent.slices.some((candidate) => candidate.id === slice)) return fail(400, "unknown_slice");
+
+  const state = context.db.transaction(() => {
+    funnel(context, "offer.declined", {
+      profileId: profile.profileId,
+      step: stepFromPage(page(context, profile).state),
+      payload: { slice, profileVersion: profile.version },
+    });
+    return page(context, profile);
+  });
+  return { status: 200, body: state };
+}
+
+/**
+ * Новая строка согласия. Старую редакцию не затираем: при смене отпечатка
+ * документа человек отмечает заново, ответы остаются.
+ */
+export function recordConsent(context: Context, params: Record<string, string>, raw: unknown): HandlerResult {
+  const profile = loadProfile(context, params["profileId"]);
+  if (!profile) return fail(404, "profile_not_found");
+
+  const body = asObject(raw);
+  const version = acceptedConsent(body ? asString(body["consentVersion"]) : null);
+  if (version === null) return fail(400, "bad_request");
+
+  const state = context.db.transaction(() => {
+    insertConsent(context.db, profile.profileId, version);
+    return page(context, profile);
+  });
+  return { status: 200, body: state };
 }
 
 const looksLikeEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -833,9 +878,7 @@ function questionText(questionId: string): string {
 
   const parsed = parseSliceQuestionId(questionId);
   if (!parsed) return questionId;
-  const known = rawContent.slices
-    .find((candidate) => candidate.id === parsed.slice)
-    ?.questions.find((candidate) => candidate.id === parsed.questionId);
+  const known = sliceQuestion(parsed.slice, parsed.questionId);
   return known?.text ?? questionId;
 }
 

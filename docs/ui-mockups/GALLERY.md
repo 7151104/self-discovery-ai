@@ -2,6 +2,12 @@
 
 Картинки в чате агента могут не открыться. Смотри их здесь, на GitHub.
 
+## Мобильные системы (главное)
+
+**[10 мобильных вариантов × 3 экрана](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/mobile-10/GALLERY.md)**
+
+Это основная развилка: навигация, меню, юзабилити на телефоне.
+
 ## Главное: 10 кабинетов
 
 **[Открыть галерею кабинетов](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/cabinet-styles/GALLERY.md)**

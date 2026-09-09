@@ -445,8 +445,7 @@
   });
 
   root.addEventListener("click", (ev) => {
-    const sheet = ev.target.classList.contains("sheet") ? ev.target : null;
-    if (sheet) {
+    if (ev.target.classList.contains("sheet")) {
       state.sheet = null;
       save();
       render();

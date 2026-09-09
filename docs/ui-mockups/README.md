@@ -1,6 +1,8 @@
 # UI-концепты: 10 экранов
 
-**Смотреть картинки:** [GALLERY.md](./GALLERY.md) · [10 кабинетов](./cabinet-styles/GALLERY.md) · [**мобильные системы**](./mobile-10/GALLERY.md)
+**Смотреть картинки:** [GALLERY.md](./GALLERY.md) · [**усиленный мобильный**](./mobile-strong/GALLERY.md) · [10 кабинетов](./cabinet-styles/GALLERY.md) · [мобильные системы](./mobile-10/GALLERY.md)
+
+Воронка простыми словами: [`docs/11-funnel-plain-language.md`](../11-funnel-plain-language.md)
 
 Концепт-арт интерфейса, сгенерированный как визуальный якорь перед прототипом.  
 Рабочее имя бренда в макетах — **координаты**. Это не утверждённое имя продукта.

@@ -208,7 +208,7 @@ function mediumPhrase(n: number, marker: string, markers: string[]): string {
     `показанное один раз меняет для тебя цену всего, что ещё не отдано.`,
   ];
   const rest = variants[n % variants.length]!;
-  if (marker.endsWith("что") || marker.endsWith("похоже")) return `${capitalize(marker)} ${rest}`;
+  if (marker.endsWith("что")) return `${capitalize(marker)} ${rest}`;
   return `${capitalize(marker)}, ${rest}`;
 }
 

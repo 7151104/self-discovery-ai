@@ -50,6 +50,8 @@ AI-сервис, который собирает портрет человека
 | Промпты LLM | `prompts/` | ✅ |
 | Демо-профиль и отчёт | `examples/` | ✅ |
 | Демо-неделя Сигналов | `examples/demo-week-signals.md` | ✅ |
+| Презентация простым языком | `examples/signal-pitch/index.html`, `docs/12-pitch-plain.md` | ✅ |
+| Три жизни пользователей | `examples/signal-life-cycles.md` | ✅ |
 
 ## Что ещё НЕ готово
 

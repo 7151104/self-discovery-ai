@@ -185,6 +185,7 @@
         <div class="toprow">
           <button class="ghost" data-act="back-q">назад</button>
           <span class="hint">${stepName} · ${idx + 1} из ${ids.length}</span>
+          ${stepDone(1) && state.screen !== "paid-q" ? `<button class="ghost" data-act="tab-page">к странице</button>` : ""}
         </div>
         <div class="progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
         <p class="why">${why}</p>
@@ -602,7 +603,11 @@
       }
       const i = LADDER.indexOf(state.qid);
       if (i <= 0) return go("gift");
-      go("question", { qid: LADDER[i - 1] });
+      const prev = LADDER[i - 1];
+      const curStep = C.questions[state.qid].step;
+      const prevStep = C.questions[prev].step;
+      if (prevStep !== curStep && stepDone(1)) return go("page");
+      go("question", { qid: prev });
     } else if (act === "after-story") go("page");
     else if (act === "tab-page") go("page");
     else if (act === "tab-map") go("map");

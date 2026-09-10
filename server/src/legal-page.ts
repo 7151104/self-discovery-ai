@@ -60,7 +60,7 @@ export function renderLegalHtml(id: LegalDocId): string {
 <html lang="ru" data-legal="${escape(id)}">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="only light">
 <meta name="theme-color" content="#f3e9dc">
 <title>${title}</title>
 <style>

@@ -152,13 +152,14 @@ test("на s0 страница читается разделами, а не ст
   assert.ok(text.includes(copy("UI_PORTION_TITLE")));
   assert.ok(text.includes(copy("UI_ROUTE_TITLE")));
   assert.ok(text.includes(copy("UI_ROUTE_NOTE")));
-  assert.equal(text.includes(copy("UI_HEAD_LINK_HINT", { ссылка: pageStates.s0.url })), false);
+  assert.equal(text.includes(copy("UI_HEAD_LINK_HINT")), false);
 });
 
 test("на s0 работа — вопрос: порция сразу под шапкой, пустые слоты ниже", () => {
   const node = draw("s0");
   assert.deepEqual(slotsOf(node), ["head", "portion", "hook", "map", "route"]);
   assert.equal(byClass(node, "map")[0]?.attrs["data-empty"], "true");
+  assert.ok(renderToString(node).includes('class="map__fold"'));
   const s1 = draw("s1");
   assert.deepEqual(slotsOf(s1), ["head", "hook", "map", "block", "portion", "route"]);
   assert.equal(byClass(s1, "map")[0]?.attrs["data-empty"], "false");
@@ -166,7 +167,9 @@ test("на s0 работа — вопрос: порция сразу под ша
 
 test("после первой порции шапка показывает ссылку на страницу", () => {
   const node = draw("s1");
-  assert.ok(visibleText(node).includes(copy("UI_HEAD_LINK_HINT", { ссылка: pageStates.s1.url })));
+  assert.ok(visibleText(node).includes(copy("UI_HEAD_LINK_HINT")));
+  const link = findAll(node, "a").find((item) => item.attrs["class"] === "head__link");
+  assert.equal(link?.attrs["href"], pageStates.s1.url);
   assert.equal(byClass(node, "hook")[0]?.attrs["data-empty"], "false");
   assert.equal(visibleText(node).includes(copy("UI_READING_EMPTY")), false);
   assert.ok(visibleText(node).includes(copy("UI_READING_TITLE")));

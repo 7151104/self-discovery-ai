@@ -34,10 +34,16 @@
 }
 
 .head__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-target);
+  min-width: var(--size-target);
   max-width: var(--measure-block);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-  color: var(--color-text-soft);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
 }
 
 .head__brand {
@@ -82,4 +88,11 @@
   line-height: var(--leading-snug);
   padding: var(--space-2) 0;
   color: var(--color-text-soft);
+}
+
+@media (hover: hover) {
+  .head__later:hover,
+  .head__link:hover {
+    color: var(--color-text-strong);
+  }
 }

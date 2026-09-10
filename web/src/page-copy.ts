@@ -58,7 +58,7 @@ export const mapTexts = {
 export const headTexts = {
   period: (theme: string): string => copy("UI_HEAD_PERIOD", { тема: theme }),
   noPeriod: (): string => copy("UI_HEAD_NO_PERIOD"),
-  linkHint: (url: string): string => copy("UI_HEAD_LINK_HINT", { ссылка: url }),
+  linkHint: (): string => copy("UI_HEAD_LINK_HINT"),
   emptyHook: (): string => copy("UI_HOOK_EMPTY"),
 };
 

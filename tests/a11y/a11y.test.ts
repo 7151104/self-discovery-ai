@@ -37,6 +37,12 @@ test("язык объявлен в оболочках страницы и вит
   const showcase = readFileSync(join(repoRoot, "web/showcase/index.html"), "utf8");
   assert.match(page, /<html lang="ru">/);
   assert.match(showcase, /<html lang="ru">/);
+  assert.match(page, /color-scheme" content="light"/);
+  assert.match(showcase, /color-scheme" content="light"/);
+  const shell = readFileSync(join(repoRoot, "server/src/http/page-shell.ts"), "utf8");
+  const legal = readFileSync(join(repoRoot, "server/src/legal-page.ts"), "utf8");
+  assert.match(shell, /color-scheme" content="light"/);
+  assert.match(legal, /color-scheme" content="light"/);
 });
 
 test("ноль нарушений на состояниях витрины", async () => {

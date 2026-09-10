@@ -90,7 +90,7 @@ export function pageLabels(page: PageStateDto): PageViewLabels {
     head: {
       period: headTexts.period,
       noPeriod: headTexts.noPeriod(),
-      linkHint: headTexts.linkHint(page.url),
+      linkHint: headTexts.linkHint(),
       emptyHook: headTexts.emptyHook(),
     },
     reading: {

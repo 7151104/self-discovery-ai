@@ -2,7 +2,12 @@
 
 Картинки в чате агента могут не открыться. Смотри их здесь, на GitHub.
 
-## Реальные каркасы (смотреть в первую очередь)
+## 1 + 2 + 10, страница 2026
+
+**[Сейчас / лестница / одно 590 ₽](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/exploit-1210/GALLERY.md)**  
+Как устроено: [`docs/13-page-ux-2026.md`](../13-page-ux-2026.md)
+
+## Реальные каркасы
 
 **[10 прикладных экранов с правильными блоками](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/real-ia/GALLERY.md)**  
 Каркас: [`docs/12-page-ia.md`](../12-page-ia.md)

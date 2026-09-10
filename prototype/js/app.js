@@ -150,24 +150,48 @@
       </div>`;
   }
 
+  function nowCard() {
+    const node = stepDone(3) ? E.nodeBlock(state.answers) : C.nodes.NODE_FINISH_FEAR;
+    if (!stepDone(1)) {
+      return { kicker: "Сейчас", title: "Три вопроса", why: "После них на странице появится блок «Как ты работаешь» и фраза, которой можно поделиться.", time: "~2 минуты", cta: "Начать", act: "tab-next" };
+    }
+    if (!stepDone(2)) {
+      return { kicker: "Сейчас", title: "Ещё 4 вопроса", why: "Потом появится блок: как ты обрабатываешь и как тебя задевает.", time: "~2 минуты", cta: "Продолжить", act: "tab-next" };
+    }
+    if (!stepDone(3)) {
+      return { kicker: "Сейчас", title: "Ещё 4 вопроса", why: "Потом — один узел: где ты себе мешаешь. Без совета.", time: "~2 минуты", cta: "Продолжить", act: "tab-next" };
+    }
+    if (!stepDone(4)) {
+      return { kicker: "Сейчас", title: "Один открытый вопрос", why: "Соберу сюжет твоими словами. Дальше без новых ответов не скажу.", time: "~3 минуты", cta: "Написать", act: "tab-next" };
+    }
+    if (!state.paid) {
+      return { kicker: "Дальше вглубь", title: node.offer.title, why: `Я вижу узел. Откуда он — по этим ответам не скажу. Нужно 8 вопросов про ${node.offer.theme}.`, time: `${node.offer.price} ₽ · не подписка`, cta: `Разобрать узел · ${node.offer.price} ₽`, act: "pay" };
+    }
+    return { kicker: "Страница живая", title: "Разбор узла уже твой", why: "Можно вернуться к тексту или отправить страницу — не тест.", time: "", cta: "Открыть разбор", act: "paid-report" };
+  }
+
+  function pillsHtml() {
+    const items = [
+      { n: 1, label: "Как работаешь" },
+      { n: 2, label: "Как задевает" },
+      { n: 3, label: "Узел" },
+      { n: 4, label: "Сюжет" },
+    ];
+    const current = !stepDone(1) ? 1 : !stepDone(2) ? 2 : !stepDone(3) ? 3 : !stepDone(4) ? 4 : 0;
+    return `<div class="pills">${items.map((it) => {
+      const cls = stepDone(it.n) ? "done" : current === it.n ? "cur" : "";
+      return `<span class="${cls}">${stepDone(it.n) ? "✓ " : ""}${it.label}</span>`;
+    }).join("")}</div>`;
+  }
+
   function page() {
     const h = E.hook(state.answers);
     const s1 = stepDone(1) ? E.step1Block(state.answers) : null;
     const s2 = stepDone(2) ? E.step2Block(state.answers) : null;
     const node = stepDone(3) ? E.nodeBlock(state.answers) : null;
     const syn = stepDone(4) ? E.synthesis(state.name, state.answers, node || E.nodeBlock(state.answers)) : null;
-    const next = nextMissing();
-    const cta = !stepDone(1)
-      ? "Три вопроса — и скажу, как ты работаешь"
-      : !stepDone(2)
-        ? "Ещё 4 вопроса — скажу, почему так"
-        : !stepDone(3)
-          ? "Ещё 4 — где ты себе мешаешь"
-          : !stepDone(4)
-            ? "Один открытый вопрос — соберу сюжет"
-            : state.paid
-              ? "Открытый разбор уже на странице"
-              : `Разобрать узел · ${node.offer.price} ₽`;
+    const now = nowCard();
+    const mapOn = stepDone(1) ? 3 : 0;
 
     return `
       <div class="screen">
@@ -175,23 +199,32 @@
           <div>
             <div class="brand">${C.brand}</div>
             <div class="serif" style="font-size:28px;margin-top:6px">${escape(state.name)}</div>
-            <div class="hint">${pageUrl()}</div>
+            <div class="hint">${pageUrl()} · твоя страница</div>
           </div>
           <button class="icon-btn" data-act="share" aria-label="поделиться">↑</button>
         </div>
-        <h1>${stepDone(1) ? h : "Страница уже есть. Настоящее — после трёх вопросов."}</h1>
-        ${s1 ? `<article class="card mt"><h2>${s1.title}</h2>${s1.paragraphs.map((p) => `<p>${p}</p>`).join("")}${s1.stitch ? `<p class="lead">${s1.stitch}</p>` : ""}</article>` : ""}
-        ${s2 ? `<article class="card mt"><h2>${s2.title}</h2>${s2.paragraphs.map((p) => `<p>${p}</p>`).join("")}${s2.price ? `<p class="lead">${s2.price}</p>` : ""}</article>` : `<button class="door" data-act="tab-next"><span>Как ты обрабатываешь и как тебя задевает</span><span class="lock">${stepDone(1) ? "ещё 4 вопроса" : "закрыто"}</span></button>`}
-        ${node ? `<article class="card mt"><h2>Где ты сам себе мешаешь</h2><p class="lead">${node.text}</p><p class="hint">Это узел. Не решение.</p></article>` : `<button class="door" data-act="tab-next"><span>Где ты сам себе мешаешь</span><span class="lock">закрыто</span></button>`}
+        <h1>${stepDone(1) ? h : "Страница уже твоя. Настоящее — после трёх вопросов."}</h1>
+        <section class="now">
+          <div class="kicker">${now.kicker}</div>
+          <h2>${now.title}</h2>
+          <p>${now.why}</p>
+          ${now.time ? `<p class="hint">${now.time}</p>` : ""}
+          <button class="btn" data-act="${now.act}">${now.cta}</button>
+        </section>
+        ${pillsHtml()}
+        <div class="mini-map">${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<i class="${i < mapOn || stepDone(4) || (stepDone(2) && i < 5) || (stepDone(3) && i < 7) ? "on" : ""}"></i>`).join("")}</div>
+        <p class="section-label">Уже на странице</p>
+        ${s1 ? `<article class="card"><h2>${s1.title}</h2>${s1.paragraphs.map((p) => `<p>${p}</p>`).join("")}${s1.stitch ? `<p class="lead">${s1.stitch}</p>` : ""}</article>` : `<button class="door" data-act="tab-next"><span>Как ты работаешь</span><span class="lock">3 вопроса</span></button>`}
+        ${s2 ? `<article class="card mt"><h2>${s2.title}</h2>${s2.paragraphs.map((p) => `<p>${p}</p>`).join("")}${s2.price ? `<p class="lead">${s2.price}</p>` : ""}</article>` : `<button class="door" data-act="tab-next"><span>Как обрабатываешь и как тебя задевает</span><span class="lock">${stepDone(1) ? "ещё 4 вопроса" : "после первой ступени"}</span></button>`}
+        ${node ? `<article class="card mt"><h2>Где ты сам себе мешаешь</h2><p class="lead">${node.text}</p><p class="hint">Это узел. Не решение.</p></article>` : `<button class="door" data-act="tab-next"><span>Где ты сам себе мешаешь</span><span class="lock">${stepDone(2) ? "ещё 4 вопроса" : "ступень 3"}</span></button>`}
         ${syn ? `<article class="card mt"><h2>${syn.title}</h2><p class="lead">${syn.plot}</p><p>${syn.cut}</p></article>` : `<button class="door" data-act="tab-next"><span>Сюжет</span><span class="lock">один открытый вопрос</span></button>`}
         ${state.paid ? `<article class="card mt"><h2>Что с этим делать</h2><p class="lead">${E.paidReport(state.name, state.answers, state.paidAnswers).lead}</p><button class="btn secondary" data-act="paid-report">Открыть разбор</button></article>` : ""}
-        <div class="mt">
-          <p class="hint">Маршрут</p>
+        <div class="mt ${stepDone(4) ? "" : "quiet"}">
+          <p class="section-label">${stepDone(4) ? "Маршрут" : "Потом, если захочешь"}</p>
           ${offerDoor(node)}
-          <button class="door" data-act="toast" data-msg="Срез близости откроется после узла. Не витрина — следующая дверь."><span>Как этот механизм в близких</span><span class="lock">потом</span></button>
+          <button class="door" data-act="toast" data-msg="Срез близости — следующая дверь после узла. Не витрина."><span>Как этот механизм в близких</span><span class="lock">потом</span></button>
           <button class="door" data-act="toast" data-msg="Полная карта — когда координат станет больше."><span>Полная карта</span><span class="lock">потом</span></button>
         </div>
-        ${next || !state.paid ? `<button class="btn mt" data-act="${!stepDone(4) ? "tab-next" : "pay"}">${cta}</button>` : `<button class="btn mt" data-act="share">Отправить страницу</button>`}
       </div>
       ${tabsHtml("page")}`;
   }
@@ -378,7 +411,11 @@
         name: C.demo.name,
         date: C.demo.date,
         skipDate: false,
-        answers: { ...C.demo.answers },
+        answers: {
+            L1: C.demo.answers.L1,
+            L2: C.demo.answers.L2,
+            L3: C.demo.answers.L3,
+          },
         paidAnswers: {},
         paid: false,
         sheet: null,

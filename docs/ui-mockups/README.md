@@ -1,8 +1,8 @@
 # UI-концепты: 10 экранов
 
-**Смотреть:** [**реальные каркасы**](./real-ia/GALLERY.md) · [GALLERY.md](./GALLERY.md) · [прогон прототипа](./prototype-run/GALLERY.md)
+**Смотреть:** [**1+2+10 страница 2026**](./exploit-1210/GALLERY.md) · [GALLERY.md](./GALLERY.md)
 
-Каркас страницы: [`docs/12-page-ia.md`](../12-page-ia.md)
+Как устроена страница: [`docs/13-page-ux-2026.md`](../13-page-ux-2026.md) · живой прототип: [`prototype/`](../../prototype/)
 
 Кликабельная воронка: [`prototype/`](../../prototype/)
 

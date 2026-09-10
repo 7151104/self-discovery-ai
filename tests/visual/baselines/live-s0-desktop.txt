@@ -322,11 +322,6 @@
       </ul>
     </section>
   </div>
-  <aside class="disclaimer-list">
-    <p class="disclaimer" data-disclaimer="DISCLAIMER_BIRTHDATE">
-      Дата рождения нужна только для карточки периода. Ни один вывод о тебе на ней не строится
-    </p>
-  </aside>
   <footer class="site-footer">
     <p class="site-footer__heading">
       Документы
@@ -346,23 +341,6 @@
       </a>
     </nav>
   </footer>
-  <aside class="disclaimer-list">
-    <p class="disclaimer" data-disclaimer="«id»">
-      Это не медицинская и не психологическая помощь. Разбор описывает, как ты устроен, по твоим же ответам, и не ставит диагнозов
-    </p>
-    <p class="disclaimer" data-disclaimer="«id»">
-      Сервис не заменяет работу с психологом, психотерапевтом или врачом. Если тебе тяжело прямо сейчас, разбор этого не закроет
-    </p>
-    <p class="disclaimer" data-disclaimer="DISCLAIMER_INFORMATIONAL">
-      Разбор — описание, а не заключение и не документ. С ним можно не согласиться: несогласие мы считаем данными и учитываем
-    </p>
-    <p class="disclaimer" data-disclaimer="«id»">
-      Ответы сохраняются, чтобы страница осталась по ссылке. Что именно хранится и как это удалить — в политике обработки данных
-    </p>
-    <p class="disclaimer" data-disclaimer="«id»">
-      Сервис рассчитан на взрослых: пользоваться им можно с 18 лет. Разборов о детях здесь нет
-    </p>
-  </aside>
 </div>
 
 --- стили ---
@@ -482,22 +460,6 @@
   border-color: #8a7662;
   border-style: solid;
   border-width: 2px;
-}
-
-.disclaimer {
-  color: #4c4136;
-  font-size: 14px;
-  line-height: 1.4;
-  max-width: 36ch;
-}
-
-.disclaimer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0 auto;
-  max-width: 560px;
-  padding: 0 12px;
 }
 
 .door__body {

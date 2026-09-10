@@ -260,6 +260,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
   const children: VNode[] = [
     renderHead(card, {
       linkHint: owner && afterFirstPortion ? labels.head.linkHint : null,
+      linkHref: owner && afterFirstPortion ? page.url : null,
       brand: labels.brand ?? null,
       laterContact:
         showLater && labels.contact

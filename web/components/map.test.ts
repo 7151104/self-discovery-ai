@@ -67,9 +67,11 @@ test("у карты видимый заголовок, не только под�
   assert.equal(node.attrs["data-empty"], "false");
 });
 
-test("когда все полосы пустые, карта помечается data-empty", () => {
+test("когда все полосы пустые, карта складывается и помечается data-empty", () => {
   const node = map(mock.emptyMapBars);
   assert.equal(node.attrs["data-empty"], "true");
+  assert.ok(renderToString(node).includes('class="map__fold"'));
+  assert.equal(html().includes('class="map__fold"'), false);
 });
 
 test("в разметке карты нет ни одной цифры и ни одного процента", () => {

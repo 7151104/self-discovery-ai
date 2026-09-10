@@ -275,6 +275,26 @@
   display: none;
 }
 
+.map__fold {
+  margin: 0;
+}
+
+.map__fold-summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-target);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+}
+
+@media (hover: hover) {
+  .map__fold-summary:hover {
+    color: var(--color-text);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bar__marker {
     animation-name: none;

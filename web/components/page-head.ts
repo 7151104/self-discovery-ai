@@ -15,6 +15,8 @@ import type { CardDto } from "../src/contract.js";
 export interface HeadExtras {
   /** Подпись постоянной ссылки. Нет — ссылку не показываем. */
   linkHint?: string | null;
+  /** Адрес постоянной ссылки. Живёт в href, не в тексте. */
+  linkHref?: string | null;
   /** Знак продукта над именем. Нет — шапка только про человека. */
   brand?: { src: string; alt: string } | null;
   laterContact?: { label: string; onSelect: () => void } | null;
@@ -34,7 +36,11 @@ export function renderHead(card: CardDto, extras: HeadExtras = {}): VNode {
     h("h1", { class: "head__name" }, card.name),
     card.theme ? h("p", { class: "head__theme" }, card.theme) : null,
     card.metaphor ? h("p", { class: "head__metaphor" }, card.metaphor) : null,
-    extras.linkHint ? h("p", { class: "head__link" }, extras.linkHint) : null,
+    extras.linkHint && extras.linkHref
+      ? h("a", { class: "head__link", href: extras.linkHref }, extras.linkHint)
+      : extras.linkHint
+        ? h("p", { class: "head__link" }, extras.linkHint)
+        : null,
     extras.laterContact
       ? h(
           "button",

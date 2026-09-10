@@ -46,9 +46,9 @@
 
 .intro__about {
   max-width: var(--measure-block);
-  font-size: var(--text-md);
-  line-height: var(--leading-normal);
-  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
 }
 
 .intro__beats {
@@ -66,7 +66,7 @@
   border: none;
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-  color: var(--color-text);
+  color: var(--color-text-soft);
 }
 
 .intro__start {
@@ -81,10 +81,10 @@
 }
 
 .intro__start-title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-strong);
-  line-height: var(--leading-tight);
-  color: var(--color-text-strong);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
 }
 
 .intro__legal {
@@ -92,6 +92,21 @@
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
   color: var(--color-text-soft);
+}
+
+.intro__optional {
+  margin: 0;
+}
+
+.intro__optional-summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-target);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
 }
 
 .intro__field {
@@ -144,7 +159,7 @@
 .intro__submit {
   min-height: var(--size-target);
   min-width: var(--size-target);
-  align-self: flex-start;
+  width: 100%;
   padding: var(--space-3) var(--space-5);
   border: var(--border-strong) solid var(--color-accent);
   border-radius: var(--radius-sm);
@@ -156,13 +171,17 @@
 }
 
 .intro__submit:disabled {
-  background: var(--color-surface-muted);
-  border-color: var(--color-line);
-  color: var(--color-text-faint);
+  background: var(--color-surface-card);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   cursor: not-allowed;
 }
 
 @media (hover: hover) {
+  .intro__optional-summary:hover {
+    color: var(--color-text-strong);
+  }
+
   .intro__input:hover:not(:disabled) {
     border-color: var(--color-line-strong);
   }

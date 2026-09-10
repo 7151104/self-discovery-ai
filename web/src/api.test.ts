@@ -7,7 +7,17 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createProfile, disagree, enableShare, loadGeneration, loadPage, loadPublic, revokeShare, saveContact } from "./api.js";
+import {
+  createProfile,
+  disagree,
+  enableShare,
+  loadGeneration,
+  loadPage,
+  loadPublic,
+  purchase,
+  revokeShare,
+  saveContact,
+} from "./api.js";
 import { visibleText } from "./dom.js";
 import { filledBars } from "./page.js";
 import { missingTexts } from "./page-copy.js";
@@ -132,6 +142,25 @@ test("клиент сохраняет контакт после первой п�
   if (!saved.ok) return;
   assert.equal(saved.page.contact?.status, "saved");
   assert.equal("email" in (saved.page.contact ?? {}), false);
+});
+
+test("покупка возвращает адрес оплаты, а не только страницу", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const page = await profileAtStep(server.origin, 4);
+  const slice = page.offer?.slice;
+  assert.ok(slice, "предложения нет");
+  const bought = await purchase(page.profileId, slice, "client-buy-1", { fetch, origin: server.origin });
+  assert.equal(bought.ok, true);
+  if (!bought.ok) return;
+  assert.match(bought.paymentUrl ?? "", /\/pay\/fake\//);
+  assert.equal(bought.page.state, "s4");
+  assert.equal(bought.page.nextPortion?.key?.startsWith("slice:") ?? false, false);
+
+  const repeat = await purchase(page.profileId, slice, "client-buy-2", { fetch, origin: server.origin });
+  assert.equal(repeat.ok, true);
+  if (!repeat.ok) return;
+  assert.equal(repeat.paymentUrl, bought.paymentUrl);
 });
 
 test("клиент читает статус генерации по идентификатору из блока", async (t) => {

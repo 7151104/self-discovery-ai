@@ -30,6 +30,7 @@ test("на карточке видны пропуск и оба поля", () =>
   const text = visibleText(node);
   assert.ok(text.includes(labels.title));
   assert.ok(text.includes(labels.skip));
+  assert.ok(findAll(node, "details").some((item) => item.attrs["class"] === "contact__fold"));
   assert.ok(findAll(node, "input").some((item) => item.attrs["name"] === "email"));
   assert.ok(findAll(node, "input").some((item) => item.attrs["name"] === "channel"));
   assert.equal(findAll(node, "button").length, 2);

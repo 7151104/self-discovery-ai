@@ -19,9 +19,9 @@
     <p class="head__metaphor">
       Как чтение книги, дочитанной до середины дважды
     </p>
-    <p class="head__link">
-      Страница живёт по ссылке /p/p-VITRINA. Сохрани её — вернёшься на то же место.
-    </p>
+    <a class="head__link" href="/p/p-VITRINA">
+      Страница живёт по этой ссылке. Сохрани её — вернёшься на то же место.
+    </a>
   </header>
   <div class="page__portrait">
     <p class="hook" data-empty="false">
@@ -307,35 +307,35 @@
     </div>
   </section>
   <form class="contact" data-screen="contact">
-    <h2 class="contact__title">
-      Страница уже твоя
-    </h2>
-    <p class="contact__lead">
-      Оставь контакт — пришлю ссылку и напишу, когда появится следующий разбор. Можно пропустить.
-    </p>
-    <label class="contact__field" for="contact-email">
-      <span class="contact__label">
-        Почта
-      </span>
-      <input autocomplete="email" class="contact__input" id="contact-email" inputmode="email" name="email" placeholder="если удобно письмом" type="email" value>
-    </label>
-    <label class="contact__field" for="contact-channel">
-      <span class="contact__label">
-        Telegram или телефон
-      </span>
-      <input autocomplete="tel" class="contact__input" id="contact-channel" name="channel" placeholder="Telegram или телефон" type="text" value>
-      <p class="contact__hint">
-        Необязательно. Так проще, чем письмом.
+    <details class="contact__fold">
+      <summary class="contact__title">
+        Страница уже твоя
+      </summary>
+      <p class="contact__lead">
+        Оставь контакт — пришлю ссылку и напишу, когда появится следующий разбор. Можно пропустить.
       </p>
-    </label>
-    <div class="contact__actions">
+      <label class="contact__field" for="contact-email">
+        <span class="contact__label">
+          Почта
+        </span>
+        <input autocomplete="email" class="contact__input" id="contact-email" inputmode="email" name="email" placeholder="если удобно письмом" type="email" value>
+      </label>
+      <label class="contact__field" for="contact-channel">
+        <span class="contact__label">
+          Telegram или телефон
+        </span>
+        <input autocomplete="tel" class="contact__input" id="contact-channel" name="channel" placeholder="Telegram или телефон" type="text" value>
+        <p class="contact__hint">
+          Необязательно. Так проще, чем письмом.
+        </p>
+      </label>
       <button class="contact__submit" type="submit">
         Оставить контакт
       </button>
-      <button class="contact__skip" type="button">
-        Пока не сейчас
-      </button>
-    </div>
+    </details>
+    <button class="contact__skip" type="button">
+      Пока не сейчас
+    </button>
   </form>
   <section aria-label="Маршрут" class="route">
     <h2 class="section-title">
@@ -682,21 +682,21 @@
   box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 0;
-}
-
-.contact__actions {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
   gap: 12px;
+  padding: 24px 0;
 }
 
 .contact__field {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.contact__fold {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0;
 }
 
 .contact__hint {
@@ -767,10 +767,14 @@
 }
 
 .contact__title {
+  align-items: center;
   color: #0d0b09;
-  font-size: 20px;
-  font-weight: 640;
+  cursor: pointer;
+  display: flex;
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1.25;
+  min-height: 44px;
 }
 
 .door__body {
@@ -894,10 +898,16 @@
 }
 
 .head__link {
-  color: #4c4136;
+  align-items: center;
+  color: #1a1612;
+  display: inline-flex;
   font-size: 14px;
   line-height: 1.4;
   max-width: 36ch;
+  min-height: 44px;
+  min-width: 44px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .head__logo {
@@ -1254,6 +1264,8 @@ h3 {
 
 html {
   -webkit-text-size-adjust: 100%;
+  background-color: #f3e9dc;
+  color-scheme: only light;
   scroll-behavior: smooth;
 }
 

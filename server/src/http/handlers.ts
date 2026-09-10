@@ -537,7 +537,7 @@ export function saveContactHandler(context: Context, params: Record<string, stri
   return { status: 200, body: stored };
 }
 
-/** Проекция заказа в контракт. Платёжный адрес держится только у живого заказа. */
+/** Проекция заказа в контракт. Адрес оплаты — у неоплаченного заказа, в том числе при повторе. */
 const projectOrder = (context: Context, order: OrderRecord, url: string | null): OrderDto => ({
   orderId: order.orderId,
   slice: order.slice,
@@ -572,12 +572,17 @@ export function purchase(context: Context, params: Record<string, string>, raw: 
   const known = rawContent.slices.find((candidate) => candidate.id === slice);
   if (!known) return fail(400, "unknown_slice");
 
+  const checkoutOf = (order: OrderRecord): string | null => {
+    if (order.status !== "created" || !order.providerRef) return null;
+    return context.payments.checkoutUrl(order.providerRef, pageUrl(context.config.publicOrigin, profile.profileId));
+  };
+
   const result = context.db.transaction((): { order: OrderRecord; created: boolean; url: string | null } => {
     const repeat = findOrderByRequest(context.db, profile.profileId, requestId);
-    if (repeat) return { order: repeat, created: false, url: null };
+    if (repeat) return { order: repeat, created: false, url: checkoutOf(repeat) };
 
     const active = findActiveOrderForSlice(context.db, profile.profileId, slice);
-    if (active) return { order: active, created: false, url: null };
+    if (active) return { order: active, created: false, url: checkoutOf(active) };
 
     const payment = context.payments.createPayment({
       orderId: newRecordId(),

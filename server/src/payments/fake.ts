@@ -50,17 +50,25 @@ export interface FakeOptions {
   publicOrigin: string;
 }
 
+/** Адрес страницы поддельного провайдера. Тот же формулой пользуются новый платёж и повтор «купить». */
+export function fakeCheckoutUrl(publicOrigin: string, reference: string, returnUrl: string): string {
+  return `${publicOrigin}/pay/fake/${reference}?return=${encodeURIComponent(returnUrl)}`;
+}
+
 export function createFakeProvider({ secret, publicOrigin }: FakeOptions): PaymentProvider {
   return {
     name: "fake",
     mode: "test",
 
+    checkoutUrl(reference: string, returnUrl: string): string {
+      return fakeCheckoutUrl(publicOrigin, reference, returnUrl);
+    },
+
     createPayment(request: PaymentRequest): PaymentHandle {
       const reference = `fake_${newRecordId()}`;
       // Настоящий провайдер отдаёт свою страницу оплаты; поддельный —
       // адрес, по которому её изображает сквозной прогон (`npm run pay`).
-      const url = `${publicOrigin}/pay/fake/${reference}?return=${encodeURIComponent(request.returnUrl)}`;
-      return { reference, url };
+      return { reference, url: fakeCheckoutUrl(publicOrigin, reference, request.returnUrl) };
     },
 
     parseWebhook(raw: string, headers: WebhookHeaders): WebhookEvent | null {

@@ -134,15 +134,23 @@ function renderBar(bar: MapBarDto, props: MapProps): VNode {
 
 export function renderMap(props: MapProps): VNode {
   const empty = props.bars.every((bar) => bar.fill === "empty");
+  const bars = h(
+    "ul",
+    { class: "map__bars" },
+    props.bars.map((bar) => renderBar(bar, props)),
+  );
+  const inventory = empty
+    ? h(
+        "details",
+        { class: "map__fold" },
+        h("summary", { class: "map__fold-summary" }, props.note ?? props.label),
+        bars,
+      )
+    : [props.note ? h("p", { class: "section-note" }, props.note) : null, bars];
   return h(
     "section",
     { class: "map", "aria-label": props.label, "data-empty": empty ? "true" : "false" },
-    h("p", { class: "section-title" }, props.label),
-    props.note ? h("p", { class: "section-note" }, props.note) : null,
-    h(
-      "ul",
-      { class: "map__bars" },
-      props.bars.map((bar) => renderBar(bar, props)),
-    ),
+    h("p", { class: empty ? "section-title visually-hidden" : "section-title" }, props.label),
+    ...(Array.isArray(inventory) ? inventory : [inventory]),
   );
 }

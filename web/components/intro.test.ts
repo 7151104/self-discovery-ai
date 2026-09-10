@@ -56,12 +56,13 @@ test("сначала идея страницы, поля — во втором �
   assert.ok(titleAt >= 0 && startAt > titleAt && nameAt > startAt, "поля не должны идти раньше идеи");
 });
 
-test("клавиатурный путь: имя, дата, отправка", () => {
+test("клавиатурный путь: имя, дата за строкой, отправка", () => {
   const path = focusable(card());
   assert.deepEqual(
-    path.map((node) => node.attrs["name"] ?? node.attrs["type"]),
-    ["name", "birth", "submit"],
+    path.map((node) => node.attrs["name"] ?? node.attrs["type"] ?? node.tag),
+    ["name", "summary", "birth", "submit"],
   );
+  assert.ok(byClass(card(), "intro__optional").length === 1);
   assert.ok(byClass(card(), "intro__submit").length === 1);
   assert.equal(renderToString(card()).includes("404"), false);
 });

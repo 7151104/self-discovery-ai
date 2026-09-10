@@ -79,6 +79,18 @@ test("тестовый режим невозможно включить в ра�
   assert.equal(loadConfig({}).payments.provider, "fake");
 });
 
+test("повторный адрес оплаты совпадает с адресом нового платежа", () => {
+  const provider = createFakeProvider({ secret: "секрет", publicOrigin: "https://example.com" });
+  const payment = provider.createPayment({
+    orderId: "o1",
+    amount: 590,
+    currency: "RUB",
+    slice: "slice_node_finish",
+    returnUrl: "https://example.com/p/abc",
+  });
+  assert.equal(provider.checkoutUrl(payment.reference, "https://example.com/p/abc"), payment.url);
+});
+
 test("поддельный провайдер проверяет подпись уведомления", () => {
   const provider = createFakeProvider({ secret: "секрет", publicOrigin: "https://example.com" });
   const { raw, signature } = fakeWebhook("секрет", {
@@ -276,9 +288,9 @@ test("две одновременные покупки одного среза �
 
   assert.equal(first?.body.order.orderId, second?.body.order.orderId);
   assert.equal(listOrders(server.db, page.profileId).length, 1);
+  assert.equal(first.body.order.payment?.url, second.body.order.payment?.url, "проигравший гонку потерял адрес оплаты");
 
-  // Проигравший гонку отдаёт тот же заказ, но без адреса оплаты. Уведомление
-  // без payment_id провайдер не разбирает — берём ответ, который заказ создал.
+  // Уведомление берём у ответа, который заказ создал: там же reference.
   const created = [first, second].find((reply) => reply.status === 201);
   assert.ok(created, "ровно один из двух запросов должен создать заказ");
   const orderId = created.body.order.orderId;

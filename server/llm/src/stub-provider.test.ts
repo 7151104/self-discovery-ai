@@ -134,6 +134,11 @@ test("выход заглушки разбирается, проходит ва�
   assert.ok(verdict.ok, verdict.violations.map((item) => item.detail).join("; "));
   const registers = checkRegisters(parsed.output, { profile: task.input.profile, openAnswer: task.input.openAnswer });
   assert.equal(registers.length, 0, registers.map((item) => `${item.kind}: ${item.phrase}`).join("; "));
+  assert.equal(
+    /в проходе \d|на круге \d/.test(parsed.output.text),
+    false,
+    "заглушка нумерует внутренние проходы",
+  );
 });
 
 test("промпт среза с заглушкой даёт текст без сюжета", async () => {

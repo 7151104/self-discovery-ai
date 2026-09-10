@@ -231,6 +231,15 @@ test("покупка создаёт заказ по цене из контент
     requestId: "buy-1",
   });
   assert.equal(repeat.body.order.orderId, first.body.order.orderId);
+  assert.equal(repeat.body.order.payment?.url, first.body.order.payment?.url, "повтор ключа потерял адрес оплаты");
+
+  const again = await call<OrderResponse>(server.origin, "POST", `/api/p/${page.profileId}/orders`, {
+    slice,
+    requestId: "buy-again",
+  });
+  assert.equal(again.status, 200);
+  assert.equal(again.body.order.orderId, first.body.order.orderId);
+  assert.equal(again.body.order.payment?.url, first.body.order.payment?.url, "второе нажатие не вернуло адрес оплаты");
 
   const unknown = await call<ErrorDto>(server.origin, "POST", `/api/p/${page.profileId}/orders`, {
     slice: "slice_unknown",

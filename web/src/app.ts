@@ -88,6 +88,11 @@ import { shareDataFromPage, shareImage } from "../share/image.js";
 
 export interface AppHost extends Transport {
   location: { pathname: string };
+  /**
+   * Смена адреса вкладки. Уход на оплату провайдера: страница продукта
+   * после этого не рисуется, пока человек не вернётся.
+   */
+  assign?: (url: string) => void;
   history?: { pushState: (data: unknown, title: string, url: string) => void };
   motion?: MotionHost | null;
   /** Часы опроса. Не движение: при снижении движения опрос не схлопывается. */
@@ -685,6 +690,10 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
         set(markPaymentFailed(session));
         return;
       }
+      if (result.paymentUrl) {
+        leavePage(host, result.paymentUrl);
+        return;
+      }
       if (result.page.nextPortion?.key.startsWith("slice:") === true) {
         revealPage(result.page, "advance");
         return;
@@ -730,6 +739,17 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
   return app;
 }
 
+/** Уход со страницы продукта. В браузере — `location.assign` с явным получателем. */
+function leavePage(host: AppHost, url: string): void {
+  if (typeof host.assign === "function") {
+    host.assign(url);
+    return;
+  }
+  if (typeof location !== "undefined" && typeof location.assign === "function") {
+    location.assign(url);
+  }
+}
+
 /**
  * Окружение живого клиента. Собирается отдельной функцией, потому что одну
  * строку в нём проверить нельзя иначе: `fetch` вызывается как поле объекта, и
@@ -742,6 +762,7 @@ export function browserHost(): AppHost {
     location,
     history,
     fetch: (input, init) => globalThis.fetch(input, init),
+    assign: (url) => location.assign(url),
     motion: windowHost(),
     timer: windowTimer(),
     scrollRoot: document,

@@ -19,10 +19,15 @@ export const reducedMotion = () => ({
 export const hostOf = (origin: string, pathname = "/") => {
   const location = { pathname };
   const focus = { selector: null as string | null };
+  const assigned: string[] = [];
   return {
     location,
     origin,
     fetch,
+    assign: (url: string) => {
+      assigned.push(url);
+    },
+    assigned,
     history: {
       pushState: (_data: unknown, _title: string, url: string) => {
         location.pathname = new URL(String(url), origin).pathname;

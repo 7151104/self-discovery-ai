@@ -42,6 +42,11 @@ export type PageResult =
   | { ok: false; missing: true }
   | { ok: false; missing: false; code: ErrorCode };
 
+export type PurchaseResult =
+  | { ok: true; page: PageStateDto; paymentUrl: string | null }
+  | { ok: false; missing: true }
+  | { ok: false; missing: false; code: ErrorCode };
+
 export type PublicResult =
   | { ok: true; page: PublicPageDto }
   | { ok: false; missing: true }
@@ -113,6 +118,15 @@ const toResult = (status: number, body: unknown): PageResult => {
 };
 
 const nestedPage = (body: unknown): unknown => (isRecord(body) && "page" in body ? body["page"] : body);
+
+const paymentUrlFrom = (body: unknown): string | null => {
+  if (!isRecord(body)) return null;
+  const order = isRecord(body["order"]) ? body["order"] : null;
+  if (!order) return null;
+  const payment = isRecord(order["payment"]) ? order["payment"] : null;
+  if (!payment || typeof payment["url"] !== "string" || payment["url"].length === 0) return null;
+  return payment["url"];
+};
 
 const isGeneration = (value: unknown): value is GenerationDto =>
   isRecord(value) &&
@@ -263,12 +277,19 @@ export async function saveContact(
   }
 }
 
-/** Создать заказ на срез. Точка оплаты целиком — E7-09; здесь нужен исход попытки. */
-export async function purchase(profileId: string, slice: string, requestId: string, transport: Transport): Promise<PageResult> {
+/** Создать заказ на срез. Адрес оплаты нельзя выбрасывать: без него кнопка никуда не ведёт. */
+export async function purchase(
+  profileId: string,
+  slice: string,
+  requestId: string,
+  transport: Transport,
+): Promise<PurchaseResult> {
   try {
     const path = fillPath(API_PURCHASE, { profileId });
     const reply = await send(transport, "POST", path, { slice, requestId });
-    return toResult(reply.status, nestedPage(reply.body));
+    const result = toResult(reply.status, nestedPage(reply.body));
+    if (!result.ok) return result;
+    return { ok: true, page: result.page, paymentUrl: paymentUrlFrom(reply.body) };
   } catch {
     return { ok: false, missing: false, code: "internal_error" };
   }

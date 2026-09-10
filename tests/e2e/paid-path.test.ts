@@ -215,6 +215,7 @@ test("платный путь: оплата, доборы, отчёт, нова�
     const order = capture.order;
     assert.ok(order, "заказ после нажатия «купить» не создался");
     assert.equal(order.slice, slice, "создан заказ на другой срез");
+    assert.match(host.assigned.at(-1) ?? "", /\/pay\/fake\//, "клиент не ушёл на страницу оплаты");
     const reference = referenceOf(order);
     assert.ok(reference, "у заказа нет идентификатора платежа");
 

@@ -79,10 +79,14 @@ const reducedMotion = (): MotionHost => ({
 const hostOf = (origin: string, pathname: string) => {
   const location = { pathname };
   const timer = createManualTimer();
-  const host: AppHost & { timer: ReturnType<typeof createManualTimer> } = {
+  const assigned: string[] = [];
+  const host: AppHost & { timer: ReturnType<typeof createManualTimer>; assigned: string[] } = {
     location,
     origin,
     fetch,
+    assign: (url) => {
+      assigned.push(url);
+    },
     history: {
       pushState: (_data, _title, url) => {
         location.pathname = new URL(String(url), origin).pathname;
@@ -90,6 +94,7 @@ const hostOf = (origin: string, pathname: string) => {
     },
     motion: reducedMotion(),
     timer,
+    assigned,
   };
   return host;
 };
@@ -176,4 +181,28 @@ test("отказ оставляет страницу полной и не пок
   assert.equal(app.tree().attrs["data-edge"], "pay-declined");
   assert.ok(visibleText(app.tree()).includes(copy("UI_EDGE_PAY_DECLINED")));
   assert.equal(byClass(app.tree(), "door__price").length, 0, "после отказа цена осталась на двери");
+});
+
+test("кнопка покупки уводит на адрес оплаты провайдера и не открывает добор сама", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+  const started = await profileAtDemoStep(server.origin, 4);
+  await drainServer(server);
+  const { app, host } = await openReadyPay(server.origin, started.profileId);
+  t.after(() => app.stop());
+
+  const before = app.session().page;
+  assert.ok(before?.offer);
+  await app.buy();
+
+  assert.equal(host.assigned.length, 1, "клиент не ушёл на оплату");
+  assert.match(host.assigned[0] ?? "", /\/pay\/fake\//);
+  assert.equal(app.session().page?.state, "s4", "страница сама перешла в оплаченное");
+  assert.equal(app.session().page?.nextPortion?.key.startsWith("slice:"), false, "добор открылся до оплаты");
+  assert.equal(byClass(app.tree(), "offer").length, 1, "предложение исчезло без оплаты");
+  assert.equal(app.session().paymentFailed, false);
+
+  await app.buy();
+  assert.equal(host.assigned.length, 2, "повторное нажатие не вернуло адрес оплаты");
+  assert.equal(host.assigned[1], host.assigned[0]);
 });

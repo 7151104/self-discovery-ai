@@ -85,7 +85,7 @@ export interface LlmRuntime {
 /**
  * Рабочий контур слоя: настройки из окружения и провайдер из реестра слоя.
  * По умолчанию это заглушка: она собирает валидный выход из самого задания.
- * Настоящий адаптер — `openrouter`, и ему нужен ключ из настроек. Тесты
+ * Настоящий адаптер — `openai` (GPT-5) или `openrouter`, и ему нужен ключ из настроек. Тесты
  * подменяют провайдера и выключают автозапуск.
  */
 export function createLlmRuntime(
@@ -105,6 +105,7 @@ export function createLlmRuntime(
       pricing: config.pricing,
       model: config.model,
       apiKey: config.apiKey,
+      ...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
     });
   return {
     provider,

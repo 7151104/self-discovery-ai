@@ -37,10 +37,15 @@ export {
 } from "./registry.js";
 
 export {
+  DEFAULT_OPENAI_MODEL,
   DEFAULT_OPENROUTER_MODEL,
   MissingLlmApiKey,
+  OPENAI_DEFAULT_PRICING,
+  OPENAI_ENDPOINT,
   OPENROUTER_DEFAULT_PRICING,
+  OPENROUTER_ENDPOINT,
   OpenRouterProvider,
+  createOpenAiProvider,
   createOpenRouterProvider,
   type OpenRouterProviderOptions,
 } from "./openrouter-provider.js";

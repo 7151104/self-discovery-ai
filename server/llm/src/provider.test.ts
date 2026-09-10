@@ -276,6 +276,7 @@ test("настройки читаются из окружения, ключа в
   const bare = loadLlmConfig({});
   assert.equal(bare.provider, "stub");
   assert.equal(bare.apiKey, "", "ключа по умолчанию не существует");
+  assert.equal(bare.baseUrl, "");
   assert.deepEqual(bare.retry, DEFAULTS.retry);
   assert.equal(bare.cost.profileLimitKopecks, DEFAULTS.cost.profileLimitKopecks);
   assert.ok(bare.cost.profileLimitKopecks > 0, "безопасное значение предела обязано быть положительным");
@@ -293,6 +294,11 @@ test("настройки читаются из окружения, ключа в
   assert.equal(tuned.pricing.inputKopecksPerMillion, 3000);
 
   assert.equal(loadLlmConfig({ SDAI_LLM_PROVIDER: "openrouter" }).provider, "openrouter");
+  assert.equal(loadLlmConfig({ SDAI_LLM_PROVIDER: "openai" }).provider, "openai");
+  assert.equal(
+    loadLlmConfig({ SDAI_LLM_BASE_URL: " https://gateway.example/v1/chat/completions " }).baseUrl,
+    "https://gateway.example/v1/chat/completions",
+  );
   assert.throws(() => loadLlmConfig({ SDAI_LLM_PROVIDER: "неизвестный" }), LlmConfigError);
   assert.throws(() => loadLlmConfig({ SDAI_LLM_ATTEMPTS: "0" }), LlmConfigError);
   assert.throws(() => loadLlmConfig({ SDAI_LLM_TIMEOUT_MS: "-1" }), LlmConfigError);

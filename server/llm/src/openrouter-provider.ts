@@ -1,15 +1,16 @@
 /**
- * Настоящий адаптер провайдера: OpenRouter + Claude Sonnet 5 (вопрос 5).
+ * OpenAI-совместимый адаптер (вопрос 5, уточнение по доступности из РФ).
  *
- * Задача продукта — короткий литературный JSON на «ты», а не кодинг. Флагманы
- * вроде Fable 5.1 здесь не выигрывают качеством и съедают предел 30 ₽ на
- * повторах. Sonnet 5 на OpenRouter — $2 / $10 за миллион токенов; при курсе
- * 100 ₽/$ это 20 000 / 100 000 копеек за миллион. Мышление модели по умолчанию
- * на Sonnet 5 включено и дорогое: для машинного конверта его выключаем.
+ * Anthropic Console из России требует заграничный паспорт и фото — основатель
+ * это уже проверил. OpenRouter с российским биллингом с июня 2026 закрывает
+ * тройку OpenAI / Anthropic / Google. Поэтому рабочий контур — не аккаунт
+ * Claude, а любой шлюз с тем же HTTP, что у Chat Completions: прямой OpenAI
+ * или уполномоченный посредник. Модель по умолчанию у `openai` — `gpt-5`:
+ * литературный JSON на «ты», $1.25 / $10 за миллион, мышление выключено.
  *
- * Шлюз один, модель меняется переменной. Пин `Anthropic` без подмены: у того же
- * слага на Bedrock мышление выключить нельзя. Тесты подставляют `fetch` и в
- * сеть не ходят. Ключ в репозитории не лежит: пустой — отказ на старте.
+ * `openrouter` остаётся в реестре для тех, у кого шлюз доступен. Человеку на
+ * сайте VPN не нужен: браузер говорит только с нашим сервером. Тесты
+ * подставляют `fetch` и в сеть не ходят. Ключ в репозитории не лежит.
  */
 
 import {
@@ -22,19 +23,26 @@ import {
   type TokenUsage,
 } from "./provider.js";
 
+export const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+export const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+
 /** Слаг на OpenRouter. Версию `:latest` не берём: смена модели должна быть явной. */
 export const DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-5";
 
-/**
- * Прайс Sonnet 5, если переменные цены не заданы. Курс заложен 100 ₽ за доллар:
- * пересчитать безопаснее, чем недосчитать и пробить предел профиля.
- */
+/** Имя у прямого OpenAI и у совместимых шлюзов. */
+export const DEFAULT_OPENAI_MODEL = "gpt-5";
+
+/** Прайс Sonnet 5: $2 / $10 при 100 ₽/$. */
 export const OPENROUTER_DEFAULT_PRICING: TokenPricing = {
   inputKopecksPerMillion: 20_000,
   outputKopecksPerMillion: 100_000,
 };
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+/** Прайс GPT-5: $1.25 / $10 при 100 ₽/$. */
+export const OPENAI_DEFAULT_PRICING: TokenPricing = {
+  inputKopecksPerMillion: 12_500,
+  outputKopecksPerMillion: 100_000,
+};
 
 export class MissingLlmApiKey extends Error {
   constructor() {
@@ -45,6 +53,8 @@ export class MissingLlmApiKey extends Error {
 
 export interface OpenRouterProviderOptions {
   apiKey: string;
+  /** `openrouter` или `openai`: пишется в журнал вызовов. */
+  id?: "openrouter" | "openai";
   model?: string;
   pricing?: TokenPricing;
   fetch?: typeof fetch;
@@ -85,25 +95,40 @@ function tokensOf(value: number | undefined, fallbackText: string): number {
   return Math.max(1, Math.ceil(fallbackText.length / 4));
 }
 
-function pricingOf(pricing: TokenPricing | undefined): TokenPricing {
-  if (!pricing) return OPENROUTER_DEFAULT_PRICING;
-  if (pricing.inputKopecksPerMillion === 0 && pricing.outputKopecksPerMillion === 0) {
-    return OPENROUTER_DEFAULT_PRICING;
-  }
+function pricingOf(pricing: TokenPricing | undefined, fallback: TokenPricing): TokenPricing {
+  if (!pricing) return fallback;
+  if (pricing.inputKopecksPerMillion === 0 && pricing.outputKopecksPerMillion === 0) return fallback;
   return pricing;
 }
 
+function isOpenRouterEndpoint(endpoint: string): boolean {
+  return endpoint.includes("openrouter.ai");
+}
+
+function isAnthropicModel(model: string): boolean {
+  return model.startsWith("anthropic/") || model.startsWith("claude");
+}
+
 /**
- * Пин только у моделей Anthropic: чужой слаг с пином Anthropic не вызовется.
- * Подмены дешёвым клоном нет; запасной Bedrock не берём — там мышление не гасится.
+ * Мышление у Sonnet 5 и у GPT-5 по умолчанию включено и дорогое.
+ * Для машинного конверта его гасим: иначе JSON и предел 30 ₽ разъедутся.
  */
-function providerPin(model: string): Record<string, unknown> | undefined {
-  if (!model.startsWith("anthropic/")) return undefined;
+function reasoningOf(model: string): Record<string, unknown> {
+  if (isAnthropicModel(model)) return { enabled: false, exclude: true };
+  return { effort: "none", exclude: true };
+}
+
+/**
+ * Пин Anthropic только на OpenRouter и только у слага Anthropic: на Bedrock
+ * мышление не гасится, а чужой слаг с этим пином просто не вызовется.
+ */
+function providerPin(model: string, endpoint: string): Record<string, unknown> | undefined {
+  if (!isOpenRouterEndpoint(endpoint) || !isAnthropicModel(model)) return undefined;
   return { order: ["Anthropic"], allow_fallbacks: false, require_parameters: true };
 }
 
 export class OpenRouterProvider implements GenerationProvider {
-  readonly id = "openrouter";
+  readonly id: "openrouter" | "openai";
   readonly model: string;
   readonly pricing: TokenPricing;
 
@@ -115,10 +140,14 @@ export class OpenRouterProvider implements GenerationProvider {
     const apiKey = options.apiKey.trim();
     if (!apiKey) throw new MissingLlmApiKey();
     this.#apiKey = apiKey;
-    this.model = options.model?.trim() || DEFAULT_OPENROUTER_MODEL;
-    this.pricing = pricingOf(options.pricing);
+    this.id = options.id ?? "openrouter";
+    const fallbackModel = this.id === "openai" ? DEFAULT_OPENAI_MODEL : DEFAULT_OPENROUTER_MODEL;
+    const fallbackPricing = this.id === "openai" ? OPENAI_DEFAULT_PRICING : OPENROUTER_DEFAULT_PRICING;
+    const fallbackEndpoint = this.id === "openai" ? OPENAI_ENDPOINT : OPENROUTER_ENDPOINT;
+    this.model = options.model?.trim() || fallbackModel;
+    this.pricing = pricingOf(options.pricing, fallbackPricing);
     this.#fetch = options.fetch ?? fetch;
-    this.#endpoint = options.endpoint ?? ENDPOINT;
+    this.#endpoint = options.endpoint?.trim() || fallbackEndpoint;
   }
 
   async generate(request: GenerationRequest, signal: AbortSignal): Promise<GenerationResult> {
@@ -132,22 +161,26 @@ export class OpenRouterProvider implements GenerationProvider {
       ],
       temperature: request.temperature,
       max_tokens: request.maxOutputTokens,
-      reasoning: { enabled: false, exclude: true },
+      reasoning: reasoningOf(this.model),
     };
     if (request.expects === "json") body.response_format = { type: "json_object" };
-    const pin = providerPin(this.model);
+    const pin = providerPin(this.model, this.#endpoint);
     if (pin) body.provider = pin;
+
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.#apiKey}`,
+      "Content-Type": "application/json",
+    };
+    if (isOpenRouterEndpoint(this.#endpoint)) {
+      headers["HTTP-Referer"] = "https://wordpop.ru";
+      headers["X-Title"] = "Smart Basket";
+    }
 
     let response: Response;
     try {
       response = await this.#fetch(this.#endpoint, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.#apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://wordpop.ru",
-          "X-Title": "Smart Basket",
-        },
+        headers,
         body: JSON.stringify(body),
         signal,
       });
@@ -183,7 +216,10 @@ export class OpenRouterProvider implements GenerationProvider {
   }
 }
 
-/** Сборка из реестра: пустой ключ — отказ на старте, а не при первом вызове. */
 export function createOpenRouterProvider(options: OpenRouterProviderOptions): OpenRouterProvider {
-  return new OpenRouterProvider(options);
+  return new OpenRouterProvider({ ...options, id: options.id ?? "openrouter" });
+}
+
+export function createOpenAiProvider(options: OpenRouterProviderOptions): OpenRouterProvider {
+  return new OpenRouterProvider({ ...options, id: "openai" });
 }

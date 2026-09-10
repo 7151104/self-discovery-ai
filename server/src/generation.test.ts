@@ -12,6 +12,7 @@ import test from "node:test";
 import {
   answering,
   DEMO_ANSWERS,
+  DEFAULT_OPENAI_MODEL,
   DEFAULT_OPENROUTER_MODEL,
   envelope,
   FakeProvider,
@@ -70,6 +71,13 @@ test("рантайм передаёт ключ в реестр и по умол�
   });
   assert.equal(live.provider.id, "openrouter");
   assert.equal(live.provider.model, DEFAULT_OPENROUTER_MODEL);
+
+  const gpt = createLlmRuntime({
+    env: { SDAI_LLM_PROVIDER: "openai", SDAI_LLM_API_KEY: "test-key" },
+    autostart: false,
+  });
+  assert.equal(gpt.provider.id, "openai");
+  assert.equal(gpt.provider.model, DEFAULT_OPENAI_MODEL);
 });
 
 function demoAnswersForStep(step: 1 | 2 | 3 | 4): AnswerInput[] {

@@ -8,8 +8,11 @@ import test from "node:test";
 import { GenerationError, type GenerationRequest } from "./provider.js";
 import { createGenerationProvider, knownLlmProviders, UnknownLlmProvider } from "./registry.js";
 import {
+  DEFAULT_OPENAI_MODEL,
   DEFAULT_OPENROUTER_MODEL,
   MissingLlmApiKey,
+  OPENAI_DEFAULT_PRICING,
+  OPENAI_ENDPOINT,
   OPENROUTER_DEFAULT_PRICING,
   OpenRouterProvider,
 } from "./openrouter-provider.js";
@@ -51,8 +54,8 @@ function capturingFetch(handler: (captured: Captured) => Promise<Response> | Res
   };
 }
 
-test("реестр знает заглушку и OpenRouter и отказывается от чужого имени", () => {
-  assert.deepEqual(knownLlmProviders(), ["stub", "openrouter"]);
+test("реестр знает заглушку, OpenAI и OpenRouter и отказывается от чужого имени", () => {
+  assert.deepEqual(knownLlmProviders(), ["stub", "openai", "openrouter"]);
   assert.throws(
     () =>
       createGenerationProvider({
@@ -70,6 +73,15 @@ test("без ключа адаптер не собирается", () => {
       createGenerationProvider({
         provider: "openrouter",
         pricing: OPENROUTER_DEFAULT_PRICING,
+        model: "",
+      }),
+    MissingLlmApiKey,
+  );
+  assert.throws(
+    () =>
+      createGenerationProvider({
+        provider: "openai",
+        pricing: { inputKopecksPerMillion: 0, outputKopecksPerMillion: 0 },
         model: "",
       }),
     MissingLlmApiKey,
@@ -97,6 +109,43 @@ test("заданная цена и модель не подменяются", ()
   });
   assert.equal(provider.model, "anthropic/claude-sonnet-4.6");
   assert.equal(provider.pricing.inputKopecksPerMillion, 3_000);
+});
+
+test("openai берёт GPT-5, прямой адрес OpenAI и прайс без пина Anthropic", async () => {
+  const fake = capturingFetch(() => jsonResponse(200, OK_BODY));
+  const provider = createGenerationProvider({
+    provider: "openai",
+    apiKey: "test-key",
+    model: "",
+    pricing: { inputKopecksPerMillion: 0, outputKopecksPerMillion: 0 },
+    fetch: fake.fetch,
+  });
+  assert.equal(provider.id, "openai");
+  assert.equal(provider.model, DEFAULT_OPENAI_MODEL);
+  assert.deepEqual(provider.pricing, OPENAI_DEFAULT_PRICING);
+  await provider.generate(REQUEST, new AbortController().signal);
+  const { url, init } = fake.calls[0]!;
+  assert.equal(url, OPENAI_ENDPOINT);
+  assert.equal((init.headers as Record<string, string>)["HTTP-Referer"], undefined);
+  const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+  assert.equal(body.model, DEFAULT_OPENAI_MODEL);
+  assert.deepEqual(body.reasoning, { effort: "none", exclude: true });
+  assert.equal("provider" in body, false);
+});
+
+test("чужой совместимый адрес подставляется, заголовки OpenRouter не едут", async () => {
+  const fake = capturingFetch(() => jsonResponse(200, OK_BODY));
+  const provider = createGenerationProvider({
+    provider: "openai",
+    apiKey: "test-key",
+    model: "gpt-5",
+    pricing: OPENAI_DEFAULT_PRICING,
+    baseUrl: "https://gateway.example/v1/chat/completions",
+    fetch: fake.fetch,
+  });
+  await provider.generate(REQUEST, new AbortController().signal);
+  assert.equal(fake.calls[0]!.url, "https://gateway.example/v1/chat/completions");
+  assert.equal((fake.calls[0]!.init.headers as Record<string, string>)["X-Title"], undefined);
 });
 
 test("успешный вызов: роли, JSON-формат, мышление выключено, пин Anthropic", async () => {

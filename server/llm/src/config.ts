@@ -3,8 +3,9 @@
  *
  * Ключ провайдера в репозитории не лежит и лежать не может: он читается из
  * окружения и в журнал не попадает. По умолчанию `SDAI_LLM_PROVIDER` — `stub`,
- * чтобы тесты и CI не ходили в сеть. Живая литература — `openrouter`
- * (вопрос 5 закрыт: Claude Sonnet 5).
+ * чтобы тесты и CI не ходили в сеть. Живая литература из РФ — `openai`
+ * (вопрос 5: GPT-5 через OpenAI-совместимый шлюз). `openrouter` остаётся
+ * для тех, у кого этот шлюз доступен.
  *
  * Предел себестоимости профиля — 30 ₽, настраивается переменной. Число выбрано
  * как около пяти процентов самого дешёвого среза: профиль дороже этого
@@ -26,6 +27,11 @@ export interface LlmConfig {
    * причина не стартовать, и проверяет это адаптер, а не эти настройки.
    */
   apiKey: string;
+  /**
+   * Адрес chat/completions. Пусто — адрес из реализации (`api.openai.com` у
+   * `openai`, OpenRouter у `openrouter`). Нужен, если ключ выдан посредником.
+   */
+  baseUrl: string;
   pricing: TokenPricing;
   retry: RetryPolicy;
   cost: CostPolicy;
@@ -86,6 +92,7 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
     provider: readProvider(env),
     model: env["SDAI_LLM_MODEL"] || DEFAULTS.model,
     apiKey: env["SDAI_LLM_API_KEY"] || "",
+    baseUrl: (env["SDAI_LLM_BASE_URL"] || "").trim(),
     pricing: {
       inputKopecksPerMillion: readInteger(
         env,

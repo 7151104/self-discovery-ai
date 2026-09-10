@@ -8,6 +8,19 @@
     { id: "mapsheet", name: "Карта + шит", hint: "Полосы сверху всегда. Текст выезжает снизу.", theme: "marsala" },
     { id: "accordion", name: "Аккордеон", hint: "Плотная полка. Открыта одна. Остальное — строки.", theme: "slate" },
     { id: "reel", name: "Лента", hint: "Каждый блок — на весь экран. Свайп вверх.", theme: "graphite" },
+    { id: "slides", name: "Слайды", hint: "Свайп в сторону. Атмосферный путь. Потом — в кабинет.", theme: "graphite" },
+    { id: "cabinet", name: "Кабинет", hint: "Дом. Полки. Сюда возвращаешься.", theme: "slate" },
+  ];
+
+  const SKINS = [
+    { id: "rain", name: "Дождь" },
+    { id: "ink", name: "Тушь" },
+    { id: "sea", name: "Море" },
+    { id: "cinema", name: "Кино" },
+    { id: "stone", name: "Камень" },
+    { id: "frost", name: "Иней" },
+    { id: "forest", name: "Лес" },
+    { id: "violet", name: "Сумерки" },
   ];
 
   function data(x) {
@@ -330,6 +343,106 @@
       </div>`;
   }
 
+  function pageSlides(x) {
+    const d = data(x);
+    const skin = x.state.skin || "rain";
+    const frames = [
+      {
+        k: "фраза",
+        html: `<p class="sl-k">${esc(x.state.name)} · страница</p>
+          <h1>${esc(d.h)}</h1>
+          <p class="sl-sub">Свайпни влево. Это кусок пути, не кабинет.</p>`,
+      },
+      {
+        k: "сейчас",
+        html: `<p class="sl-k">${esc(d.now.kicker)}</p>
+          <h1>${esc(d.now.title)}</h1>
+          <p>${esc(d.now.why)}</p>
+          <p class="hint">${esc(d.now.time || "")}</p>
+          ${nowBtn(d.now)}`,
+      },
+      {
+        k: "полка",
+        html: d.s1
+          ? `<p class="sl-k">уже в кабинете</p><h1>Как ты работаешь</h1><p>${esc(d.s1.paragraphs[0] || "")}</p>`
+          : `<p class="sl-k">ещё пусто</p><h1>Как ты работаешь</h1><p>Три вопроса — и этот слайд станет настоящим.</p>${nowBtn(d.now)}`,
+      },
+      {
+        k: "закрыто",
+        html: `<p class="sl-k">следующая полка</p>
+          <h1>Как тебя задевает</h1>
+          <p>${x.stepDone(1) ? "Ещё 4 вопроса — и слайд допишется." : "Сначала первая полка."}</p>
+          <p class="hint">590 ₽ на слайдах не живёт.</p>`,
+      },
+      {
+        k: "карта",
+        html: `<p class="sl-k">без процентов</p>
+          <h1>Как ты устроена</h1>
+          <div class="st-stripes">${[0,1,2,3,4,5,6,7].map((i) => `<i class="${i < d.lit ? "on" : ""}"></i>`).join("")}</div>`,
+      },
+      {
+        k: "кабинет",
+        html: `<p class="sl-k">дом</p>
+          <h1>Открыть кабинет</h1>
+          <p>Слайды — путь. Кабинет — куда возвращаешься.</p>
+          <button class="btn" data-act="open-cabinet">В кабинет</button>`,
+      },
+    ];
+    const i = Math.max(0, Math.min(x.state.slide || 0, frames.length - 1));
+    const skins = SKINS.map((s) => `<button class="sl-skin ${skin === s.id ? "on" : ""}" data-act="set-skin" data-skin="${s.id}">${s.name}</button>`).join("");
+    return `
+      <div class="screen no-tabs sl-wrap sl-${skin}">
+        <div class="st-bars">${frames.map((_, n) => `<i class="${n <= i ? "on" : ""}"></i>`).join("")}</div>
+        <div class="sl-stage">
+          ${frames[i].html}
+        </div>
+        <button class="st-hit left" data-act="slide-prev" aria-label="назад"></button>
+        <button class="st-hit right" data-act="slide-next" aria-label="дальше"></button>
+        <div class="sl-skins">${skins}</div>
+        <p class="st-count">${i + 1} / ${frames.length} · ${frames[i].k} · свайп</p>
+      </div>`;
+  }
+
+  function pageCabinet(x) {
+    const d = data(x);
+    const rows = [
+      { open: !!d.s1, title: "Как ты работаешь", sub: d.s1 ? "открыто" : "3 вопроса", body: d.s1 ? `<p>${esc(d.s1.paragraphs[0] || "")}</p>` : "" },
+      { open: !!d.s2, title: "Как задевает", sub: d.s2 ? "открыто" : "ещё 4", body: "" },
+      { open: !!d.node, title: "Узел", sub: d.node ? "узел" : "ступень 3", body: "" },
+      { open: !!d.syn, title: "Сюжет", sub: d.syn ? "открыто" : "один вопрос", body: "" },
+    ];
+    return `
+      <div class="screen no-tabs cab">
+        <header class="cab-top">
+          <span>${x.C.brand}</span>
+          <button class="ghost" data-act="share">отправить</button>
+        </header>
+        <p class="cab-url" data-act="copy-url">${esc(x.pageUrl())}</p>
+        <p class="cab-name">${esc(x.state.name)}</p>
+        <h1 class="cab-hook">${esc(d.h)}</h1>
+        <p class="cab-note">Это кабинет. Сюда возвращаешься. Слайды — только куски пути.</p>
+        <section class="cab-now">
+          <div class="kicker">${esc(d.now.kicker)}</div>
+          <h2>${esc(d.now.title)}</h2>
+          <p>${esc(d.now.why)}</p>
+          ${nowBtn(d.now)}
+        </section>
+        <div class="cab-shelves">
+          ${rows.map((r) => `
+            <button class="cab-shelf ${r.open ? "open" : ""}" data-act="start-portion">
+              <span>${r.title}</span>
+              <small>${r.sub}</small>
+              ${r.body}
+            </button>`).join("")}
+        </div>
+        <nav class="type-foot">
+          <button data-act="set-type" data-type-set="slides">слайды пути</button>
+          <button data-act="tab-map">карта</button>
+          <button data-act="tab-more">сменить тип</button>
+        </nav>
+      </div>`;
+  }
+
   const pages = {
     artifact: pageArtifact,
     stories: pageStories,
@@ -339,6 +452,8 @@
     mapsheet: pageMapsheet,
     accordion: pageAccordion,
     reel: pageReel,
+    slides: pageSlides,
+    cabinet: pageCabinet,
   };
 
   function picker(current) {
@@ -351,5 +466,5 @@
     </div>`;
   }
 
-  global.KO_TYPES = { list: TYPES, pages, picker };
+  global.KO_TYPES = { list: TYPES, pages, picker, skins: SKINS };
 })(window);

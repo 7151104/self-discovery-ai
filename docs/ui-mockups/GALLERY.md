@@ -2,7 +2,11 @@
 
 Картинки в чате агента могут не открыться. Смотри их здесь, на GitHub.
 
-## Сейчас: восемь ТИПОВ страницы
+## Сейчас: 20 концептов — слайды пути + кабинет
+
+**[Щупаем жест, палитру, форму](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/explore-20/GALLERY.md)**
+
+## Восемь ТИПОВ страницы
 
 **[Артефакт / сторис / вкладки / колода / письмо / карта / аккордеон / лента](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/type-systems/GALLERY.md)**  
 Это разные системы хода, не шесть перекрасок.

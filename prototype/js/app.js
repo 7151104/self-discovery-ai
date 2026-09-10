@@ -53,6 +53,7 @@
     slide: 0,
     card: 0,
     acc: "now",
+    skin: "rain",
   };
 
   function save() {
@@ -534,6 +535,35 @@
     else html = welcome();
 
     root.innerHTML = `<div class="phone" data-theme="${theme()}" data-type="${typeId()}">${html}${state.sheet === "share" ? shareSheet() : ""}</div>`;
+    bindSwipe();
+  }
+
+  function bindSwipe() {
+    const stage = root.querySelector(".sl-wrap, .t-stories");
+    if (!stage) return;
+    let x0 = null;
+    const start = (ev) => {
+      x0 = (ev.touches ? ev.touches[0].clientX : ev.clientX);
+    };
+    const end = (ev) => {
+      if (x0 == null) return;
+      const x1 = ev.changedTouches ? ev.changedTouches[0].clientX : ev.clientX;
+      const dx = x1 - x0;
+      x0 = null;
+      if (dx < -48) {
+        state.slide = Math.min(5, (state.slide || 0) + 1);
+        save();
+        render();
+      } else if (dx > 48) {
+        state.slide = Math.max(0, (state.slide || 0) - 1);
+        save();
+        render();
+      }
+    };
+    stage.addEventListener("touchstart", start, { passive: true });
+    stage.addEventListener("touchend", end);
+    stage.addEventListener("mousedown", start);
+    stage.addEventListener("mouseup", end);
   }
 
   function readOpen() {
@@ -675,8 +705,16 @@
       state.acc = "now";
       if (state.screen !== "welcome") go("page");
       else render();
+    } else if (act === "set-skin") {
+      state.skin = btn.dataset.skin;
+      save();
+      render();
+    } else if (act === "open-cabinet") {
+      localStorage.setItem(TYPE_KEY, "cabinet");
+      localStorage.setItem(THEME_KEY, "slate");
+      go("page");
     } else if (act === "slide-next") {
-      state.slide = (state.slide || 0) + 1;
+      state.slide = Math.min(5, (state.slide || 0) + 1);
       save();
       render();
     } else if (act === "slide-prev") {

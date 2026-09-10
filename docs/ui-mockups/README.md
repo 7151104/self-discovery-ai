@@ -1,6 +1,6 @@
 # UI-концепты: 10 экранов
 
-**Смотреть:** [**восемь типов хода**](./type-systems/GALLERY.md) · [**шесть палитр**](./color-v2/GALLERY.md) · [**1+2+10**](./exploit-1210/GALLERY.md)
+**Смотреть:** [**20 концептов: слайды + кабинет**](./explore-20/GALLERY.md) · [**восемь типов**](./type-systems/GALLERY.md) · [**палитры**](./color-v2/GALLERY.md)
 
 Как устроена страница: [`docs/13-page-ux-2026.md`](../13-page-ux-2026.md) · живой прототип: [`prototype/`](../../prototype/)
 

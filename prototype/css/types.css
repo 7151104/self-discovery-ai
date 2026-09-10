@@ -223,3 +223,69 @@
 .t-reel h1, .t-reel p, .t-reel .lead { color: #f3f5f7; }
 .t-reel .hint, .t-reel .section-label { color: #9aa3b2; }
 .t-reel .now, .t-reel .block, .t-reel .door { background: #171b22; border-color: #2a3140; color: #f3f5f7; }
+
+/* Atmospheric slides — journey, not home */
+.sl-wrap {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 22px !important;
+  color: #f4f5f7;
+}
+.sl-wrap h1, .sl-wrap p { color: inherit; }
+.sl-stage { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 20px; pointer-events: none; }
+.sl-stage .btn { pointer-events: auto; }
+.sl-k { letter-spacing: 0.16em; text-transform: uppercase; font-size: 11px; opacity: 0.72; }
+.sl-sub { opacity: 0.8; }
+.sl-skins { display: flex; gap: 6px; overflow-x: auto; position: relative; z-index: 3; padding-bottom: 6px; }
+.sl-skin {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: transparent;
+  color: #fff;
+  border-radius: 99px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 11px;
+  min-height: 36px;
+  cursor: pointer;
+}
+.sl-skin.on { background: #fff; color: #111; }
+.sl-rain { background: radial-gradient(120% 80% at 50% 0%, #243044, #0b1018 70%); }
+.sl-ink { background: #111111; color: #f2f3f5; }
+.sl-sea { background: radial-gradient(90% 70% at 80% 10%, #1f6b6b, #0a1f24 60%); }
+.sl-cinema { background: #050505; }
+.sl-stone { background: linear-gradient(180deg, #6a6664, #2c2928); }
+.sl-frost { background: linear-gradient(180deg, #e7eef4, #9bb0c2); color: #12202a; }
+.sl-frost h1, .sl-frost p, .sl-frost .sl-k { color: #12202a; }
+.sl-frost .sl-skin { color: #12202a; border-color: #12202a; }
+.sl-frost .sl-skin.on { background: #12202a; color: #e7eef4; }
+.sl-forest { background: radial-gradient(100% 80% at 50% 100%, #1a2e22, #0b120e); }
+.sl-violet { background: linear-gradient(180deg, #6b4ce6, #2a1840); }
+.phone[data-type="slides"] { background: #0b1018; }
+
+/* Cabinet — the room you return to */
+.cab { padding: 22px 20px 32px !important; }
+.cab-top { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.cab-url { font-size: 12px; color: var(--muted); }
+.cab-name { letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; color: var(--muted); margin: 22px 0 6px; }
+.cab-hook { font-size: 2.2rem; line-height: 1.12; margin: 0 0 10px; }
+.cab-note { font-size: 13px; color: var(--muted); }
+.cab-now { border-top: 3px solid var(--accent); padding: 14px 0 8px; margin: 16px 0; }
+.cab-now .btn { border-radius: 0; }
+.cab-shelves { display: grid; }
+.cab-shelf {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--ink);
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cab-shelf small { color: var(--muted); font-size: 12px; }
+.cab-shelf:not(.open) { color: var(--locked); }
+.cab-shelf p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>координаты — прототип</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;650&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/app.css">
+  <link rel="stylesheet" href="./css/types.css">
+  <script>
+    (function () {
+      var t = localStorage.getItem("koordinaty-theme") || "slate";
+      var typ = localStorage.getItem("koordinaty-type") || "artifact";
+      document.documentElement.dataset.theme = t;
+      document.documentElement.dataset.type = typ;
+    })();
+  </script>
+</head>
+<body>
+  <main class="stage">
+    <div id="app"></div>
+  </main>
+  <script src="./js/content.js"></script>
+  <script src="./js/engine.js"></script>
+  <script src="./js/types.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

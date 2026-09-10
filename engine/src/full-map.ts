@@ -524,6 +524,25 @@ export function fullMapThreshold(
   return { passed: missing.length === 0, missing, followUps: missing.length ? followUps : [], blocked: null };
 }
 
+/**
+ * Порог до синтеза О3. Задача периода (координата 16) пишется тем же вызовом,
+ * что текст, поэтому до провайдера её ещё нет: без зонда пункт про пустые
+ * координаты и счётчик `medium+` (шестнадцатая может быть двенадцатой) валят
+ * порог ложно. Короткий О3 зонд не спасает — провайдера не вызываем.
+ */
+export function fullMapThresholdBeforeSynthesis(
+  input: FullMapInput,
+  options: ProfileOptions = {},
+): SliceThreshold {
+  const periodTask = options.periodTask ?? {
+    value: "ожидание синтеза",
+    code: "period_task_probe",
+    confidence: "medium" as const,
+  };
+  const probed = { ...options, periodTask };
+  return fullMapThreshold(input, buildFullMapProfile(input, probed), probed);
+}
+
 /** Итог по добору полной карты: что показываем сейчас и можно ли собирать отчёт. */
 export interface FullMapReport {
   ready: boolean;

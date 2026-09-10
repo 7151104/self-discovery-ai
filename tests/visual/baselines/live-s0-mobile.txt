@@ -18,225 +18,8 @@
     <p class="page__notice" data-edge="no-date" data-tone="rest">
       Дата не введена, поэтому карточки периода нет. На разбор это не влияет
     </p>
-    <p class="hook" data-empty="true">
-      Крючок появится после первых трёх вопросов
-    </p>
-    <section aria-label="Карта" class="map">
-      <p class="section-title">
-        Карта
-      </p>
-      <p class="section-note">
-        Здесь семь полос. Остальное закрыто и видно ниже, дверями
-      </p>
-      <ul class="map__bars">
-        <li class="bar" data-animate="on" data-bar="tempo" data-fill="empty" data-kind="axis">
-          <span class="visually-hidden">
-            Темп: Пока закрыто. Откроется на первых трёх вопросах
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Темп
-              </span>
-              <span class="bar__track"></span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на первых трёх вопросах
-            </p>
-          </details>
-          <div aria-hidden="true" class="bar__poles">
-            <span class="bar__pole">
-              ровный поток
-            </span>
-            <span class="bar__pole">
-              импульсы
-            </span>
-          </div>
-        </li>
-        <li class="bar" data-animate="on" data-bar="completion" data-fill="empty" data-kind="axis">
-          <span class="visually-hidden">
-            Доведение: Пока закрыто. Откроется на первых трёх вопросах
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Доведение
-              </span>
-              <span class="bar__track"></span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на первых трёх вопросах
-            </p>
-          </details>
-          <div aria-hidden="true" class="bar__poles">
-            <span class="bar__pole">
-              до конца
-            </span>
-            <span class="bar__pole">
-              обрыв
-            </span>
-          </div>
-        </li>
-        <li class="bar" data-animate="on" data-bar="pressure" data-fill="empty" data-kind="axis">
-          <span class="visually-hidden">
-            Под давлением: Пока закрыто. Откроется на первых трёх вопросах
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Под давлением
-              </span>
-              <span class="bar__track"></span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на первых трёх вопросах
-            </p>
-          </details>
-          <div aria-hidden="true" class="bar__poles">
-            <span class="bar__pole">
-              замирание
-            </span>
-            <span class="bar__pole">
-              ускорение
-            </span>
-          </div>
-        </li>
-        <li class="bar" data-animate="on" data-bar="trigger" data-fill="empty" data-kind="category">
-          <span class="visually-hidden">
-            Что задевает: Пока закрыто. Откроется на вопросах про то, что задевает
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Что задевает
-              </span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на вопросах про то, что задевает
-            </p>
-          </details>
-          <ul class="bar__dots">
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда меня не воспринимают всерьёз
-              </span>
-            </li>
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда я теряю контроль над ситуацией
-              </span>
-            </li>
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда меня отвергают
-              </span>
-            </li>
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда я оказываюсь ненужным
-              </span>
-            </li>
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда я оказываюсь неправ
-              </span>
-            </li>
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда меня ограничивают
-              </span>
-            </li>
-            <li class="bar__dot" data-selected="false">
-              <span class="visually-hidden">
-                когда всё оказывается бессмысленным
-              </span>
-            </li>
-          </ul>
-        </li>
-        <li class="bar" data-animate="on" data-bar="attention" data-fill="empty" data-kind="axis">
-          <span class="visually-hidden">
-            Внимание: Пока закрыто. Откроется на вопросах про то, как ты обрабатываешь
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Внимание
-              </span>
-              <span class="bar__track"></span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на вопросах про то, как ты обрабатываешь
-            </p>
-          </details>
-          <div aria-hidden="true" class="bar__poles">
-            <span class="bar__pole">
-              конкретика
-            </span>
-            <span class="bar__pole">
-              связи
-            </span>
-          </div>
-        </li>
-        <li class="bar" data-animate="on" data-bar="structure" data-fill="empty" data-kind="axis">
-          <span class="visually-hidden">
-            Структура: Пока закрыто. Откроется на вопросах про планы и решения
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Структура
-              </span>
-              <span class="bar__track"></span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на вопросах про планы и решения
-            </p>
-          </details>
-          <div aria-hidden="true" class="bar__poles">
-            <span class="bar__pole">
-              определённость
-            </span>
-            <span class="bar__pole">
-              открытый финал
-            </span>
-          </div>
-        </li>
-        <li class="bar" data-animate="on" data-bar="holding" data-fill="empty" data-kind="axis">
-          <span class="visually-hidden">
-            Удержание: Пока закрыто. Откроется на вопросах про то, как тебя задевает
-          </span>
-          <details class="bar__explain">
-            <summary class="bar__row">
-              <span class="bar__label">
-                Удержание
-              </span>
-              <span class="bar__track"></span>
-            </summary>
-            <p class="bar__hint">
-              Откроется на вопросах про то, как тебя задевает
-            </p>
-          </details>
-          <div aria-hidden="true" class="bar__poles">
-            <span class="bar__pole">
-              отпускает
-            </span>
-            <span class="bar__pole">
-              держит долго
-            </span>
-          </div>
-        </li>
-      </ul>
-    </section>
-    <div class="reading" data-empty="true">
-      <h2 class="section-title">
-        Разбор
-      </h2>
-      <p class="section-note">
-        После первых трёх вопросов здесь появится текст — страница станет длиннее
-      </p>
-    </div>
     <section class="portion" data-index="0" data-kind="choice" data-portion="step:1" data-total="3">
-      <h2 class="section-title">
+      <h2 class="section-title visually-hidden">
         На этой странице
       </h2>
       <p class="portion__lead">
@@ -283,6 +66,225 @@
         </div>
       </div>
     </section>
+    <div class="page__portrait">
+      <p class="hook" data-empty="true">
+        Крючок появится после первых трёх вопросов
+      </p>
+      <section aria-label="Карта" class="map" data-empty="true">
+        <p class="section-title">
+          Карта
+        </p>
+        <p class="section-note">
+          Здесь семь полос. Остальное закрыто и видно ниже, дверями
+        </p>
+        <ul class="map__bars">
+          <li class="bar" data-animate="on" data-bar="tempo" data-fill="empty" data-kind="axis">
+            <span class="visually-hidden">
+              Темп: Пока закрыто. Откроется на первых трёх вопросах
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Темп
+                </span>
+                <span class="bar__track"></span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на первых трёх вопросах
+              </p>
+            </details>
+            <div aria-hidden="true" class="bar__poles">
+              <span class="bar__pole">
+                ровный поток
+              </span>
+              <span class="bar__pole">
+                импульсы
+              </span>
+            </div>
+          </li>
+          <li class="bar" data-animate="on" data-bar="completion" data-fill="empty" data-kind="axis">
+            <span class="visually-hidden">
+              Доведение: Пока закрыто. Откроется на первых трёх вопросах
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Доведение
+                </span>
+                <span class="bar__track"></span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на первых трёх вопросах
+              </p>
+            </details>
+            <div aria-hidden="true" class="bar__poles">
+              <span class="bar__pole">
+                до конца
+              </span>
+              <span class="bar__pole">
+                обрыв
+              </span>
+            </div>
+          </li>
+          <li class="bar" data-animate="on" data-bar="pressure" data-fill="empty" data-kind="axis">
+            <span class="visually-hidden">
+              Под давлением: Пока закрыто. Откроется на первых трёх вопросах
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Под давлением
+                </span>
+                <span class="bar__track"></span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на первых трёх вопросах
+              </p>
+            </details>
+            <div aria-hidden="true" class="bar__poles">
+              <span class="bar__pole">
+                замирание
+              </span>
+              <span class="bar__pole">
+                ускорение
+              </span>
+            </div>
+          </li>
+          <li class="bar" data-animate="on" data-bar="trigger" data-fill="empty" data-kind="category">
+            <span class="visually-hidden">
+              Что задевает: Пока закрыто. Откроется на вопросах про то, что задевает
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Что задевает
+                </span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на вопросах про то, что задевает
+              </p>
+            </details>
+            <ul class="bar__dots">
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда меня не воспринимают всерьёз
+                </span>
+              </li>
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда я теряю контроль над ситуацией
+                </span>
+              </li>
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда меня отвергают
+                </span>
+              </li>
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда я оказываюсь ненужным
+                </span>
+              </li>
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда я оказываюсь неправ
+                </span>
+              </li>
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда меня ограничивают
+                </span>
+              </li>
+              <li class="bar__dot" data-selected="false">
+                <span class="visually-hidden">
+                  когда всё оказывается бессмысленным
+                </span>
+              </li>
+            </ul>
+          </li>
+          <li class="bar" data-animate="on" data-bar="attention" data-fill="empty" data-kind="axis">
+            <span class="visually-hidden">
+              Внимание: Пока закрыто. Откроется на вопросах про то, как ты обрабатываешь
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Внимание
+                </span>
+                <span class="bar__track"></span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на вопросах про то, как ты обрабатываешь
+              </p>
+            </details>
+            <div aria-hidden="true" class="bar__poles">
+              <span class="bar__pole">
+                конкретика
+              </span>
+              <span class="bar__pole">
+                связи
+              </span>
+            </div>
+          </li>
+          <li class="bar" data-animate="on" data-bar="structure" data-fill="empty" data-kind="axis">
+            <span class="visually-hidden">
+              Структура: Пока закрыто. Откроется на вопросах про планы и решения
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Структура
+                </span>
+                <span class="bar__track"></span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на вопросах про планы и решения
+              </p>
+            </details>
+            <div aria-hidden="true" class="bar__poles">
+              <span class="bar__pole">
+                определённость
+              </span>
+              <span class="bar__pole">
+                открытый финал
+              </span>
+            </div>
+          </li>
+          <li class="bar" data-animate="on" data-bar="holding" data-fill="empty" data-kind="axis">
+            <span class="visually-hidden">
+              Удержание: Пока закрыто. Откроется на вопросах про то, как тебя задевает
+            </span>
+            <details class="bar__explain">
+              <summary class="bar__row">
+                <span class="bar__label">
+                  Удержание
+                </span>
+                <span class="bar__track"></span>
+              </summary>
+              <p class="bar__hint">
+                Откроется на вопросах про то, как тебя задевает
+              </p>
+            </details>
+            <div aria-hidden="true" class="bar__poles">
+              <span class="bar__pole">
+                отпускает
+              </span>
+              <span class="bar__pole">
+                держит долго
+              </span>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
+    <section class="reading" data-empty="true">
+      <h2 class="section-title visually-hidden">
+        Разбор
+      </h2>
+      <p class="section-note">
+        После первых трёх вопросов здесь появится текст — страница станет длиннее
+      </p>
+    </section>
     <section aria-label="Маршрут" class="route">
       <h2 class="section-title">
         Маршрут
@@ -320,11 +322,6 @@
       </ul>
     </section>
   </div>
-  <aside class="disclaimer-list">
-    <p class="disclaimer" data-disclaimer="DISCLAIMER_BIRTHDATE">
-      Дата рождения нужна только для карточки периода. Ни один вывод о тебе на ней не строится
-    </p>
-  </aside>
   <footer class="site-footer">
     <p class="site-footer__heading">
       Документы
@@ -344,23 +341,6 @@
       </a>
     </nav>
   </footer>
-  <aside class="disclaimer-list">
-    <p class="disclaimer" data-disclaimer="«id»">
-      Это не медицинская и не психологическая помощь. Разбор описывает, как ты устроен, по твоим же ответам, и не ставит диагнозов
-    </p>
-    <p class="disclaimer" data-disclaimer="«id»">
-      Сервис не заменяет работу с психологом, психотерапевтом или врачом. Если тебе тяжело прямо сейчас, разбор этого не закроет
-    </p>
-    <p class="disclaimer" data-disclaimer="DISCLAIMER_INFORMATIONAL">
-      Разбор — описание, а не заключение и не документ. С ним можно не согласиться: несогласие мы считаем данными и учитываем
-    </p>
-    <p class="disclaimer" data-disclaimer="«id»">
-      Ответы сохраняются, чтобы страница осталась по ссылке. Что именно хранится и как это удалить — в политике обработки данных
-    </p>
-    <p class="disclaimer" data-disclaimer="«id»">
-      Сервис рассчитан на взрослых: пользоваться им можно с 18 лет. Разборов о детях здесь нет
-    </p>
-  </aside>
 </div>
 
 --- стили ---
@@ -462,6 +442,10 @@
   color: #4c4136;
 }
 
+.bar[data-fill="empty"] .bar__poles {
+  display: none;
+}
+
 .bar[data-fill="empty"] .bar__track {
   background: transparent;
   border-style: dashed;
@@ -472,22 +456,6 @@
   border-color: #8a7662;
   border-style: solid;
   border-width: 2px;
-}
-
-.disclaimer {
-  color: #4c4136;
-  font-size: 14px;
-  line-height: 1.4;
-  max-width: 36ch;
-}
-
-.disclaimer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0 auto;
-  max-width: 560px;
-  padding: 0 12px;
 }
 
 .door__body {
@@ -535,6 +503,17 @@
 
 .door[data-state="locked_generic"] .door__face {
   color: #6d5c4c;
+}
+
+.door[data-state="locked_generic"] .door__face,
+.door[data-state="locked_profiled"] .door__face,
+.door[data-state="paid"] .door__face {
+  background: transparent;
+  border-bottom: 1px solid #c1ad93;
+  border-radius: 0;
+  border-style: none;
+  box-shadow: none;
+  padding: 8px 0;
 }
 
 .door[data-state="locked_profiled"] .door__face {
@@ -591,8 +570,8 @@
 .head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 16px;
+  gap: 4px;
+  padding-top: 8px;
 }
 
 .head__brand {
@@ -608,9 +587,9 @@
 .head__name {
   color: #0d0b09;
   font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
-  font-size: 36px;
+  font-size: 20px;
   font-weight: 640;
-  letter-spacing: -0.48px;
+  letter-spacing: -0.32px;
   line-height: 1.25;
 }
 
@@ -629,9 +608,11 @@
 .hook[data-empty="true"] {
   color: #4c4136;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0;
+  line-height: 1.4;
+  padding: 8px 0;
 }
 
 .map {
@@ -653,6 +634,27 @@
   list-style: none;
   margin: 0;
   padding: 16px;
+}
+
+.map[data-empty="true"] {
+  gap: 8px;
+}
+
+.map[data-empty="true"] .bar {
+  gap: 0;
+}
+
+.map[data-empty="true"] .bar__track,
+.map[data-empty="true"] .bar__dots {
+  display: none;
+}
+
+.map[data-empty="true"] .map__bars {
+  background: transparent;
+  border-style: none;
+  box-shadow: none;
+  gap: 0;
+  padding: 0;
 }
 
 .option {
@@ -759,11 +761,33 @@
   border-style: dashed;
 }
 
+.page__portrait {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .page-shell {
   display: flex;
   flex-direction: column;
   gap: 32px;
   min-height: 100%;
+}
+
+.page[data-page="s0"] {
+  gap: 16px;
+}
+
+.page[data-page="s0"] .door[data-state="opens_with_answers"] .door__face {
+  background: transparent;
+  border-bottom: 1px solid #c1ad93;
+  border-radius: 0;
+  border-style: none;
+  padding: 8px 0;
+}
+
+.page[data-page="s0"] .page__portrait {
+  gap: 8px;
 }
 
 .portion {
@@ -775,6 +799,16 @@
   flex-direction: column;
   gap: 16px;
   padding: 24px;
+}
+
+.portion .option {
+  background: transparent;
+  box-shadow: none;
+}
+
+.portion .option[data-state="selected"] {
+  background: #dceae7;
+  box-shadow: none;
 }
 
 .portion__choice,
@@ -828,7 +862,11 @@
 .reading {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
+}
+
+.reading[data-empty="true"] {
+  gap: 8px;
 }
 
 .route {

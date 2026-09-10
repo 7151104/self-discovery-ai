@@ -159,11 +159,11 @@ export const contactLabels = (): {
 });
 
 /**
- * Несуществующий профиль. Отдельной строки в реестре нет (вопрос 38):
- * показываем публичный выход «сделать свою», без кодов отказа и без «404».
+ * Несуществующий профиль. Отдельная строка реестра (вопрос 38): не
+ * «ответы на месте» (`UI_ERROR_LOAD`) и не заголовок продукта.
  */
 export const missingTexts = {
-  title: (): string => copy("UI_PAGE_TITLE"),
+  title: (): string => copy("UI_ERROR_MISSING"),
   text: (): string => copy("UI_PUBLIC_MAKE_OWN_HINT"),
   action: (): string => copy("UI_PUBLIC_MAKE_OWN"),
 };
@@ -175,6 +175,7 @@ export const blockTexts = {
   ],
   updated: (): string => copy("UI_BLOCK_UPDATED"),
   diverged: (): string => copy("UI_EDGE_PAID_DIVERGED"),
+  stitch: (): string => copy("UI_BLOCK_STITCH_LABEL"),
   disagreeDone: (): string => copy("UI_BLOCK_DISAGREE_DONE"),
   acknowledged: (): string => copy("UI_DISAGREE_DONE"),
 };

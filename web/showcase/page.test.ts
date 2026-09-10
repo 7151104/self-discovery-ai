@@ -15,7 +15,7 @@ const markup = (key: keyof typeof pageStates): string => {
   return renderToString(renderPersonalPage(page, viewLabels(page)));
 };
 
-test("s0: шапка, пустая карта, место крючка, маршрут, порция — без блоков", () => {
+test("s0: шапка, порция, место крючка, пустая карта, маршрут — без блоков", () => {
   const page = pageStates.s0;
   const node = renderPersonalPage(page, viewLabels(page));
   assert.equal(node.attrs["data-page"], "s0");

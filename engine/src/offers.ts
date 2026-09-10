@@ -7,6 +7,8 @@
  */
 
 import { rawContent } from "./generated/content.js";
+import { fullMap } from "./full-map.js";
+import { offerSkippingRejectedNode } from "./scoring.js";
 import { nextSliceAfter } from "./slices.js";
 import { uiCopy } from "./ui-copy.js";
 import type { Block, Door, Offer, Profile, SliceAnswers } from "./types.js";
@@ -26,14 +28,27 @@ const toOffer = (id: string): Offer | null => {
   };
 };
 
+/** Срез узла, с блоком которого человек не согласился. Null — продавать можно. */
+export function rejectedNodeSlice(profile: Profile): string | null {
+  if (!profile.flags.includes("disagreement_step_3") || !profile.dominantNode) return null;
+  return rawContent.step3.offers[profile.dominantNode] ?? null;
+}
+
 export function selectOffer(profile: Profile): Offer | null {
-  return toOffer(profile.nextPaidOffer);
+  const rejected = rejectedNodeSlice(profile);
+  const slice =
+    rejected && profile.nextPaidOffer === rejected ? offerSkippingRejectedNode(profile) : profile.nextPaidOffer;
+  if (rejected && slice === rejected) return null;
+  return toOffer(slice);
 }
 
 /**
  * Одно предложение после закрытого платного среза: правило берётся из таблицы
  * «Следующие двери» файла этого среза (`engine/src/slices.ts`), цена и обещание —
  * из `content/slices/`. Уже купленные срезы пропускаются.
+ *
+ * Полная карта в `SCORED_SLICES` не входит: следующая дверь читается из её
+ * собственной таблицы, `nextSliceAfter` её не вызывает.
  */
 export function selectOfferAfterSlice(
   slice: string,
@@ -41,6 +56,10 @@ export function selectOfferAfterSlice(
   answers: SliceAnswers,
   purchased: string[] = [],
 ): Offer | null {
+  if (slice === "slice_full_map") {
+    const next = fullMap().nextDoors.at(-1)?.slice ?? null;
+    return next ? toOffer(next) : null;
+  }
   return toOffer(nextSliceAfter(slice, profile, answers, purchased));
 }
 
@@ -68,7 +87,8 @@ export function buildDoors(profile: Profile, blocks: Block[], offer: Offer | nul
     });
   }
 
-  const offered = offer?.slice ?? null;
+  const rejected = rejectedNodeSlice(profile);
+  const offered = offer?.slice && offer.slice !== rejected ? offer.slice : null;
   const seen = new Set<string>();
 
   for (const node of profile.nodes) {
@@ -77,15 +97,16 @@ export function buildDoors(profile: Profile, blocks: Block[], offer: Offer | nul
     const slice = sliceById(sliceId);
     if (!slice) continue;
     seen.add(sliceId);
+    // Отвергнутый узел остаётся дверью без цены: продавать его нельзя.
     doors.push({ id: `door_${sliceId}`, title: slice.title, state: "paid", price: null, slice: sliceId });
   }
 
-  const fullMap = sliceById("slice_full_map");
-  if (fullMap && fullMap.id !== offered) {
-    doors.push({ id: "door_slice_full_map", title: fullMap.title, state: "paid", price: null, slice: fullMap.id });
+  const mapDoor = sliceById("slice_full_map");
+  if (mapDoor && mapDoor.id !== offered) {
+    doors.push({ id: "door_slice_full_map", title: mapDoor.title, state: "paid", price: null, slice: mapDoor.id });
   }
 
-  if (offer) {
+  if (offer && offer.slice !== rejected) {
     doors.push({
       id: `offer_${offer.slice}`,
       title: offer.title,

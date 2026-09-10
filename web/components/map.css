@@ -93,6 +93,10 @@
 /* ── Пустая полоса ─────────────────────────────────────────────────────────
    Контур и ничего внутри. Строка кликабельна и объясняет, чем откроется. */
 
+.bar[data-fill="empty"] .bar__poles {
+  display: none;
+}
+
 .bar[data-fill="empty"] .bar__track {
   border-style: dashed;
   border-width: var(--border-strong);
@@ -245,6 +249,30 @@
 
 .bar[data-animate="off"] .bar__marker {
   animation-name: none;
+}
+
+/* Пустая карта — опись полос, не панель виджетов. Дорожки появляются,
+   когда хотя бы одна полоса заполнена: тогда пустые контрастируют с ними. */
+
+.map[data-empty="true"] {
+  gap: var(--space-2);
+}
+
+.map[data-empty="true"] .map__bars {
+  gap: 0;
+  padding: 0;
+  border-style: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.map[data-empty="true"] .bar {
+  gap: 0;
+}
+
+.map[data-empty="true"] .bar__track,
+.map[data-empty="true"] .bar__dots {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

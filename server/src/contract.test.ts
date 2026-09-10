@@ -66,6 +66,7 @@ test("реестр покрывает страницу, оплату, публи
   assert.deepEqual(names.sort(), [
     "blockText",
     "createProfile",
+    "declineOffer",
     "deleteProfile",
     "disagree",
     "editAnswer",
@@ -75,6 +76,7 @@ test("реестр покрывает страницу, оплату, публи
     "pageState",
     "publicPage",
     "purchase",
+    "recordConsent",
     "refund",
     "regenerate",
     "reportError",

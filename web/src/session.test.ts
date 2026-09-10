@@ -97,4 +97,6 @@ test("отказ от оплаты запоминается на визит", ()
   const declined = declineOffer(session);
   assert.equal(declined.offerDeclined, true);
   assert.equal(markPaymentFailed(session).paymentFailed, true);
+  const withOffer = showPage(declined, { ...pageStates.s4, offer: pageStates.s4.offer }, "advance");
+  assert.equal(withOffer.offerDeclined, false);
 });

@@ -176,7 +176,7 @@ const page = (state: PageStateDto["state"], parts: Partial<PageStateDto>): PageS
   offer: null,
   nextPortion: null,
   share: null,
-  contact: state === "s0" ? { status: "hidden" } : { status: "ask" },
+  contact: state === "s0" ? { status: "hidden" } : state === "s1" ? { status: "ask" } : { status: "skipped" },
   updatedAt: UPDATED_AT,
   ...parts,
 });
@@ -256,7 +256,7 @@ export type PageStateKey = keyof typeof pageStates;
 
 /** Порядок показа в витрине. `spec` — строка таблицы «Состояния страницы» в docs/11. */
 export const PAGE_STATE_CASES: { key: PageStateKey; id: string; caption: string; spec: boolean }[] = [
-  { key: "s0", id: "s0", caption: "s0 · шапка, пустая карта, маршрут заглушкой", spec: true },
+  { key: "s0", id: "s0", caption: "s0 · шапка, порция, пустые карта и маршрут", spec: true },
   { key: "s1", id: "s1", caption: "s1 · первый блок и три полосы", spec: true },
   { key: "s2", id: "s2", caption: "s2 · второй блок и пять полос", spec: true },
   { key: "s3", id: "s3", caption: "s3 · третий блок, семь полос, двери под профиль", spec: true },

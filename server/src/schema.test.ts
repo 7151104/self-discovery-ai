@@ -193,6 +193,21 @@ test("миграции откатываются по одной, в обратн
   }
 });
 
+test("у согласия уникальна пара профиль плюс версия, не один профиль", () => {
+  const db = fresh();
+  try {
+    up(db);
+    const keys = db
+      .all<{ name: string; pk: number }>("SELECT name, pk FROM pragma_table_info('consents')")
+      .filter((column) => column.pk > 0)
+      .sort((left, right) => left.pk - right.pk)
+      .map((column) => column.name);
+    assert.deepEqual(keys, ["profile_id", "version"]);
+  } finally {
+    db.close();
+  }
+});
+
 test("статус различает применённое, непринятое и изменённое", () => {
   const db = fresh();
   try {

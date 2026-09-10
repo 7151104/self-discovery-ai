@@ -108,4 +108,4 @@ export { ladderCapOf, registerMarkers, reportTypes, volumeOf, assemblerPrompt, s
 
 export { crisisGate, crisisOf, avoidInstruction } from "./crisis.js";
 
-export { generatePaidSlice, findingsForSlice, openAnswersOf, sliceTaskOf, type SliceOptions, type SliceOutcome, type SliceReason } from "./slice.js";
+export { generatePaidSlice, findingsForSlice, openAnswersOf, sliceTaskOf, fullMapTaskOf, type SliceOptions, type SliceOutcome, type SliceReason } from "./slice.js";

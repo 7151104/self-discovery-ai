@@ -213,7 +213,7 @@ export function renderPortion(props: PortionProps): VNode {
       "data-index": String(props.index),
       "data-total": String(props.total),
     },
-    props.labels.title ? h("h2", { class: "section-title" }, props.labels.title) : null,
+    props.labels.title ? h("h2", { class: "section-title visually-hidden" }, props.labels.title) : null,
     h("p", { class: "portion__lead" }, props.labels.lead),
     renderProgress(props),
     renderQuestion(props),

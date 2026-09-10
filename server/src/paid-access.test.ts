@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   answerSlicePortions,
   answersForPortion,
+  answersForStep,
   call,
   deliverWebhook,
   profileAtPaidState,
@@ -14,7 +15,7 @@ import {
   purchaseSlice,
   startTestServer,
 } from "./test-support.js";
-import { listAnswers, listBlocks, listOrders, saveBlockContent } from "./store.js";
+import { listAnswers, listBlocks, listEvents, listOrders, saveBlockContent } from "./store.js";
 import { rawContent } from "./engine.js";
 import type { BlockResponse, ErrorDto, OrderResponse, PageStateDto } from "./contract/index.js";
 
@@ -254,4 +255,68 @@ test("после возврата срез можно купить заново"
   assert.equal(again.status, 201);
   assert.notEqual(again.body.order.orderId, paid.orderId);
   assert.equal(listOrders(server.db, profileId).length, 2);
+});
+
+test("подписи двух величин числового вопроса берутся из текста", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  const paid = await purchaseSlice(server.origin, "slice_motivation");
+  const s5 = paid.page.nextPortion?.questions.find((question) => question.id.endsWith(":S5"));
+  assert.ok(s5, "в порции мотивации нет S5");
+  assert.equal(s5.kind, "число");
+  const labels = s5.options.map((option) => option.text).join(" ");
+  assert.match(labels, /начинал/);
+  assert.match(labels, /дошло/);
+});
+
+test("полная карта выдаёт порции банка, а не slicePortions", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  const paid = await purchaseSlice(server.origin, "slice_full_map");
+  assert.equal(paid.page.nextPortion?.key, "slice:slice_full_map:1");
+  assert.ok((paid.page.nextPortion?.questions.length ?? 0) > 0);
+  assert.ok(paid.page.nextPortion?.questions.every((question) => question.id.startsWith("slice_full_map:")));
+  assert.equal(
+    paid.page.blocks.find((block) => block.id === "slice:slice_full_map"),
+    undefined,
+  );
+});
+
+test("совместимость после оплаты остаётся pending без текста", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  const paid = await purchaseSlice(server.origin, "slice_compatibility");
+  assert.equal(paid.page.nextPortion, null);
+  const block = paid.page.blocks.find((candidate) => candidate.id === "slice:slice_compatibility");
+  assert.ok(block, "блока совместимости нет");
+  assert.equal(block.generation?.status, "pending");
+  assert.deepEqual(block.paragraphs, []);
+});
+
+test("отказ от предложения прячет оффер до новых ответов", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  const page = await profileAtStep(server.origin, 4);
+  assert.ok(page.offer);
+  const slice = page.offer.slice;
+  const declined = await call<PageStateDto>(server.origin, "POST", `/api/p/${page.profileId}/offer-decline`, { slice });
+  assert.equal(declined.status, 200);
+  assert.equal(declined.body.offer, null);
+  assert.ok(declined.body.doors.length > 0);
+  const events = listEvents(server.db, page.profileId).filter((event) => event.type === "offer.declined");
+  assert.equal(events.length, 1);
+  const payload = JSON.parse(events[0]!.payload) as Record<string, unknown>;
+  assert.equal(payload.slice, slice);
+  assert.equal(typeof payload.profileVersion, "number");
+  assert.equal("email" in payload, false);
+
+  const first = answersForStep(1)[0];
+  assert.ok(first);
+  await call(server.origin, "PATCH", `/api/p/${page.profileId}/answers/${first.questionId}`, { answer: first });
+  const after = await call<PageStateDto>(server.origin, "GET", `/api/p/${page.profileId}`);
+  assert.ok(after.body.offer, "после новых ответов предложение должно вернуться");
 });

@@ -47,6 +47,9 @@ export interface Session {
   contactError: string | null;
   /** После пропуска: карточка снова открыта с шапки. */
   contactOpen: boolean;
+  /** Согласие устарело: показать отметку в потоке и повторить отправку. */
+  needsConsent: boolean;
+  pendingPortion: SubmitPortionRequest | null;
 }
 
 export function emptySession(): Session {
@@ -76,6 +79,8 @@ export function emptySession(): Session {
     contactChannel: "",
     contactError: null,
     contactOpen: false,
+    needsConsent: false,
+    pendingPortion: null,
   };
 }
 
@@ -168,13 +173,15 @@ export function showPage(session: Session, page: PageStateDto, mode: "load" | "a
     shareOpen: false,
     shareSvg: null,
     shareClosed: false,
-    offerDeclined: mode === "load" ? false : session.offerDeclined,
+    offerDeclined: page.offer ? false : mode === "load" ? false : session.offerDeclined,
     paymentFailed: mode === "load" ? false : session.paymentFailed,
     returned,
     waitResumed: mode === "load" && waiting,
     portionError: null,
     contactError: null,
     contactOpen: page.contact?.status === "ask" ? false : session.contactOpen,
+    needsConsent: false,
+    pendingPortion: null,
   };
 }
 

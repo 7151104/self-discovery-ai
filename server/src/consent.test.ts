@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { answersForStep, call, currentConsentVersion, portionKey, profileBody, startTestServer } from "./test-support.js";
-import { findConsent, listAnswers } from "./store.js";
+import { findConsent, insertConsent, listAnswers, listConsents } from "./store.js";
 import { LEGAL_DOCUMENTS } from "./engine.js";
 import { LEGAL_PATHS } from "./contract/index.js";
 import type { ErrorDto, PageStateDto } from "./contract/index.js";
@@ -100,6 +100,54 @@ test("правка ответа без согласия отклоняется",
   );
   assert.equal(denied.status, 403);
   assert.equal(denied.body.error.code, "consent_required");
+});
+
+test("смена отпечатка согласия пишет новую строку и не затирает ответы", async (t) => {
+  const server = await startTestServer();
+  t.after(() => server.close());
+
+  const created = await call<PageStateDto>(server.origin, "POST", "/api/profiles", profileBody("Аня", null));
+  assert.equal(created.status, 201);
+  const profileId = created.body.profileId;
+  const first = currentConsentVersion();
+  assert.equal(findConsent(server.db, profileId)?.version, first);
+
+  const saved = await call<PageStateDto>(server.origin, "POST", `/api/p/${profileId}/portions`, {
+    portion: portionKey(1),
+    answers: answersForStep(1),
+    requestId: "keep-answers",
+  });
+  assert.equal(saved.status, 200);
+  const count = listAnswers(server.db, profileId).length;
+  assert.ok(count > 0);
+
+  insertConsent(server.db, profileId, "a".repeat(64));
+  assert.equal(findConsent(server.db, profileId)?.version, "a".repeat(64));
+  assert.equal(listConsents(server.db, profileId).length, 2);
+
+  const denied = await call<ErrorDto>(server.origin, "POST", `/api/p/${profileId}/portions`, {
+    portion: portionKey(2),
+    answers: answersForStep(2),
+    requestId: "stale",
+  });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.error.code, "consent_required");
+  assert.equal(listAnswers(server.db, profileId).length, count);
+
+  const renewed = await call<PageStateDto>(server.origin, "POST", `/api/p/${profileId}/consent`, {
+    consentVersion: first,
+  });
+  assert.equal(renewed.status, 200);
+  assert.equal(findConsent(server.db, profileId)?.version, first);
+  assert.equal(listConsents(server.db, profileId).length, 2);
+
+  const next = await call<PageStateDto>(server.origin, "POST", `/api/p/${profileId}/portions`, {
+    portion: portionKey(2),
+    answers: answersForStep(2),
+    requestId: "after-renew",
+  });
+  assert.equal(next.status, 200);
+  assert.ok(listAnswers(server.db, profileId).length > count);
 });
 
 test("страница документа читает markdown и не копирует его в код сервера", async (t) => {

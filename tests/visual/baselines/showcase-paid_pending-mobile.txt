@@ -23,331 +23,315 @@
       Страница живёт по ссылке /p/p-VITRINA. Сохрани её — вернёшься на то же место.
     </p>
   </header>
-  <p class="hook" data-empty="false">
-    Круг замыкается там же, где начался
-  </p>
-  <section aria-label="Карта" class="map">
-    <p class="section-title">
-      Карта
+  <div class="page__portrait">
+    <p class="hook" data-empty="false">
+      Круг замыкается там же, где начался
     </p>
-    <p class="section-note">
-      Здесь семь полос. Остальное закрыто и видно ниже, дверями
-    </p>
-    <ul class="map__bars">
-      <li class="bar" data-animate="on" data-bar="tempo" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Темп: перевес — импульсы. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Темп
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="high"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            ровный поток
-          </span>
-          <span class="bar__pole">
-            импульсы
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="on" data-bar="completion" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Доведение: перевес — обрыв. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Доведение
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="high"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            до конца
-          </span>
-          <span class="bar__pole">
-            обрыв
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="on" data-bar="pressure" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Под давлением: лёгкий перевес — замирание. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Под давлением
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="mid-low"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            замирание
-          </span>
-          <span class="bar__pole">
-            ускорение
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="on" data-bar="trigger" data-fill="precise" data-kind="category">
-        <span class="visually-hidden">
-          Что задевает: когда обо мне думают хуже, чем есть. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Что задевает
-          </span>
-        </div>
-        <ul class="bar__dots">
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда меня не воспринимают всерьёз
-            </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда я теряю контроль над происходящим
-            </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда меня оставляют одного
-            </span>
-          </li>
-          <li class="bar__dot" data-selected="true">
-            <span class="visually-hidden">
-              когда обо мне думают хуже, чем есть
-            </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда меня торопят
-            </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда решают за меня
-            </span>
-          </li>
-          <li class="bar__dot" data-selected="false">
-            <span class="visually-hidden">
-              когда я подвожу тех, кто рассчитывал
-            </span>
-          </li>
-        </ul>
-        <p class="bar__selected">
-          когда обо мне думают хуже, чем есть
-        </p>
-      </li>
-      <li class="bar" data-animate="on" data-bar="attention" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Внимание: посередине, без перевеса. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Внимание
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="center"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            конкретика
-          </span>
-          <span class="bar__pole">
-            связи
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="on" data-bar="structure" data-fill="precise" data-kind="axis">
-        <span class="visually-hidden">
-          Структура: лёгкий перевес — определённость. Точно
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Структура
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="mid-low"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            определённость
-          </span>
-          <span class="bar__pole">
-            открытый финал
-          </span>
-        </div>
-      </li>
-      <li class="bar" data-animate="on" data-bar="holding" data-fill="approximate" data-kind="axis">
-        <span class="visually-hidden">
-          Удержание: лёгкий перевес — держит долго. Пока предположение
-        </span>
-        <div class="bar__row">
-          <span class="bar__label">
-            Удержание
-          </span>
-          <span class="bar__track">
-            <span class="bar__marker" data-zone="mid-high"></span>
-          </span>
-        </div>
-        <div aria-hidden="true" class="bar__poles">
-          <span class="bar__pole">
-            отпускает
-          </span>
-          <span class="bar__pole">
-            держит долго
-          </span>
-        </div>
-      </li>
-    </ul>
-  </section>
-  <p class="section-title">
-    Разбор
-  </p>
-  <article class="block" data-block="step1" data-enter="off" data-state="rest">
-    <h2 class="block__heading">
-      Как ты работаешь
-    </h2>
-    <p class="block__paragraph">
-      Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
-    </p>
-    <p class="block__paragraph">
-      Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
-    </p>
-    <p class="block__paragraph">
-      Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
-    </p>
-    <p class="block__highlight">
-      Ты останавливаешься не там, где трудно, а там, где почти получилось: последний шаг требует признать, что вышло именно так, а не как задумано.
-    </p>
-    <div class="block__actions">
-      <button class="block__action" data-action="disagree" type="button">
-        Не согласен с этим
-      </button>
-      <button class="block__action" data-action="share" type="button">
-        Поделиться
-      </button>
-    </div>
-  </article>
-  <article class="block" data-block="step2" data-enter="off" data-state="rest">
-    <h2 class="block__heading">
-      Как тебя задевает
-    </h2>
-    <p class="block__paragraph">
-      Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
-    </p>
-    <p class="block__paragraph">
-      Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
-    </p>
-    <p class="block__paragraph">
-      Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
-    </p>
-    <p class="block__highlight">
-      Ты замечаешь не сам укол, а то, что после него остаёшься объяснять себе, почему он не имел значения.
-    </p>
-    <div class="block__actions">
-      <button class="block__action" data-action="disagree" type="button">
-        Не согласен с этим
-      </button>
-      <button class="block__action" data-action="share" type="button">
-        Поделиться
-      </button>
-    </div>
-  </article>
-  <article class="block" data-block="step3" data-enter="off" data-state="rest">
-    <h2 class="block__heading">
-      Где ты себе мешаешь
-    </h2>
-    <p class="block__paragraph">
-      Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
-    </p>
-    <p class="block__paragraph">
-      Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
-    </p>
-    <p class="block__paragraph">
-      Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
-    </p>
-    <p class="block__highlight">
-      Ты закрываешь дело ровно тогда, когда его уже нельзя сделать лучше, — и поэтому не закрываешь никогда.
-    </p>
-    <div class="block__actions">
-      <button class="block__action" data-action="disagree" type="button">
-        Не согласен с этим
-      </button>
-      <button class="block__action" data-action="share" type="button">
-        Поделиться
-      </button>
-    </div>
-  </article>
-  <article class="block" data-block="step4" data-enter="off" data-state="rest">
-    <h2 class="block__heading">
-      Твой сюжет
-    </h2>
-    <p class="block__paragraph">
-      Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
-    </p>
-    <p class="block__paragraph">
-      Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
-    </p>
-    <p class="block__paragraph">
-      Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
-    </p>
-    <p class="block__highlight">
-      Круг замыкается там же, где начался: в моменте, когда результат становится оценкой тебя.
-    </p>
-    <div class="block__actions">
-      <button class="block__action" data-action="disagree" type="button">
-        Не согласен с этим
-      </button>
-      <button class="block__action" data-action="share" type="button">
-        Поделиться
-      </button>
-    </div>
-  </article>
-  <form class="contact" data-screen="contact">
-    <h2 class="contact__title">
-      Страница уже твоя
-    </h2>
-    <p class="contact__lead">
-      Оставь контакт — пришлю ссылку и напишу, когда появится следующий разбор. Можно пропустить.
-    </p>
-    <label class="contact__field" for="contact-email">
-      <span class="contact__label">
-        Почта
-      </span>
-      <input autocomplete="email" class="contact__input" id="contact-email" inputmode="email" name="email" placeholder="если удобно письмом" type="email" value>
-    </label>
-    <label class="contact__field" for="contact-channel">
-      <span class="contact__label">
-        Telegram или телефон
-      </span>
-      <input autocomplete="tel" class="contact__input" id="contact-channel" name="channel" placeholder="Telegram или телефон" type="text" value>
-      <p class="contact__hint">
-        Необязательно. Так проще, чем письмом.
+    <section aria-label="Карта" class="map" data-empty="false">
+      <p class="section-title">
+        Карта
       </p>
-    </label>
-    <div class="contact__actions">
-      <button class="contact__submit" type="submit">
-        Оставить контакт
-      </button>
-      <button class="contact__skip" type="button">
-        Пока не сейчас
-      </button>
-    </div>
-  </form>
+      <p class="section-note">
+        Здесь семь полос. Остальное закрыто и видно ниже, дверями
+      </p>
+      <ul class="map__bars">
+        <li class="bar" data-animate="on" data-bar="tempo" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Темп: перевес — импульсы. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Темп
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="high"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              ровный поток
+            </span>
+            <span class="bar__pole">
+              импульсы
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="on" data-bar="completion" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Доведение: перевес — обрыв. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Доведение
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="high"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              до конца
+            </span>
+            <span class="bar__pole">
+              обрыв
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="on" data-bar="pressure" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Под давлением: лёгкий перевес — замирание. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Под давлением
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="mid-low"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              замирание
+            </span>
+            <span class="bar__pole">
+              ускорение
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="on" data-bar="trigger" data-fill="precise" data-kind="category">
+          <span class="visually-hidden">
+            Что задевает: когда обо мне думают хуже, чем есть. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Что задевает
+            </span>
+          </div>
+          <ul class="bar__dots">
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда меня не воспринимают всерьёз
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда я теряю контроль над происходящим
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда меня оставляют одного
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="true">
+              <span class="visually-hidden">
+                когда обо мне думают хуже, чем есть
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда меня торопят
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда решают за меня
+              </span>
+            </li>
+            <li class="bar__dot" data-selected="false">
+              <span class="visually-hidden">
+                когда я подвожу тех, кто рассчитывал
+              </span>
+            </li>
+          </ul>
+          <p class="bar__selected">
+            когда обо мне думают хуже, чем есть
+          </p>
+        </li>
+        <li class="bar" data-animate="on" data-bar="attention" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Внимание: посередине, без перевеса. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Внимание
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="center"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              конкретика
+            </span>
+            <span class="bar__pole">
+              связи
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="on" data-bar="structure" data-fill="precise" data-kind="axis">
+          <span class="visually-hidden">
+            Структура: лёгкий перевес — определённость. Точно
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Структура
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="mid-low"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              определённость
+            </span>
+            <span class="bar__pole">
+              открытый финал
+            </span>
+          </div>
+        </li>
+        <li class="bar" data-animate="on" data-bar="holding" data-fill="approximate" data-kind="axis">
+          <span class="visually-hidden">
+            Удержание: лёгкий перевес — держит долго. Пока предположение
+          </span>
+          <div class="bar__row">
+            <span class="bar__label">
+              Удержание
+            </span>
+            <span class="bar__track">
+              <span class="bar__marker" data-zone="mid-high"></span>
+            </span>
+          </div>
+          <div aria-hidden="true" class="bar__poles">
+            <span class="bar__pole">
+              отпускает
+            </span>
+            <span class="bar__pole">
+              держит долго
+            </span>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </div>
+  <section class="reading" data-empty="false">
+    <h2 class="section-title visually-hidden">
+      Разбор
+    </h2>
+    <article class="block" data-block="step1" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Как ты работаешь
+      </h2>
+      <p class="block__paragraph">
+        Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
+      </p>
+      <p class="block__paragraph">
+        Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
+      </p>
+      <p class="block__paragraph">
+        Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
+      </p>
+      <figure class="block__stitch">
+        <figcaption class="block__stitch-label">
+          сшивка
+        </figcaption>
+        <p class="block__highlight">
+          Ты останавливаешься не там, где трудно, а там, где почти получилось: последний шаг требует признать, что вышло именно так, а не как задумано.
+        </p>
+      </figure>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+      </div>
+    </article>
+    <article class="block" data-block="step2" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Как тебя задевает
+      </h2>
+      <p class="block__paragraph">
+        Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
+      </p>
+      <p class="block__paragraph">
+        Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
+      </p>
+      <p class="block__paragraph">
+        Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
+      </p>
+      <figure class="block__stitch">
+        <figcaption class="block__stitch-label">
+          сшивка
+        </figcaption>
+        <p class="block__highlight">
+          Ты замечаешь не сам укол, а то, что после него остаёшься объяснять себе, почему он не имел значения.
+        </p>
+      </figure>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+      </div>
+    </article>
+    <article class="block" data-block="step3" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Где ты себе мешаешь
+      </h2>
+      <p class="block__paragraph">
+        Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
+      </p>
+      <p class="block__paragraph">
+        Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
+      </p>
+      <p class="block__paragraph">
+        Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
+      </p>
+      <figure class="block__stitch">
+        <figcaption class="block__stitch-label">
+          сшивка
+        </figcaption>
+        <p class="block__highlight">
+          Ты закрываешь дело ровно тогда, когда его уже нельзя сделать лучше, — и поэтому не закрываешь никогда.
+        </p>
+      </figure>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+      </div>
+    </article>
+    <article class="block" data-block="step4" data-enter="off" data-state="rest">
+      <h2 class="block__heading">
+        Твой сюжет
+      </h2>
+      <p class="block__paragraph">
+        Ты входишь в работу рывком: сначала долго не начинаешь, потом делаешь за вечер то, на что закладывал неделю. Это не лень и не собранность — это способ набирать скорость от давления срока.
+      </p>
+      <p class="block__paragraph">
+        Пока задача держится в голове целиком, ты не выпускаешь её из рук. Как только она распадается на части, каждая часть кажется отдельной задачей, и та, что скучнее, остаётся лежать.
+      </p>
+      <p class="block__paragraph">
+        Сильнее всего это видно на длинных делах без внешнего срока: там некому создать давление, и работа встаёт не в начале, а в момент, когда результат уже почти есть.
+      </p>
+      <figure class="block__stitch">
+        <figcaption class="block__stitch-label">
+          сшивка
+        </figcaption>
+        <p class="block__highlight">
+          Круг замыкается там же, где начался: в моменте, когда результат становится оценкой тебя.
+        </p>
+      </figure>
+      <div class="block__actions">
+        <button class="block__action" data-action="disagree" type="button">
+          Не согласен с этим
+        </button>
+        <button class="block__action" data-action="share" type="button">
+          Поделиться
+        </button>
+      </div>
+    </article>
+  </section>
   <section class="portion" data-index="0" data-kind="choice" data-portion="slice:node_finish" data-total="2">
-    <h2 class="section-title">
+    <h2 class="section-title visually-hidden">
       На этой странице
     </h2>
     <p class="portion__lead">
@@ -583,6 +567,10 @@
   color: #4c4136;
 }
 
+.bar[data-fill="empty"] .bar__poles {
+  display: none;
+}
+
 .bar[data-fill="empty"] .bar__track {
   background: transparent;
   border-style: dashed;
@@ -604,10 +592,11 @@
 }
 
 .block {
-  background: #fffdf8;
-  border: 1px solid #c1ad93;
-  border-radius: 20px;
-  box-shadow: 0 1px 2px rgba(13, 11, 9, 0.06), 0 12px 28px rgba(13, 11, 9, 0.08);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid #c1ad93;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -615,16 +604,18 @@
 }
 
 .block__action {
-  background: #fffdf8;
-  border: 1px solid #c1ad93;
-  border-radius: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   color: #4c4136;
   font-size: 14px;
   font-weight: 400;
   min-height: 44px;
   min-width: 44px;
-  padding: 8px 12px;
-  transition: color 120ms ease, border-color 120ms ease;
+  padding: 8px 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 120ms ease;
 }
 
 .block__actions {
@@ -661,6 +652,22 @@
   max-width: 36ch;
 }
 
+.block__stitch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.block__stitch-label {
+  color: #4c4136;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.64px;
+  line-height: 1.4;
+  text-transform: lowercase;
+}
+
 .block[data-enter="off"],
 .wait[data-enter="off"] {
   animation-name: none;
@@ -680,7 +687,6 @@
 }
 
 .block[data-state="disagreed"] .block__action[data-action="disagree"] {
-  border-color: #8a7662;
   color: #0d0b09;
 }
 
@@ -689,107 +695,11 @@
 }
 
 .block[data-state="purchased"] {
-  border-color: #8a7662;
+  border-color: #c1ad93;
 }
 
 .block[data-state="stale"] {
   border-color: #8a7662;
-}
-
-.contact {
-  background: #fffdf8;
-  border: 1px solid #c1ad93;
-  border-radius: 20px;
-  box-shadow: 0 1px 2px rgba(13, 11, 9, 0.06), 0 12px 28px rgba(13, 11, 9, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 24px;
-}
-
-.contact__actions {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.contact__field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.contact__hint {
-  color: #4c4136;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.contact__input {
-  background: #fffdf8;
-  border: 2px solid #c1ad93;
-  border-radius: 10px;
-  box-shadow: inset 0 1px 2px rgba(13, 11, 9, 0.14);
-  color: #1a1612;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.4;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 12px;
-  width: 100%;
-}
-
-.contact__label {
-  color: #0d0b09;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.contact__lead {
-  color: #1a1612;
-  font-size: 16px;
-  line-height: 1.55;
-  max-width: 36ch;
-}
-
-.contact__skip {
-  background: #fffdf8;
-  border: 1px solid #c1ad93;
-  border-radius: 10px;
-  color: #1a1612;
-  font-size: 16px;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 12px 24px;
-}
-
-.contact__submit {
-  background: #0e524c;
-  border: 2px solid #0e524c;
-  border-radius: 10px;
-  color: #fffdf8;
-  font-size: 16px;
-  font-weight: 500;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 12px 24px;
-}
-
-.contact__submit:disabled,
-.contact__skip:disabled,
-.contact__input:disabled {
-  color: #6d5c4c;
-  cursor: not-allowed;
-}
-
-.contact__title {
-  color: #0d0b09;
-  font-size: 20px;
-  font-weight: 640;
-  line-height: 1.25;
 }
 
 .door__body {
@@ -837,6 +747,17 @@
 
 .door[data-state="locked_generic"] .door__face {
   color: #6d5c4c;
+}
+
+.door[data-state="locked_generic"] .door__face,
+.door[data-state="locked_profiled"] .door__face,
+.door[data-state="paid"] .door__face {
+  background: transparent;
+  border-bottom: 1px solid #c1ad93;
+  border-radius: 0;
+  border-style: none;
+  box-shadow: none;
+  padding: 8px 0;
 }
 
 .door[data-state="locked_profiled"] .door__face {
@@ -893,8 +814,8 @@
 .head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 16px;
+  gap: 4px;
+  padding-top: 8px;
 }
 
 .head__brand {
@@ -924,15 +845,15 @@
 .head__name {
   color: #0d0b09;
   font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
-  font-size: 36px;
+  font-size: 20px;
   font-weight: 640;
-  letter-spacing: -0.48px;
+  letter-spacing: -0.32px;
   line-height: 1.25;
 }
 
 .head__theme {
   color: #4c4136;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -951,9 +872,11 @@
 .hook[data-empty="true"] {
   color: #4c4136;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0;
+  line-height: 1.4;
+  padding: 8px 0;
 }
 
 .map {
@@ -975,6 +898,27 @@
   list-style: none;
   margin: 0;
   padding: 16px;
+}
+
+.map[data-empty="true"] {
+  gap: 8px;
+}
+
+.map[data-empty="true"] .bar {
+  gap: 0;
+}
+
+.map[data-empty="true"] .bar__track,
+.map[data-empty="true"] .bar__dots {
+  display: none;
+}
+
+.map[data-empty="true"] .map__bars {
+  background: transparent;
+  border-style: none;
+  box-shadow: none;
+  gap: 0;
+  padding: 0;
 }
 
 .option {
@@ -1064,6 +1008,28 @@
   padding-bottom: 48px;
 }
 
+.page__portrait {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page[data-page="s0"] {
+  gap: 16px;
+}
+
+.page[data-page="s0"] .door[data-state="opens_with_answers"] .door__face {
+  background: transparent;
+  border-bottom: 1px solid #c1ad93;
+  border-radius: 0;
+  border-style: none;
+  padding: 8px 0;
+}
+
+.page[data-page="s0"] .page__portrait {
+  gap: 8px;
+}
+
 .portion {
   background: #fffdf8;
   border: 1px solid #c1ad93;
@@ -1073,6 +1039,16 @@
   flex-direction: column;
   gap: 16px;
   padding: 24px;
+}
+
+.portion .option {
+  background: transparent;
+  box-shadow: none;
+}
+
+.portion .option[data-state="selected"] {
+  background: #dceae7;
+  box-shadow: none;
 }
 
 .portion__choice,
@@ -1121,6 +1097,16 @@
   font-weight: 500;
   line-height: 1.4;
   max-width: 36ch;
+}
+
+.reading {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.reading[data-empty="true"] {
+  gap: 8px;
 }
 
 .route {

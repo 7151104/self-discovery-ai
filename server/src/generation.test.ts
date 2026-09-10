@@ -5,14 +5,14 @@
  */
 
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { answering, DEMO_ANSWERS, envelope, FakeProvider, sliceEnvelope, textOfVolume, volumeOf, reportTypeOfSlice } from "../llm/dist/index.js";
 import type { AnswerInput, GenerationResponse, PageStateDto, PortionDto } from "./contract/index.js";
 import { rawContent, rawExtraContent } from "./engine.js";
-import { sliceAnswers } from "../../engine/dist/slice-fixtures.js";
+import { sliceAnswers, textLonger } from "../../engine/dist/slice-fixtures.js";
 import { buildKeyring } from "./db/crypto.js";
 import { up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
@@ -32,7 +32,7 @@ import {
   saveCache,
   saveJobResult,
 } from "./store.js";
-import { call, deliverWebhook, drainServer, profileAtStep, profileBody, startTestServer, TEST_KEY } from "./test-support.js";
+import { call, deliverWebhook, drainServer, profileAtStep, profileBody, purchaseSlice, startTestServer, TEST_KEY } from "./test-support.js";
 
 const LLM_FAST = {
   SDAI_LLM_ATTEMPTS: "1",
@@ -659,6 +659,69 @@ for (const slice of ["slice_node_finish", "slice_work"]) {
     assert.ok((block.paragraphs.length ?? 0) > 0);
   });
 }
+
+/** Ответы добора полной карты — тот же человек, что в `examples/demo-person-answers.md`. */
+function demoBankClosed(): Record<string, string | number> {
+  const answers: Record<string, string | number> = {};
+  const source = readFileSync(new URL("../../examples/demo-person-answers.md", import.meta.url), "utf8");
+  for (const line of source.split("\n")) {
+    const row = /^\|\s*(\d+)\s*\|\s*([A-G]|[1-5])\s*\|$/.exec(line.trim());
+    if (!row) continue;
+    const value = row[2] ?? "";
+    answers[`Q${row[1]}`] = /^[1-5]$/.test(value) ? Number(value) : value;
+  }
+  return answers;
+}
+
+async function answerFullMapPortions(origin: string, profileId: string): Promise<PageStateDto> {
+  const demo = demoBankClosed();
+  const open = textLonger(20);
+  let page = (await call<PageStateDto>(origin, "GET", `/api/p/${profileId}`)).body;
+  for (let guard = 0; guard < 5; guard += 1) {
+    const portion = page.nextPortion;
+    if (!portion || !portion.key.startsWith("slice:slice_full_map:")) break;
+    const answers = portion.questions.map((question): AnswerInput => {
+      const id = parseSliceQuestionId(question.id)?.questionId ?? question.id;
+      if (question.kind === "выбор") {
+        return { questionId: question.id, kind: "выбор", option: String(demo[id] ?? question.options[0]?.key ?? "A") };
+      }
+      if (question.kind === "шкала") {
+        const scale = Number(demo[id] ?? 4);
+        return { questionId: question.id, kind: "шкала", scale: scale as 1 | 2 | 3 | 4 | 5 };
+      }
+      if (question.kind === "число") return { questionId: question.id, kind: "число", numbers: [5, 2] };
+      return { questionId: question.id, kind: "открытый", text: open };
+    });
+    const reply = await call<PageStateDto>(origin, "POST", `/api/p/${profileId}/portions`, {
+      portion: portion.key,
+      answers,
+      requestId: `portion-${portion.key}`,
+    });
+    page = reply.body;
+  }
+  return page;
+}
+
+test("полная карта: после добора задание ставится и пишет задачу периода", async (t) => {
+  const server = await startTestServer({ ...LLM_FAST, SDAI_LLM_TIMEOUT_MS: "2000" });
+  t.after(() => server.close());
+
+  const page = await profileAtDemoLadder(server.origin);
+  await drainServer(server);
+  const paid = await purchaseSlice(server.origin, "slice_full_map", page);
+  assert.ok(paid.page.nextPortion?.key.startsWith("slice:slice_full_map:"));
+  await answerFullMapPortions(server.origin, paid.page.profileId);
+  await drainServer(server);
+
+  const job = findLatestJob(server.db, paid.page.profileId, "slice:slice_full_map");
+  assert.equal(job?.status, "ready", job?.failureCode ?? "задания нет");
+  assert.ok(job?.result?.periodTask, "задача периода не записана");
+  const block = (await call<PageStateDto>(server.origin, "GET", `/api/p/${paid.page.profileId}`)).body.blocks.find(
+    (item) => item.id === "slice:slice_full_map",
+  );
+  assert.ok(block);
+  assert.ok((block.paragraphs.length ?? 0) > 0);
+});
 
 test("generation.failed не кладёт фразу человека в журнал", async (t) => {
   const lines: string[] = [];

@@ -26,6 +26,7 @@ const outputWith = (statements: Statement[], text = GOOD_TEXT): ModelOutput => (
   text,
   statements,
   storyline: { value: "сюжет", code: "code_here", confidence: "medium" },
+  periodTask: null,
 });
 
 const one = (phrase: string, kind: StatementKind, coordinate: number | null): RegisterProblem[] =>

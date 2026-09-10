@@ -40,6 +40,7 @@ interface ParsedTask {
   openAnswer: string;
   reportType: string;
   storyline: boolean;
+  periodTask: boolean;
 }
 
 interface Draft {
@@ -118,6 +119,14 @@ function parseStorylineNeeded(instruction: string): boolean {
   return parseReportType(instruction) === LADDER_FINAL;
 }
 
+function parsePeriodTaskNeeded(instruction: string): boolean {
+  return /«задача_периода»\s*—\s*задача периода/.test(instruction);
+}
+
+function parseOpenNamed(data: string, title: string): string {
+  return parseOpenAnswer(sectionBody(data, title));
+}
+
 function parseTask(request: GenerationRequest): ParsedTask {
   const instruction = request.instruction.replace(/\r\n?/g, "\n");
   const data = request.data.replace(/\r\n?/g, "\n");
@@ -129,6 +138,7 @@ function parseTask(request: GenerationRequest): ParsedTask {
     openAnswer: parseOpenAnswer(data),
     reportType: parseReportType(instruction),
     storyline: parseStorylineNeeded(instruction),
+    periodTask: parsePeriodTaskNeeded(instruction),
   };
 }
 
@@ -228,7 +238,16 @@ function buildStoryline(task: ParsedTask): Storyline | null {
   return { value, code: "stub_open_loop", confidence };
 }
 
-function buildOutput(task: ParsedTask): ModelOutput {
+function buildPeriodTask(task: ParsedTask, data: string): Storyline | null {
+  if (!task.periodTask && task.reportType !== "полная_карта") return null;
+  const o3 = parseOpenNamed(data, "ОТКРЫТЫЙ ОТВЕТ О3") || parseOpenNamed(data, "ОТКРЫТЫЙ ОТВЕТ O3");
+  const source = o3 || task.openAnswer;
+  const compact = source.replace(/\s+/g, " ").trim();
+  if (!compact) return null;
+  return { value: compact.slice(0, 120), code: "stub_period_task", confidence: "medium" };
+}
+
+function buildOutput(task: ParsedTask, data: string): ModelOutput {
   const volume = volumeFor(task.reportType);
   const ladder = task.reportType === LADDER_FINAL;
   const markers = registerMarkers().medium;
@@ -274,6 +293,7 @@ function buildOutput(task: ParsedTask): ModelOutput {
     text,
     statements: drafts.map(asStatement),
     storyline: buildStoryline(task),
+    periodTask: buildPeriodTask(task, data),
   };
 }
 
@@ -294,12 +314,22 @@ function serialize(output: ModelOutput): string {
           },
         }
       : {}),
+    ...(output.periodTask
+      ? {
+          задача_периода: {
+            значение: output.periodTask.value,
+            код: output.periodTask.code,
+            уверенность: output.periodTask.confidence,
+          },
+        }
+      : {}),
   });
 }
 
 /** Собрать машинный конверт из задания. Нужно тестам заглушки, не серверу. */
 export function stubEnvelope(request: GenerationRequest): string {
-  return serialize(buildOutput(parseTask(request)));
+  const task = parseTask(request);
+  return serialize(buildOutput(task, request.data.replace(/\r\n?/g, "\n")));
 }
 
 export interface StubProviderOptions {

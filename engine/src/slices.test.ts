@@ -13,7 +13,7 @@ import test from "node:test";
 import { rawContent } from "./generated/content.js";
 import { applySlice, sameSubtype, sliceOwnedCodes, subtypeRegistry, SCORED_SLICES } from "./slices.js";
 import { demoProfile, sliceAnswers, textLonger } from "./slice-fixtures.js";
-import type { Profile } from "./types.js";
+import type { Profile, SliceAnswers } from "./types.js";
 
 const repoFile = (path: string): string => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
@@ -99,6 +99,9 @@ test("словарь сводит разную точность координа
   // Координата 14: банк называл режим «analysis», срез — «analytic».
   assert.ok(sameSubtype("analysis", "analytic"));
   assert.ok(!sameSubtype("analysis", "pressure_gated"));
+  assert.ok(sameSubtype("at_80", "pre_show_plan"));
+  assert.ok(sameSubtype("releases", "slow_short"));
+  assert.ok(sameSubtype("releases", "fast_short"));
 });
 
 test("slice_node_finish: обрыв до показа с укрытием в доработке и флаг рационализации", () => {
@@ -160,6 +163,75 @@ test("slice_decisions: решение вырывает срок, решённо�
   assert.equal(coordinate(profile, 14).code, "pressure_gated");
   assert.ok(coordinate(profile, 14).flags.includes("open_after_close"));
   assert.ok(coordinate(profile, 5).flags.includes("commitment_reversal"));
+});
+
+test("slice_node_finish: обрыв до показа с укрытием в плане", () => {
+  const answers = { ...sliceAnswers("slice_node_finish"), S1: "A", S2: "D" };
+  const profile = applySlice("slice_node_finish", demoProfile(), answers);
+  assert.equal(coordinate(profile, 11).code, "pre_show_plan");
+});
+
+test("slice_stress: клапан был, в перегрузе им не пользуется", () => {
+  const answers = { ...sliceAnswers("slice_stress"), S2: "A", S3: "A" };
+  const profile = applySlice("slice_stress", demoProfile(), answers);
+  assert.equal(coordinate(profile, 12).code, "unused_outlet");
+});
+
+test("slice_stress: S2=C/D не отдаёт has_outlet клеткам без клапана в моменте", () => {
+  const withOutlet = applySlice("slice_stress", demoProfile(), { ...sliceAnswers("slice_stress"), S2: "C", S3: "A" });
+  assert.equal(coordinate(withOutlet, 12).code, "has_outlet");
+  const burned = applySlice("slice_stress", demoProfile(), { ...sliceAnswers("slice_stress"), S2: "E", S3: "C" });
+  assert.equal(coordinate(burned, 12).code, "learned_self_reliance");
+});
+
+test("slice_reactivity: замечает поздно, отпускает быстро", () => {
+  const answers = { ...sliceAnswers("slice_reactivity"), S8: "C", S3: "A" };
+  const profile = applySlice("slice_reactivity", demoProfile(), answers);
+  assert.equal(coordinate(profile, 7).code, "slow_short");
+});
+
+test("slice_decisions: собирал данные, сдвинуло внутренним откликом", () => {
+  const answers = { ...sliceAnswers("slice_decisions"), S2: "A", S3: "D" };
+  const profile = applySlice("slice_decisions", demoProfile(), answers);
+  assert.equal(coordinate(profile, 14).code, "incubation");
+});
+
+const choiceKeys = (slice: string, id: string): string[] => {
+  const question = rawContent.slices.find((candidate) => candidate.id === slice)?.questions.find((item) => item.id === id);
+  assert.ok(question, `${slice} ${id}: нет вопроса`);
+  assert.ok((question?.options.length ?? 0) > 0, `${slice} ${id}: не выбор`);
+  return question!.options.map((option) => option.key);
+};
+
+const ownedOn = (slice: string, coordinateId: number, extra: SliceAnswers): string => {
+  const profile = applySlice(slice, demoProfile(), { ...sliceAnswers(slice), ...extra });
+  const code = coordinate(profile, coordinateId).code;
+  assert.ok(code, `${slice}: ${JSON.stringify(extra)} не поставил код`);
+  assert.equal(sliceOwnedCodes(slice)[code], coordinateId, `${slice}: ${JSON.stringify(extra)} → ${code}, не подтип среза`);
+  return code;
+};
+
+test("таблицы подтипов покрывают все сочетания ответов, от которых зависит порог", () => {
+  for (const s1 of choiceKeys("slice_node_finish", "S1")) {
+    for (const s2 of choiceKeys("slice_node_finish", "S2")) {
+      ownedOn("slice_node_finish", 11, { S1: s1, S2: s2 });
+    }
+  }
+  for (const s2 of choiceKeys("slice_stress", "S2")) {
+    for (const s3 of choiceKeys("slice_stress", "S3")) {
+      ownedOn("slice_stress", 12, { S2: s2, S3: s3 });
+    }
+  }
+  for (const s8 of choiceKeys("slice_reactivity", "S8")) {
+    for (const s3 of choiceKeys("slice_reactivity", "S3")) {
+      ownedOn("slice_reactivity", 7, { S8: s8, S3: s3 });
+    }
+  }
+  for (const s2 of choiceKeys("slice_decisions", "S2")) {
+    for (const s3 of choiceKeys("slice_decisions", "S3")) {
+      ownedOn("slice_decisions", 14, { S2: s2, S3: s3 });
+    }
+  }
 });
 
 test("slice_work: сильная и дорогая зоны становятся конфигурацией профиля", () => {

@@ -159,7 +159,7 @@ test("кнопка покупки — единственное место, гд�
   assert.equal(priceOccurrences(renderToString(buttons[0] ?? null)), 1);
 });
 
-test("предложение приподнято тенью из шкалы, а не выкрашено в праздничный цвет", () => {
-  const shadow = declared(lookup, ".offer", "box-shadow");
-  assert.ok(shadow !== null && shadow !== "none");
+test("предложение отделено тяжёлой линейкой, а не праздничной заливкой", () => {
+  const border = declared(lookup, ".offer", "border-top");
+  assert.ok(border !== null && border.includes("solid"));
 });

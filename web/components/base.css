@@ -64,6 +64,20 @@ button {
   padding-bottom: var(--space-7);
 }
 
+.page[data-page="s0"] {
+  gap: var(--space-4);
+}
+
+.page__portrait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.page[data-page="s0"] .page__portrait {
+  gap: var(--space-2);
+}
+
 .section-title {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -81,7 +95,11 @@ button {
 .reading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 0;
+}
+
+.reading[data-empty="true"] {
+  gap: var(--space-2);
 }
 
 .page__notice {

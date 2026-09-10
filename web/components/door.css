@@ -76,6 +76,17 @@
 }
 
 /* Закрыта, тема неизвестна: приглушена, читается как «здесь что-то есть». */
+.door[data-state="locked_generic"] .door__face,
+.door[data-state="locked_profiled"] .door__face,
+.door[data-state="paid"] .door__face {
+  padding: var(--space-2) 0;
+  border-style: none;
+  border-bottom: var(--border-hair) solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .door[data-state="locked_generic"] .door__face {
   color: var(--color-text-faint);
 }
@@ -134,6 +145,24 @@
 .door[data-state="offered"] .door__title {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
+}
+
+.page:has(.offer) .door__price {
+  display: none;
+}
+
+.page:has(.offer) .door[data-state="offered"] .door__face {
+  box-shadow: none;
+  border-color: var(--color-line);
+}
+
+/* На s0 маршрут — опись дверей под работой, не витрина карточек. */
+.page[data-page="s0"] .door[data-state="opens_with_answers"] .door__face {
+  padding: var(--space-2) 0;
+  border-style: none;
+  border-bottom: var(--border-hair) solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
 }
 
 @media (hover: hover) {

@@ -133,9 +133,10 @@ function renderBar(bar: MapBarDto, props: MapProps): VNode {
 }
 
 export function renderMap(props: MapProps): VNode {
+  const empty = props.bars.every((bar) => bar.fill === "empty");
   return h(
     "section",
-    { class: "map", "aria-label": props.label },
+    { class: "map", "aria-label": props.label, "data-empty": empty ? "true" : "false" },
     h("p", { class: "section-title" }, props.label),
     props.note ? h("p", { class: "section-note" }, props.note) : null,
     h(

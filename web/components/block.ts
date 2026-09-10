@@ -34,6 +34,8 @@ export interface BlockProps {
   paragraphs: string[];
   /** Фраза-сшивка. null — пары не сработали, блок остаётся из абзацев. */
   highlight?: string | null;
+  /** Подпись сшивки из реестра. Пусто — выделенный абзац без каталожного ярлыка. */
+  stitchLabel?: string | null;
   actions?: BlockAction[];
   /** Пометка «обновилось» или отметка о расхождении: текст приходит снаружи. */
   note?: string | null;
@@ -74,7 +76,14 @@ export function renderBlock(props: BlockProps): VNode {
     h("h2", { class: "block__heading" }, props.heading),
     props.note ? h("p", { class: "block__note" }, props.note) : null,
     ...props.paragraphs.map((paragraph) => h("p", { class: "block__paragraph" }, paragraph)),
-    props.highlight ? h("p", { class: "block__highlight" }, props.highlight) : null,
+    props.highlight
+      ? h(
+          "figure",
+          { class: "block__stitch" },
+          props.stitchLabel ? h("figcaption", { class: "block__stitch-label" }, props.stitchLabel) : null,
+          h("p", { class: "block__highlight" }, props.highlight),
+        )
+      : null,
     props.picker
       ? h(
           "div",

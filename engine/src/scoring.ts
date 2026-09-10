@@ -1103,7 +1103,42 @@ export function applyDisagreement(profile: Profile, disagreement: Disagreement):
     ...Object.values(coordinates).flatMap((coordinate) => coordinate.flags),
   ];
 
-  return { ...profile, coordinates, flags: [...new Set(flags)] };
+  /*
+   * Несогласие с блоком ступени 3 (узел) не трогает dominantNode — текст блока
+   * остаётся тем же. Платное предложение этого узла пропускается: продавать
+   * разбор механизма, который человек только что отверг, нельзя.
+   */
+  const nextPaidOffer =
+    disagreement.step === 3 ? offerSkippingRejectedNode({ ...profile, coordinates, flags }) : profile.nextPaidOffer;
+
+  return { ...profile, coordinates, flags: [...new Set(flags)], nextPaidOffer };
+}
+
+/**
+ * Следующее платное предложение, если сработавший узел отвергнут. Сначала
+ * другой сработавший узел, иначе запасной срез, который узлом не является.
+ * Сам узел в профиле остаётся: несогласие не переписывает ступень 3.
+ */
+export function offerSkippingRejectedNode(profile: Profile): string {
+  const offers = rawContent.step3.offers;
+  const rejected = profile.dominantNode ? offers[profile.dominantNode] : undefined;
+  if (!rejected) return profile.nextPaidOffer;
+
+  for (const node of profile.nodes) {
+    const slice = offers[node.id];
+    if (slice && slice !== rejected) return slice;
+  }
+
+  const nodeSlices = new Set(
+    Object.entries(offers)
+      .filter(([key]) => key !== "default")
+      .map(([, slice]) => slice),
+  );
+  const fallback = offers["default"];
+  if (fallback && fallback !== rejected) return fallback;
+
+  const other = rawContent.slices.find((slice) => slice.id !== rejected && !nodeSlices.has(slice.id));
+  return other?.id ?? profile.nextPaidOffer;
 }
 
 /** Несколько несогласий подряд: потолки складываются, вниз и только вниз. */

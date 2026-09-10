@@ -9,11 +9,13 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   API_CREATE_PROFILE,
+  API_DECLINE_OFFER,
   API_DISAGREE,
   API_GENERATION_STATUS,
   API_PAGE_STATE,
   API_PUBLIC_PAGE,
   API_PURCHASE,
+  API_RECORD_CONSENT,
   API_SAVE_CONTACT,
   API_SHARE,
   API_SUBMIT_PORTION,
@@ -40,6 +42,8 @@ test("шаблоны адресов совпадают с контрактом",
   assert.equal(API_PUBLIC_PAGE, contract.API.publicPage.path);
   assert.equal(API_PURCHASE, contract.API.purchase.path);
   assert.equal(API_GENERATION_STATUS, contract.API.generationStatus.path);
+  assert.equal(API_DECLINE_OFFER, contract.API.declineOffer.path);
+  assert.equal(API_RECORD_CONSENT, contract.API.recordConsent.path);
 });
 
 test("подстановка параметров совпадает с buildPath контракта", () => {

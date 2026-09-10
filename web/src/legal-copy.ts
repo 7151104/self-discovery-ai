@@ -34,10 +34,10 @@ export function disclaimersFor(places: string[]): { id: string; text: string }[]
 }
 
 export function disclaimerPlaces(input: { screen: string; page: { blocks: { id: string; generation: { status: string } | null }[]; offer: unknown; nextPortion: unknown } | null }): string[] {
-  if (input.screen === "intro") return ["экран входа", "экран согласия"];
+  if (input.screen === "intro") return ["экран входа"];
   const page = input.page;
   if (page === null) return [];
-  const places: string[] = ["шапка страницы"];
+  const places: string[] = [];
   const ids = page.blocks.map((block) => block.id);
   if (ids.includes("step1")) places.push("блок ступени 1");
   if (ids.includes("step3")) places.push("блок ступени 3");

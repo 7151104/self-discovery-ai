@@ -22,7 +22,17 @@
 
 import { assemblerPrompt, reportTypeOfSlice, sliceOverlay, volumeOf, type ReportType } from "./content.js";
 import { avoidInstruction } from "./crisis.js";
-import { rawContent, type Block, type LlmTask, type Profile, type SliceAnswers, type SliceTextFindings, type TriggeredNode } from "./engine.js";
+import {
+  rawContent,
+  type Block,
+  type FullMapInput,
+  type LlmTask,
+  type Profile,
+  type ProfileOptions,
+  type SliceAnswers,
+  type SliceTextFindings,
+  type TriggeredNode,
+} from "./engine.js";
 import { newNonce, wrapUserText } from "./isolation.js";
 import { outputContractText } from "./output.js";
 import { wordCount } from "./text.js";
@@ -182,6 +192,13 @@ export interface SliceTask {
   findings: SliceTextFindings;
   shownBlocks: Block[];
   openAnswers: { id: string; text: string }[];
+  /**
+   * Вход полной карты. В `SCORED_SLICES` её нет: порог и профиль считает
+   * `fullMapThreshold` / `buildFullMapProfile`, не `applySlice`.
+   */
+  fullMap?: FullMapInput;
+  /** Сюжет ступени 4: координата 15. Нужен порогу полной карты, не скорингу среза. */
+  storyline?: ProfileOptions["storyline"];
 }
 
 const renderAnswers = (answers: SliceAnswers): string => {
@@ -220,7 +237,10 @@ export function buildSlicePrompt(task: SliceTask, nonce: string = newNonce(), av
     {
       title: "ФОРМА ОТВЕТА",
       kind: "инструкция",
-      body: outputContractText(knownCoordinates, { storyline: "optional" }),
+      body: outputContractText(knownCoordinates, {
+        storyline: "optional",
+        periodTask: task.slice === "slice_full_map" ? "required" : "optional",
+      }),
     },
     { title: "ОБРАЩЕНИЕ С ДАННЫМИ", kind: "инструкция", body: DATA_RULES },
     ...(avoidBody ? [{ title: "ТЕМЫ ВНЕ РАЗБОРА", kind: "инструкция" as const, body: avoidBody }] : []),

@@ -46,31 +46,58 @@ function slotOf(node: VNode): string | null {
   return null;
 }
 
-/** Слоты прямых детей `.page` — порядок экрана из схемы. */
-export function screenSlots(tree: Child, kit: Kit): string[] {
-  const page = pageNode(tree, kit);
-  const slots: string[] = [];
-  for (const child of page.children) {
+function isWrapper(node: VNode): boolean {
+  const classes = classesOf(node);
+  return classes.includes("page__portrait") || classes.includes("reading");
+}
+
+function collectSlots(nodes: Child[], slots: string[]): void {
+  for (const child of nodes) {
     if (!isNode(child)) continue;
+    if (isWrapper(child)) {
+      collectSlots(child.children, slots);
+      continue;
+    }
     const kind = slotOf(child);
     if (kind) slots.push(kind);
   }
+}
+
+/** Слоты экрана в визуальном порядке. Обёртки портрета и чтения прозрачны. */
+export function screenSlots(tree: Child, kit: Kit): string[] {
+  const slots: string[] = [];
+  collectSlots(pageNode(tree, kit).children, slots);
   return slots;
 }
 
 /**
  * Ожидаемый порядок слотов на конкретном состоянии.
  *
- * Крючок всегда на месте: на `s0` это зарезервированная фраза, после первой
- * порции — настоящий. Ступень 4 в ожидании занимает место блока
- * слотом `wait`, а не `.block`. После готового сюжета порцию сменяет предложение.
+ * На `s0` работа — вопрос: порция (или пауза «собираю») сразу под шапкой,
+ * пустые крючок и карта ниже. С `s1` экран совпадает со схемой в `docs/11`:
+ * крючок, карта, блоки, порция или предложение, маршрут. Крючок всегда на
+ * месте: на `s0` это зарезервированная фраза, после первой порции — настоящий.
+ * Ступень 4 в ожидании занимает место блока слотом `wait`, а не `.block`.
+ * После готового сюжета порцию сменяет предложение.
  */
 export function expectedSlots(input: {
   blocks: string[];
   waiting: boolean;
   offer: boolean;
   portion: boolean;
+  emptyCabinet?: boolean;
 }): string[] {
+  if (input.emptyCabinet === true) {
+    const slots: string[] = ["head"];
+    if (input.portion) slots.push("portion");
+    else if (input.waiting) slots.push("wait");
+    slots.push("hook", "map");
+    for (const id of input.blocks) {
+      slots.push(input.waiting && id === "step4" ? "wait" : "block");
+    }
+    slots.push("route");
+    return slots;
+  }
   const slots: string[] = ["head", "hook", "map"];
   for (const id of input.blocks) {
     slots.push(input.waiting && id === "step4" ? "wait" : "block");

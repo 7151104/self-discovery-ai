@@ -521,9 +521,16 @@ function parseSliceSubtypes(file, body) {
       if (!cell) continue;
       const m = /^`([a-z_]+)`(?:\s*—\s*(.+))?$/.exec(cell);
       if (!m) throw new Error(`${file}: не разобран подтип «${cell}»`);
-      const text = m[2] ?? cells[column + 1] ?? "";
+      const text = (m[2] ?? cells[column + 1] ?? "").trim();
       if (!text) throw new Error(`${file}: у подтипа ${m[1]} нет формулировки`);
-      if (out.some((subtype) => subtype.code === m[1])) throw new Error(`${file}: подтип ${m[1]} записан дважды`);
+      const existing = out.find((subtype) => subtype.code === m[1]);
+      if (existing) {
+        // Несколько строк таблицы могут делить один код (разные клетки, тот же
+        // подтип). Повторять код с другой формулировкой нельзя: словарь один.
+        if (existing.text !== text)
+          throw new Error(`${file}: подтип ${m[1]} записан дважды с разной формулировкой`);
+        continue;
+      }
       out.push({ code: m[1], text });
     }
   });

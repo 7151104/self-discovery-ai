@@ -149,6 +149,7 @@
   margin: 0 0 22px;
   font-size: 14px;
 }
+.lt-note b { display: block; margin-bottom: 6px; font-family: "Newsreader", serif; font-size: 1.1rem; }
 .lt-note .btn { margin-top: 10px; border-radius: 0; }
 .lt-sec { display: grid; grid-template-columns: 36px 1fr; gap: 10px; padding: 14px 0; border-top: 1px solid #c5cec6; }
 .lt-sec em { font-family: "IBM Plex Mono", monospace; font-size: 11px; font-style: normal; color: #2f6b4f; }

@@ -4,6 +4,7 @@
   const root = document.getElementById("app");
   const KEY = "koordinaty-prototype-v1";
   const THEME_KEY = "koordinaty-theme";
+  const TYPE_KEY = "koordinaty-type";
   const THEMES = [
     { id: "slate", name: "Сланец", hint: "холодный серый, вишня", swatch: "#c43b4b" },
     { id: "graphite", name: "Графит", hint: "тёмная, лёд", swatch: "#7aa2ff" },
@@ -19,14 +20,21 @@
     4: { name: "Сюжет", long: "Сюжет", get: "сюжет твоими словами и обрыв", n: 1, min: 3 },
   };
 
+  function typeId() {
+    const t = localStorage.getItem(TYPE_KEY);
+    return (window.KO_TYPES.list || []).some((x) => x.id === t) ? t : "artifact";
+  }
   function theme() {
     const t = localStorage.getItem(THEME_KEY);
     return THEMES.some((x) => x.id === t) ? t : "slate";
   }
   function applyTheme() {
     const t = theme();
+    const typ = typeId();
     document.documentElement.dataset.theme = t;
+    document.documentElement.dataset.type = typ;
     document.body.dataset.theme = t;
+    document.body.dataset.type = typ;
   }
 
   const LADDER = ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9", "L10", "L11", "L12"];
@@ -42,6 +50,9 @@
     qid: "L1",
     paidIndex: 0,
     seenCoach: false,
+    slide: 0,
+    card: 0,
+    acc: "now",
   };
 
   function save() {
@@ -99,6 +110,16 @@
     return `koordinaty.app/${E.slugify(state.name || "page")}`;
   }
 
+  function chromeNav(active) {
+    if (typeId() === "tabs") return tabsHtml(active);
+    return `<nav class="type-foot">
+      <button data-act="tab-page">страница</button>
+      <button data-act="tab-next">дальше</button>
+      <button data-act="tab-map">карта</button>
+      <button data-act="tab-more">тип</button>
+    </nav>`;
+  }
+
   function tabsHtml(active) {
     const waiting = Boolean(nextMissing());
     const badge = waiting ? `<span class="n">1</span>` : "";
@@ -116,7 +137,9 @@
       <div class="screen no-tabs">
         <div class="brand">${C.brand}</div>
         <h1>Твоя страница.<br>Не тест.</h1>
-        <p class="lead">Двадцать секунд — имя. Потом порции по 3–4 вопроса. Страницу можно отправить.</p>
+        <p class="lead">Сначала выбери, как ходить. Это разные системы, не разные цвета.</p>
+        ${window.KO_TYPES.picker(typeId())}
+        <p class="lead">Двадцать секунд — имя. Потом порции по 3–4 вопроса.</p>
         <div class="benefits">
           <div>1. Сначала подарок — ещё ничего не спрашиваем</div>
           <div>2. Каждая порция сразу что-то открывает на странице</div>
@@ -273,7 +296,20 @@
     return `<div class="you-are">${state.paid ? "Страница собрана. Разбор узла открыт." : "Бесплатное собрано. Дальше — если захочешь."}</div>`;
   }
 
+  function typeApi() {
+    return {
+      E, C, state, STEPS, escape, nowCard, pillsHtml, offerDoor, tabsHtml,
+      youAreHtml, coachHtml, stepDone, currentStepNum, mapLitCount, pageUrl,
+      freeMinutesLeft, pageTabs: pageTabsImpl,
+    };
+  }
+
   function page() {
+    const fn = window.KO_TYPES.pages[typeId()];
+    return fn ? fn(typeApi()) : pageTabsImpl();
+  }
+
+  function pageTabsImpl() {
     const h = E.hook(state.answers);
     const s1 = stepDone(1) ? E.step1Block(state.answers) : null;
     const s2 = stepDone(2) ? E.step2Block(state.answers) : null;
@@ -356,7 +392,7 @@
         <button class="btn mt" data-act="${now.act}">${escape(now.cta)}</button>
         ${cur <= 4 ? `<p class="hint">590 ₽ — потом, если захочешь. Сейчас бесплатно.</p>` : ""}
       </div>
-      ${tabsHtml("next")}`;
+      ${chromeNav("next")}`;
   }
 
   function mapView() {
@@ -372,7 +408,7 @@
         </div>
         <button class="btn secondary" data-act="share">Поделиться картой</button>
       </div>
-      ${tabsHtml("map")}`;
+      ${chromeNav("map")}`;
   }
 
   function more() {
@@ -388,6 +424,12 @@
       <div class="screen">
         <h1>Ещё</h1>
         <div class="card">
+          <p class="kicker-line">Тип</p>
+          <h2>Как ходить</h2>
+          <p class="lead">Разный жест и характер. Не перекраска.</p>
+          ${window.KO_TYPES.picker(typeId())}
+        </div>
+        <div class="card mt">
           <p class="kicker-line">Цвет</p>
           <h2>Как смотреть</h2>
           <p class="lead">Один смысл. Шесть спокойных палитр. Жёлтого нет.</p>
@@ -404,7 +446,7 @@
         </div>
         <p class="hint mt">Прототип. Ступени 1–3 — готовые тексты. Сюжет собран шаблоном. Цвет сохранится, если начнёшь заново.</p>
       </div>
-      ${tabsHtml("more")}`;
+      ${chromeNav("more")}`;
   }
 
   function pay() {
@@ -431,7 +473,7 @@
           <p class="hint" style="text-align:center">это не подписка. один разбор.</p>
         </article>
       </div>
-      ${tabsHtml("next")}`;
+      ${chromeNav("next")}`;
   }
 
   function paidReport() {
@@ -449,7 +491,7 @@
         <button class="btn mt" data-act="share">Этим уже можно делиться</button>
         <button class="btn secondary mt" data-act="tab-page">Вернуться на страницу</button>
       </div>
-      ${tabsHtml("page")}`;
+      ${chromeNav("page")}`;
   }
 
   function shareSheet() {
@@ -491,7 +533,7 @@
     else if (state.screen === "paid-report") html = paidReport();
     else html = welcome();
 
-    root.innerHTML = `<div class="phone" data-theme="${theme()}">${html}${state.sheet === "share" ? shareSheet() : ""}</div>`;
+    root.innerHTML = `<div class="phone" data-theme="${theme()}" data-type="${typeId()}">${html}${state.sheet === "share" ? shareSheet() : ""}</div>`;
   }
 
   function readOpen() {
@@ -576,9 +618,12 @@
         paidAnswers: {},
         paid: false,
         sheet: null,
-        seenCoach: false,
+        seenCoach: true,
+        slide: 0,
+        card: 0,
+        acc: "now",
       });
-      go("story");
+      go("page");
     } else if (act === "start-q" || act === "start-portion") startPortion();
     else if (act === "pick") {
       if (state.screen === "paid-q") state.paidAnswers[btn.dataset.id] = isNaN(btn.dataset.val) ? btn.dataset.val : Number(btn.dataset.val);
@@ -618,6 +663,36 @@
     else if (act === "paid-report") go("paid-report");
     else if (act === "dismiss-coach") {
       state.seenCoach = true;
+      save();
+      render();
+    } else if (act === "set-type") {
+      const id = btn.dataset.typeSet;
+      localStorage.setItem(TYPE_KEY, id);
+      const meta = window.KO_TYPES.list.find((t) => t.id === id);
+      if (meta) localStorage.setItem(THEME_KEY, meta.theme);
+      state.slide = 0;
+      state.card = 0;
+      state.acc = "now";
+      if (state.screen !== "welcome") go("page");
+      else render();
+    } else if (act === "slide-next") {
+      state.slide = (state.slide || 0) + 1;
+      save();
+      render();
+    } else if (act === "slide-prev") {
+      state.slide = Math.max(0, (state.slide || 0) - 1);
+      save();
+      render();
+    } else if (act === "deck-next") {
+      state.card = (state.card || 0) + 1;
+      save();
+      render();
+    } else if (act === "deck-prev") {
+      state.card = Math.max(0, (state.card || 0) - 1);
+      save();
+      render();
+    } else if (act === "acc-open") {
+      state.acc = btn.dataset.acc;
       save();
       render();
     } else if (act === "set-theme") {

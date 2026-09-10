@@ -59,7 +59,7 @@ test("сначала идея страницы, поля — во втором �
 test("клавиатурный путь: имя, дата за строкой, отправка", () => {
   const path = focusable(card());
   assert.deepEqual(
-    path.map((node) => node.attrs["name"] ?? node.tag),
+    path.map((node) => node.attrs["name"] ?? node.attrs["type"] ?? node.tag),
     ["name", "summary", "birth", "submit"],
   );
   assert.ok(byClass(card(), "intro__optional").length === 1);

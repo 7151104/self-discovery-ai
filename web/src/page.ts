@@ -5,9 +5,11 @@
  * дерево, что витрина показывает, тесты читают строкой, а живой клиент
  * монтирует в DOM. Двух реализаций страницы нет.
  *
- * Порядок экрана — `docs/11-ui-page-spec.md`: шапка, крючок, карта, блоки,
- * порция или предложение, маршрут. Ожидание подменяет блок, который ещё
- * пишется. Пауза «собираю» стоит на месте порции.
+ * Порядок экрана — `docs/11-ui-page-spec.md`. Заполненная страница (`s1` и
+ * дальше): шапка, крючок, карта, блоки, порция или предложение, маршрут.
+ * На `s0` работа — вопрос: порция сразу под шапкой, пустые крючок и карта
+ * ниже. Ожидание подменяет блок, который ещё пишется. Пауза «собираю»
+ * стоит на месте порции.
  *
  * До E7 функция жила в витрине (`web/showcase/page.ts`). Переезд — решение
  * из журнала: витрина не начинала каркас, а E7 подключает ту же сборку
@@ -267,23 +269,20 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
   ];
   if (options.notice) children.push(...renderNotices(options.notice));
 
-  children.push(
-    h(
-      "div",
-      { class: "page__portrait" },
-      page.hook ? renderHook(page.hook) : renderHook(labels.head.emptyHook, { empty: true }),
-      renderMap({
-        bars: page.map,
-        label: labels.map.label,
-        note: labels.map.note,
-        zoneLabel: labels.map.zoneLabel,
-        fillLabels: labels.map.fillLabels,
-        animated: options.seenBars,
-      }),
-    ),
+  const portrait = h(
+    "div",
+    { class: "page__portrait" },
+    page.hook ? renderHook(page.hook) : renderHook(labels.head.emptyHook, { empty: true }),
+    renderMap({
+      bars: page.map,
+      label: labels.map.label,
+      note: labels.map.note,
+      zoneLabel: labels.map.zoneLabel,
+      fillLabels: labels.map.fillLabels,
+      animated: options.seenBars,
+    }),
   );
-
-  if (options.sharePanel) children.push(renderSharePanel(options.sharePanel));
+  const share = options.sharePanel ? renderSharePanel(options.sharePanel) : null;
 
   const readingBlocks = orderedBlocks(visibleBlocks);
   const shareHostId = [...readingBlocks]
@@ -356,18 +355,18 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     );
   }
 
-  if (owner || readingBlocks.length > 0) {
-    children.push(
-      h(
-        "section",
-        { class: "reading", "data-empty": readingBlocks.length === 0 ? "true" : "false" },
-        ...readingChildren,
-      ),
-    );
-  }
+  const reading =
+    owner || readingBlocks.length > 0
+      ? h(
+          "section",
+          { class: "reading", "data-empty": readingBlocks.length === 0 ? "true" : "false" },
+          ...readingChildren,
+        )
+      : null;
 
+  const workbench: VNode[] = [];
   if (options.collecting === true) {
-    children.push(
+    workbench.push(
       renderWait({
         title: labels.wait.collecting,
         kind: "collecting",
@@ -376,7 +375,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     );
   } else if (page.nextPortion !== null && page.nextPortion.questions.length > 0) {
     const current = currentQuestion(page.nextPortion, options.portionIndex);
-    children.push(
+    workbench.push(
       renderPortion({
         id: page.nextPortion.key,
         question: current.question,
@@ -391,7 +390,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     );
   } else if ((page.clarifications?.questions.length ?? 0) > 0) {
     const items = page.clarifications?.questions ?? [];
-    children.push(
+    workbench.push(
       h(
         "section",
         {
@@ -403,7 +402,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       ),
     );
   } else if (!waiting && page.offer !== null && options.publicView !== true) {
-    children.push(
+    workbench.push(
       renderOffer({
         offer: page.offer,
         labels: labels.offer,
@@ -413,8 +412,9 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
     );
   }
 
+  const afterWorkbench: VNode[] = [];
   if (showContactCard && labels.contact) {
-    children.push(
+    afterWorkbench.push(
       renderContactCard({
         labels: labels.contact,
         values: options.contactValues,
@@ -425,11 +425,11 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       }),
     );
   } else if (owner && contactStatus === "saved" && labels.contact) {
-    children.push(h("p", { class: "contact__saved", "data-screen": "contact-saved" }, labels.contact.saved));
+    afterWorkbench.push(h("p", { class: "contact__saved", "data-screen": "contact-saved" }, labels.contact.saved));
   }
 
   if (page.doors.length > 0 && options.publicView !== true) {
-    children.push(
+    afterWorkbench.push(
       renderRoute({
         doors: page.doors,
         context: routeContext(page),
@@ -443,7 +443,7 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
   }
 
   if (options.publicView === true && labels.public) {
-    children.push(
+    afterWorkbench.push(
       h(
         "div",
         { class: "page__own" },
@@ -452,6 +452,11 @@ export function renderPersonalPage(page: PageStateDto, labels: PageViewLabels, o
       ),
     );
   }
+
+  const cabinet = [portrait, share, reading].filter((node): node is VNode => node !== null);
+  if (page.state === "s0") children.push(...workbench, ...cabinet);
+  else children.push(...cabinet, ...workbench);
+  children.push(...afterWorkbench);
 
   return h(
     "div",

@@ -64,10 +64,18 @@ button {
   padding-bottom: var(--space-7);
 }
 
+.page[data-page="s0"] {
+  gap: var(--space-4);
+}
+
 .page__portrait {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.page[data-page="s0"] .page__portrait {
+  gap: var(--space-2);
 }
 
 .section-title {

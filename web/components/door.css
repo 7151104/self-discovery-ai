@@ -156,6 +156,15 @@
   border-color: var(--color-line);
 }
 
+/* На s0 маршрут — опись дверей под работой, не витрина карточек. */
+.page[data-page="s0"] .door[data-state="opens_with_answers"] .door__face {
+  padding: var(--space-2) 0;
+  border-style: none;
+  border-bottom: var(--border-hair) solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
+}
+
 @media (hover: hover) {
   .door__face:not([data-static="true"]):hover {
     border-color: var(--color-text-soft);

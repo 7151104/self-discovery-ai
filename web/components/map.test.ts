@@ -64,6 +64,12 @@ test("у карты видимый заголовок, не только под�
   const node = map();
   assert.equal(node.tag, "section");
   assert.ok(visibleText(node).includes(mock.mapLabel));
+  assert.equal(node.attrs["data-empty"], "false");
+});
+
+test("когда все полосы пустые, карта помечается data-empty", () => {
+  const node = map(mock.emptyMapBars);
+  assert.equal(node.attrs["data-empty"], "true");
 });
 
 test("в разметке карты нет ни одной цифры и ни одного процента", () => {

@@ -4,7 +4,7 @@
 
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { findAll, renderToString, visibleText } from "./dom.js";
+import { findAll, isVNode, renderToString, visibleText, type Child, type VNode } from "./dom.js";
 import { byClass, tokenPixels } from "./test-support.js";
 import { copy } from "./copy.js";
 import { filledBars, renderPersonalPage } from "./page.js";
@@ -16,6 +16,32 @@ import { BASE_VIEWPORT_HEIGHT_PX } from "../tokens/tokens.js";
 
 const draw = (key: keyof typeof pageStates, extra: Parameters<typeof renderPersonalPage>[2] = {}) =>
   renderPersonalPage(pageStates[key], viewLabels(pageStates[key]), extra);
+
+const classList = (node: VNode): string[] => String(node.attrs["class"] ?? "").split(/\s+/).filter(Boolean);
+
+function slotsOf(page: VNode): string[] {
+  const names: string[] = [];
+  const walk = (nodes: Child[]): void => {
+    for (const child of nodes) {
+      if (!isVNode(child)) continue;
+      const classes = classList(child);
+      if (classes.includes("page__portrait") || classes.includes("reading")) {
+        walk(child.children);
+        continue;
+      }
+      if (classes.includes("head")) names.push("head");
+      else if (classes.includes("hook")) names.push("hook");
+      else if (classes.includes("map")) names.push("map");
+      else if (classes.includes("portion")) names.push("portion");
+      else if (classes.includes("route")) names.push("route");
+      else if (classes.includes("wait")) names.push("wait");
+      else if (classes.includes("block")) names.push("block");
+      else if (classes.includes("offer")) names.push("offer");
+    }
+  };
+  walk(page.children);
+  return names;
+}
 
 test("после первой порции на странице карточка контакта, на входе её нет", () => {
   const s0 = draw("s0");
@@ -129,6 +155,15 @@ test("на s0 страница читается разделами, а не ст
   assert.equal(text.includes(copy("UI_HEAD_LINK_HINT", { ссылка: pageStates.s0.url })), false);
 });
 
+test("на s0 работа — вопрос: порция сразу под шапкой, пустые слоты ниже", () => {
+  const node = draw("s0");
+  assert.deepEqual(slotsOf(node), ["head", "portion", "hook", "map", "route"]);
+  assert.equal(byClass(node, "map")[0]?.attrs["data-empty"], "true");
+  const s1 = draw("s1");
+  assert.deepEqual(slotsOf(s1), ["head", "hook", "map", "block", "portion", "route"]);
+  assert.equal(byClass(s1, "map")[0]?.attrs["data-empty"], "false");
+});
+
 test("после первой порции шапка показывает ссылку на страницу", () => {
   const node = draw("s1");
   assert.ok(visibleText(node).includes(copy("UI_HEAD_LINK_HINT", { ссылка: pageStates.s1.url })));
@@ -209,6 +244,7 @@ test("пауза «собираю» стоит на месте порции", ()
   assert.equal(byClass(node, "portion").length, 0);
   assert.ok(byClass(node, "wait").some((item) => item.attrs["data-wait"] === "collecting"));
   assert.ok(visibleText(node).includes(copy("UI_WAIT_COLLECTING")));
+  assert.deepEqual(slotsOf(node), ["head", "wait", "hook", "map", "route"]);
 });
 
 test("пока сюжет пишется, предложение не показывается", () => {

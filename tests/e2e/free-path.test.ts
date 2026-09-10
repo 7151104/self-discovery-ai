@@ -156,6 +156,7 @@ test("бесплатный путь: ступени 0–4, полосы, бло�
         waiting,
         offer,
         portion: portion && !waiting && page.offer === null,
+        emptyCabinet: state === "s0",
       }),
       `${state}: порядок слотов [${slots.join(", ")}]`,
     );

@@ -1,41 +1,27 @@
 /*
- * Шапка и крючок. Крупный текст на странице ровно два: имя и крючок.
- * Больше ничего не претендует на размер — тон спокойный, не праздничный.
+ * Шапка и крючок. Крупный текст на заполненной странице — крючок.
+ * Имя в шапке спокойное: это кабинет, не афиша. Пустой крючок на s0 —
+ * подпись места, не заголовок.
  */
 
 .head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
+  gap: var(--space-1);
+  padding-top: var(--space-2);
 }
 
 .head__name {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: var(--text-lg);
   font-weight: var(--weight-strong);
   line-height: var(--leading-tight);
   color: var(--color-text-strong);
-  letter-spacing: -0.03em;
-}
-
-.page:not([data-page="s0"]) .head {
-  padding-top: var(--space-2);
-  gap: var(--space-1);
-}
-
-.page:not([data-page="s0"]) .head__name {
-  font-size: var(--text-lg);
   letter-spacing: -0.02em;
 }
 
-.page:not([data-page="s0"]) .head__theme,
-.page:not([data-page="s0"]) .head__metaphor {
-  font-size: var(--text-sm);
-}
-
 .head__theme {
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   line-height: var(--leading-snug);
   color: var(--color-text-soft);
 }
@@ -89,6 +75,11 @@
 }
 
 .hook[data-empty="true"] {
-  padding: var(--space-4) 0 var(--space-3);
+  font-family: var(--font-family);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  letter-spacing: 0;
+  line-height: var(--leading-snug);
+  padding: var(--space-2) 0;
   color: var(--color-text-soft);
 }

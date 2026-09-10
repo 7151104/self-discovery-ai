@@ -73,16 +73,31 @@ export function screenSlots(tree: Child, kit: Kit): string[] {
 /**
  * Ожидаемый порядок слотов на конкретном состоянии.
  *
- * Крючок всегда на месте: на `s0` это зарезервированная фраза, после первой
- * порции — настоящий. Ступень 4 в ожидании занимает место блока
- * слотом `wait`, а не `.block`. После готового сюжета порцию сменяет предложение.
+ * На `s0` работа — вопрос: порция (или пауза «собираю») сразу под шапкой,
+ * пустые крючок и карта ниже. С `s1` экран совпадает со схемой в `docs/11`:
+ * крючок, карта, блоки, порция или предложение, маршрут. Крючок всегда на
+ * месте: на `s0` это зарезервированная фраза, после первой порции — настоящий.
+ * Ступень 4 в ожидании занимает место блока слотом `wait`, а не `.block`.
+ * После готового сюжета порцию сменяет предложение.
  */
 export function expectedSlots(input: {
   blocks: string[];
   waiting: boolean;
   offer: boolean;
   portion: boolean;
+  emptyCabinet?: boolean;
 }): string[] {
+  if (input.emptyCabinet === true) {
+    const slots: string[] = ["head"];
+    if (input.portion) slots.push("portion");
+    else if (input.waiting) slots.push("wait");
+    slots.push("hook", "map");
+    for (const id of input.blocks) {
+      slots.push(input.waiting && id === "step4" ? "wait" : "block");
+    }
+    slots.push("route");
+    return slots;
+  }
   const slots: string[] = ["head", "hook", "map"];
   for (const id of input.blocks) {
     slots.push(input.waiting && id === "step4" ? "wait" : "block");

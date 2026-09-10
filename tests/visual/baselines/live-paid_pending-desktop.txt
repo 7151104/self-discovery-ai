@@ -1446,7 +1446,8 @@ h3 {
 
 html {
   -webkit-text-size-adjust: 100%;
-  color-scheme: light;
+  background-color: #f3e9dc;
+  color-scheme: only light;
   scroll-behavior: smooth;
 }
 

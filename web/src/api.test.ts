@@ -155,7 +155,7 @@ test("покупка возвращает адрес оплаты, а не то�
   if (!bought.ok) return;
   assert.match(bought.paymentUrl ?? "", /\/pay\/fake\//);
   assert.equal(bought.page.state, "s4");
-  assert.equal(bought.page.nextPortion?.key.startsWith("slice:"), false);
+  assert.equal(bought.page.nextPortion?.key?.startsWith("slice:") ?? false, false);
 
   const repeat = await purchase(page.profileId, slice, "client-buy-2", { fetch, origin: server.origin });
   assert.equal(repeat.ok, true);

@@ -198,7 +198,7 @@ test("кнопка покупки уводит на адрес оплаты пр
   assert.equal(host.assigned.length, 1, "клиент не ушёл на оплату");
   assert.match(host.assigned[0] ?? "", /\/pay\/fake\//);
   assert.equal(app.session().page?.state, "s4", "страница сама перешла в оплаченное");
-  assert.equal(app.session().page?.nextPortion?.key.startsWith("slice:"), false, "добор открылся до оплаты");
+  assert.equal(app.session().page?.nextPortion?.key?.startsWith("slice:") ?? false, false, "добор открылся до оплаты");
   assert.equal(byClass(app.tree(), "offer").length, 1, "предложение исчезло без оплаты");
   assert.equal(app.session().paymentFailed, false);
 

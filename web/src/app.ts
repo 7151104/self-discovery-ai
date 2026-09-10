@@ -388,10 +388,10 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
 
   const chrome = (view: VNode): VNode => {
     const product = disclaimersFor(disclaimerPlaces({ screen: session.screen, page: session.page }));
-    const footer = disclaimersFor(["подвал"]);
     const label = unfilledLabel();
     // Пометки состояния остаются на корне: подвал и дисклеймеры обрамляют
     // страницу, но не отменяют того, что на ней сейчас происходит.
+    // Подвал — ссылки на документы, не вторая печать тех же абзацев.
     const marks = Object.fromEntries(
       Object.entries(view.attrs).filter(([key]) => key.startsWith("data-")),
     );
@@ -401,7 +401,6 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       view,
       renderDisclaimerList({ items: product, unfilledLabel: label }),
       renderFooter({ heading: footerHeading(), links: footerLinks() }),
-      renderDisclaimerList({ items: footer, unfilledLabel: label }),
     );
   };
 

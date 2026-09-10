@@ -99,6 +99,11 @@ test("лестница: вход без даты, порции, карта 3→5
   assert.ok(byClass(app.tree(), "consent").length === 1);
   assert.equal(byClass(app.tree(), "consent")[0]?.attrs["data-consent"], "off");
   assert.equal(findAll(app.tree(), "dialog").length, 0);
+  const introIds = byClass(app.tree(), "disclaimer").map((node) => String(node.attrs["data-disclaimer"]));
+  assert.equal(new Set(introIds).size, introIds.length, `дисклеймер на входе повторяется: ${introIds.join(", ")}`);
+  assert.ok(introIds.includes("DISCLAIMER_NOT_MEDICAL"));
+  const medical = "не медицинская и не психологическая помощь";
+  assert.equal([...intro.matchAll(new RegExp(medical, "g"))].length, 1, "немедицинский дисклеймер напечатан дважды");
 
   await app.intro("Аня", null);
   assert.equal(app.session().screen, "intro", "без отметки профиль не создаётся");

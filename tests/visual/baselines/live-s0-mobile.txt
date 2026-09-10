@@ -18,12 +18,60 @@
     <p class="page__notice" data-edge="no-date" data-tone="rest">
       Дата не введена, поэтому карточки периода нет. На разбор это не влияет
     </p>
+    <section class="portion" data-index="0" data-kind="choice" data-portion="step:1" data-total="3">
+      <h2 class="section-title visually-hidden">
+        На этой странице
+      </h2>
+      <p class="portion__lead">
+        Три вопроса — и я скажу, как ты на самом деле работаешь.
+      </p>
+      <p aria-label="Вопрос 1 из 3 в этой порции" class="portion__progress" role="status">
+        <span aria-hidden="true" class="portion__dot" data-state="current"></span>
+        <span aria-hidden="true" class="portion__dot" data-state="rest"></span>
+        <span aria-hidden="true" class="portion__dot" data-state="rest"></span>
+      </p>
+      <div class="portion__choice">
+        <p class="portion__question">
+          Как выглядели по темпу твои последние три больших дела?
+        </p>
+        <div aria-label="Как выглядели по темпу твои последние три больших дела?" class="options" role="radiogroup">
+          <label class="option" data-state="rest" for="L1-A">
+            <input class="option__input" id="L1-A" name="L1" type="radio" value="A">
+            <span aria-hidden="true" class="option__mark"></span>
+            <span class="option__text">
+              ровно: примерно одинаково от начала до конца
+            </span>
+          </label>
+          <label class="option" data-state="rest" for="L1-B">
+            <input class="option__input" id="L1-B" name="L1" type="radio" value="B">
+            <span aria-hidden="true" class="option__mark"></span>
+            <span class="option__text">
+              рывками: то много и интенсивно, то провал
+            </span>
+          </label>
+          <label class="option" data-state="rest" for="L1-C">
+            <input class="option__input" id="L1-C" name="L1" type="radio" value="C">
+            <span aria-hidden="true" class="option__mark"></span>
+            <span class="option__text">
+              сильный старт, потом спад
+            </span>
+          </label>
+          <label class="option" data-state="rest" for="L1-D">
+            <input class="option__input" id="L1-D" name="L1" type="radio" value="D">
+            <span aria-hidden="true" class="option__mark"></span>
+            <span class="option__text">
+              долго раскачивался, ускорился к концу
+            </span>
+          </label>
+        </div>
+      </div>
+    </section>
     <div class="page__portrait">
       <p class="hook" data-empty="true">
         Крючок появится после первых трёх вопросов
       </p>
-      <section aria-label="Карта" class="map">
-        <p class="section-title visually-hidden">
+      <section aria-label="Карта" class="map" data-empty="true">
+        <p class="section-title">
           Карта
         </p>
         <p class="section-note">
@@ -236,54 +284,6 @@
       <p class="section-note">
         После первых трёх вопросов здесь появится текст — страница станет длиннее
       </p>
-    </section>
-    <section class="portion" data-index="0" data-kind="choice" data-portion="step:1" data-total="3">
-      <h2 class="section-title visually-hidden">
-        На этой странице
-      </h2>
-      <p class="portion__lead">
-        Три вопроса — и я скажу, как ты на самом деле работаешь.
-      </p>
-      <p aria-label="Вопрос 1 из 3 в этой порции" class="portion__progress" role="status">
-        <span aria-hidden="true" class="portion__dot" data-state="current"></span>
-        <span aria-hidden="true" class="portion__dot" data-state="rest"></span>
-        <span aria-hidden="true" class="portion__dot" data-state="rest"></span>
-      </p>
-      <div class="portion__choice">
-        <p class="portion__question">
-          Как выглядели по темпу твои последние три больших дела?
-        </p>
-        <div aria-label="Как выглядели по темпу твои последние три больших дела?" class="options" role="radiogroup">
-          <label class="option" data-state="rest" for="L1-A">
-            <input class="option__input" id="L1-A" name="L1" type="radio" value="A">
-            <span aria-hidden="true" class="option__mark"></span>
-            <span class="option__text">
-              ровно: примерно одинаково от начала до конца
-            </span>
-          </label>
-          <label class="option" data-state="rest" for="L1-B">
-            <input class="option__input" id="L1-B" name="L1" type="radio" value="B">
-            <span aria-hidden="true" class="option__mark"></span>
-            <span class="option__text">
-              рывками: то много и интенсивно, то провал
-            </span>
-          </label>
-          <label class="option" data-state="rest" for="L1-C">
-            <input class="option__input" id="L1-C" name="L1" type="radio" value="C">
-            <span aria-hidden="true" class="option__mark"></span>
-            <span class="option__text">
-              сильный старт, потом спад
-            </span>
-          </label>
-          <label class="option" data-state="rest" for="L1-D">
-            <input class="option__input" id="L1-D" name="L1" type="radio" value="D">
-            <span aria-hidden="true" class="option__mark"></span>
-            <span class="option__text">
-              долго раскачивался, ускорился к концу
-            </span>
-          </label>
-        </div>
-      </div>
     </section>
     <section aria-label="Маршрут" class="route">
       <h2 class="section-title">
@@ -570,8 +570,8 @@
 .head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 16px;
+  gap: 4px;
+  padding-top: 8px;
 }
 
 .head__brand {
@@ -587,9 +587,9 @@
 .head__name {
   color: #0d0b09;
   font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
-  font-size: 36px;
+  font-size: 20px;
   font-weight: 640;
-  letter-spacing: -0.48px;
+  letter-spacing: -0.32px;
   line-height: 1.25;
 }
 
@@ -607,7 +607,12 @@
 
 .hook[data-empty="true"] {
   color: #4c4136;
-  padding: 16px 0 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+  padding: 8px 0;
 }
 
 .map {
@@ -629,6 +634,27 @@
   list-style: none;
   margin: 0;
   padding: 16px;
+}
+
+.map[data-empty="true"] {
+  gap: 8px;
+}
+
+.map[data-empty="true"] .bar {
+  gap: 0;
+}
+
+.map[data-empty="true"] .bar__track,
+.map[data-empty="true"] .bar__dots {
+  display: none;
+}
+
+.map[data-empty="true"] .map__bars {
+  background: transparent;
+  border-style: none;
+  box-shadow: none;
+  gap: 0;
+  padding: 0;
 }
 
 .option {
@@ -748,14 +774,20 @@
   min-height: 100%;
 }
 
-.page:not([data-page="s0"]) .head {
-  gap: 4px;
-  padding-top: 8px;
+.page[data-page="s0"] {
+  gap: 16px;
 }
 
-.page:not([data-page="s0"]) .head__name {
-  font-size: 20px;
-  letter-spacing: -0.32px;
+.page[data-page="s0"] .door[data-state="opens_with_answers"] .door__face {
+  background: transparent;
+  border-bottom: 1px solid #c1ad93;
+  border-radius: 0;
+  border-style: none;
+  padding: 8px 0;
+}
+
+.page[data-page="s0"] .page__portrait {
+  gap: 8px;
 }
 
 .portion {

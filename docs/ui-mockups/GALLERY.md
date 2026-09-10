@@ -2,6 +2,11 @@
 
 Картинки в чате агента могут не открыться. Смотри их здесь, на GitHub.
 
+## Сейчас: цвет и UX глубже
+
+**[Шесть палитр одной страницы, без жёлтого](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/color-v2/GALLERY.md)**  
+100 правок: [`docs/14-ux-improvements.md`](../14-ux-improvements.md) · каркас: [`docs/13-page-ux-2026.md`](../13-page-ux-2026.md)
+
 ## 1 + 2 + 10, страница 2026
 
 **[Сейчас / лестница / одно 590 ₽](https://github.com/7151104/self-discovery-ai/blob/cursor/ui-mockups-ten-interfaces-e6f8/docs/ui-mockups/exploit-1210/GALLERY.md)**  

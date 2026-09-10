@@ -1,6 +1,6 @@
 # UI-концепты: 10 экранов
 
-**Смотреть:** [**1+2+10 страница 2026**](./exploit-1210/GALLERY.md) · [GALLERY.md](./GALLERY.md)
+**Смотреть:** [**шесть палитр, без жёлтого**](./color-v2/GALLERY.md) · [**1+2+10**](./exploit-1210/GALLERY.md) · [GALLERY.md](./GALLERY.md)
 
 Как устроена страница: [`docs/13-page-ux-2026.md`](../13-page-ux-2026.md) · живой прототип: [`prototype/`](../../prototype/)
 

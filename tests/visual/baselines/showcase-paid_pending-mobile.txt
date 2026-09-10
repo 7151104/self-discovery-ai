@@ -19,9 +19,9 @@
     <p class="head__metaphor">
       Как чтение книги, дочитанной до середины дважды
     </p>
-    <p class="head__link">
-      Страница живёт по ссылке /p/p-VITRINA. Сохрани её — вернёшься на то же место.
-    </p>
+    <a class="head__link" href="/p/p-VITRINA">
+      Страница живёт по этой ссылке. Сохрани её — вернёшься на то же место.
+    </a>
   </header>
   <div class="page__portrait">
     <p class="hook" data-empty="false">
@@ -823,10 +823,16 @@
 }
 
 .head__link {
-  color: #4c4136;
+  align-items: center;
+  color: #1a1612;
+  display: inline-flex;
   font-size: 14px;
   line-height: 1.4;
   max-width: 36ch;
+  min-height: 44px;
+  min-width: 44px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .head__logo {
@@ -1183,6 +1189,7 @@ h3 {
 
 html {
   -webkit-text-size-adjust: 100%;
+  color-scheme: light;
   scroll-behavior: smooth;
 }
 

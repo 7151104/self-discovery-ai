@@ -239,7 +239,7 @@ test("аборт во время fetch раскладывается как та�
 
 test("без usage токены оцениваются по длине, ключ в текст ошибки не попадает", async () => {
   const provider = new OpenRouterProvider({
-    apiKey: "super-secret-value",
+    apiKey: "probe-key",
     fetch: capturingFetch(() => jsonResponse(200, { choices: [{ message: { content: "абвг" } }] })).fetch,
   });
   const result = await provider.generate(REQUEST, new AbortController().signal);
@@ -247,12 +247,12 @@ test("без usage токены оцениваются по длине, ключ
   assert.equal(result.usage.outputTokens, 1);
   try {
     await new OpenRouterProvider({
-      apiKey: "super-secret-value",
+      apiKey: "probe-key",
       fetch: capturingFetch(() => jsonResponse(403, { error: { message: "nope" } })).fetch,
     }).generate(REQUEST, new AbortController().signal);
     assert.fail("ожидался отказ");
   } catch (error) {
     assert.ok(error instanceof GenerationError);
-    assert.equal(String(error).includes("super-secret-value"), false);
+    assert.equal(String(error).includes("probe-key"), false);
   }
 });

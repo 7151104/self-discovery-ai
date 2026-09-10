@@ -73,7 +73,7 @@ AI-сервис, который собирает портрет человека
 6. `content/step1-branches.md` + `step3-contradictions.md`
 7. `prompts/full-report-assembler.md`
 8. `examples/demo-report-output.md` — эталон качества
-9. `docs/11-daily-ritual-and-social.md` — если задача про возврат, привычку, сторис/рилсы
+9. Сначала `examples/signal-pitch/index.html` и `docs/12-pitch-plain.md`. Полная механика — `docs/11-daily-ritual-and-social.md`.
 
 ---
 

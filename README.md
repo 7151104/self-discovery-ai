@@ -8,7 +8,7 @@
 1. **Прочитай полностью:** [`AGENT-BOOTSTRAP.md`](./AGENT-BOOTSTRAP.md) — главный документ входа, правила работы, что не ломать.
 2. **Пойми систему:** [`docs/01-architecture.md`](./docs/01-architecture.md) → [`docs/02-coordinates.md`](./docs/02-coordinates.md) → [`docs/04-alignment-rules.md`](./docs/04-alignment-rules.md)
 3. **Пойми продукт:** [`docs/05-user-journey.md`](./docs/05-user-journey.md) → [`docs/07-monetization-route.md`](./docs/07-monetization-route.md)
-4. **Возврат каждый день и контент в соцсети:** [`docs/11-daily-ritual-and-social.md`](./docs/11-daily-ritual-and-social.md)
+4. **Возврат каждый день простыми словами:** [`examples/signal-pitch/index.html`](./examples/signal-pitch/index.html) → [`docs/12-pitch-plain.md`](./docs/12-pitch-plain.md) → [`docs/11-daily-ritual-and-social.md`](./docs/11-daily-ritual-and-social.md)
 5. **Контент и логика:** папка [`content/`](./content/) + [`prompts/`](./prompts/)
 6. **Пример качества:** [`examples/demo-person-answers.md`](./examples/demo-person-answers.md) + [`examples/demo-report-output.md`](./examples/demo-report-output.md) + [`examples/demo-week-signals.md`](./examples/demo-week-signals.md)
 
@@ -48,7 +48,9 @@
 └── examples/               ← демо для калибровки качества
     ├── demo-person-answers.md
     ├── demo-report-output.md
-    └── demo-week-signals.md
+    ├── demo-week-signals.md
+    ├── signal-life-cycles.md
+    └── signal-pitch/index.html     ← презентация идеи простым языком
 ```
 
 ## Ключевые решения (не пересматривать без запроса основателя)

@@ -41,17 +41,20 @@ AI-сервис, который собирает портрет человека
 | Маршрут и цены | `docs/07-monetization-route.md` | ✅ |
 | Юридика и безопасность | `docs/08-legal-safety.md` | ✅ |
 | Критерии валидации | `docs/09-validation.md` | ✅ |
-| Ежедневный ритуал + соц. артефакт | `docs/11-daily-ritual-and-social.md` | ✅ механика |
+| **Пилот (единственный активный шаг)** | `examples/pilot-go-to-market.md`, `docs/15-pilot-scene-fork.md` | ✅ запуск |
+| Банк развилок пилота | `content/pilot-scene-fork-bank.md` | ✅ 6 узлов × 4 сцены |
+| Ежедневный ритуал + соц. артефакт | `docs/11-daily-ritual-and-social.md` | ⏸ заморожено |
 | Полный банк 35+3 | `content/questions-full-bank.md` | ✅ |
 | Лестница 11+1 | `content/questions-ladder.md` | ✅ |
 | Правила скоринга | `content/scoring-rules.md` | ✅ |
 | Тексты ступени 0–4 | `content/step0`–`step4` | ✅ |
-| Банк Сигналов | `content/daily-signal-bank.md` | ✅ узлы лестницы; не все 16×сцены |
+| Банк Сигналов | `content/daily-signal-bank.md` | ⏸ заморожено |
 | Промпты LLM | `prompts/` | ✅ |
 | Демо-профиль и отчёт | `examples/` | ✅ |
 | Демо-неделя Сигналов | `examples/demo-week-signals.md` | ✅ |
-| Презентация простым языком | `examples/signal-pitch/index.html`, `docs/12-pitch-plain.md` | ✅ |
-| Три жизни пользователей | `examples/signal-life-cycles.md` | ✅ |
+| Go-to-market пилота | `examples/pilot-go-to-market.md` | ✅ |
+| Архив: 3 гипотезы | `examples/manual-return-test-protocol.md` | ⏸ |
+| Презентация простым языком | `examples/signal-pitch/index.html`, `docs/12-pitch-plain.md` | ✅ (не для пилота) |
 
 ## Что ещё НЕ готово
 

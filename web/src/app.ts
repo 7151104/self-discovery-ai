@@ -12,7 +12,8 @@ import { renderFooter } from "../components/footer.js";
 import { renderIntro } from "../components/intro.js";
 import { renderMissing } from "../components/missing.js";
 import type { SharePanelProps } from "../components/share-panel.js";
-import { countWords, SUBMIT_FROM_WORDS } from "../components/open-field.js";
+import { countWords, openDraftNeedsPaint, SUBMIT_FROM_WORDS } from "../components/open-field.js";
+import { numberSubmitReady } from "../components/portion.js";
 import { h, mount, type VNode } from "./dom.js";
 import type { AnswerInput, DisagreementKind, PageStateDto, QuestionDto } from "./contract.js";
 import {
@@ -602,7 +603,27 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       if (next.collecting) await finishPortion();
     },
     back: () => set(goBack(session)),
-    draft: (value) => set(setDraft(session, value)),
+    draft: (value) => {
+      const question = currentQuestion(session);
+      const next = setDraft(session, value);
+      if (question?.kind === "открытый") {
+        if (openDraftNeedsPaint(session.draft, value, openSubmitFrom(session))) {
+          set(next);
+          return;
+        }
+        session = next;
+        return;
+      }
+      if (question?.kind === "число") {
+        if (numberSubmitReady(session.draft, question) !== numberSubmitReady(value, question)) {
+          set(next);
+          return;
+        }
+        session = next;
+        return;
+      }
+      set(next);
+    },
     intro: async (name, birthDate) => {
       const trimmed = name.trim();
       if (trimmed.length === 0) {
@@ -701,7 +722,10 @@ export function createPageApp(host: AppHost, onChange?: () => void): PageApp {
       set(replacePage(session, result.page));
       watchIfNeeded(result.page);
     },
-    contactInput: (field, value) => set(setContactDraft(session, field, value)),
+    // Без перерисовки: поле уже содержит набранное, как на входе.
+    contactInput: (field, value) => {
+      session = setContactDraft(session, field, value);
+    },
     submitContact: async (value) => {
       const page = session.page;
       if (page === null || page.profileId.length === 0) return;
@@ -773,12 +797,46 @@ export function browserHost(): AppHost {
   };
 }
 
+/** После полной перерисовки возвращает фокус и каретку в поле ввода — иначе на телефоне падает клавиатура. */
+export function remountWithTextFocus(root: Element, tree: VNode): void {
+  const active = document.activeElement;
+  let field: HTMLTextAreaElement | HTMLInputElement | null = null;
+  let caretStart: number | null = null;
+  let caretEnd: number | null = null;
+
+  if (active instanceof HTMLTextAreaElement && active.classList.contains("field__input")) {
+    field = active;
+    caretStart = active.selectionStart;
+    caretEnd = active.selectionEnd;
+  } else if (active instanceof HTMLInputElement) {
+    if (active.classList.contains("portion__number-input") || active.classList.contains("contact__input")) {
+      field = active;
+      caretStart = active.selectionStart;
+      caretEnd = active.selectionEnd;
+    }
+  }
+
+  root.replaceChildren();
+  mount(tree, root);
+
+  if (field === null) return;
+  const next = field.id.length > 0 ? document.getElementById(field.id) : null;
+  if (next instanceof HTMLTextAreaElement && caretStart !== null && caretEnd !== null) {
+    next.focus();
+    next.setSelectionRange(caretStart, caretEnd);
+    return;
+  }
+  if (next instanceof HTMLInputElement) {
+    next.focus();
+    if (caretStart !== null && caretEnd !== null) next.setSelectionRange(caretStart, caretEnd);
+  }
+}
+
 const root = typeof document === "undefined" ? null : document.querySelector("#app");
 if (root !== null) {
   const host: AppHost = browserHost();
   const app = createPageApp(host, () => {
-    root.replaceChildren();
-    mount(app.tree(), root);
+    remountWithTextFocus(root, app.tree());
   });
   void app.start();
 }

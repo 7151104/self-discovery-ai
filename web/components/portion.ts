@@ -103,6 +103,14 @@ const numberValues = (value: PortionProps["value"], count: number): string[] => 
 const numberFilled = (parts: string[]): boolean =>
   parts.every((part) => part.trim() !== "" && Number.isFinite(Number(part.replace(",", ".").trim())));
 
+/** Меняется ли доступность кнопки «дальше» — единственное, что требует перерисовки при наборе числа. */
+export function numberSubmitReady(value: string | null | undefined, question: QuestionDto): boolean {
+  const fields = numberFields(question);
+  const parts = (value ?? "").split(",").map((part) => part.trim());
+  const values = Array.from({ length: fields.length }, (_, index) => parts[index] ?? "");
+  return numberFilled(values);
+}
+
 function renderNumber(props: PortionProps): VNode {
   const fields = numberFields(props.question);
   const values = numberValues(props.value, fields.length);

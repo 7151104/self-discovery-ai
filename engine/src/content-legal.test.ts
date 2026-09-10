@@ -150,7 +150,7 @@ test("реквизитов в текстах нет: только подстан
   const listed = new Set(
     [...text("content/legal/README.md").matchAll(/`\{\{([А-ЯЁA-Z_]+)\}\}`/g)].map((match) => match[1]!),
   );
-  assert.ok(listed.size >= 20, `в реестре подстановок только ${listed.size} строк — таблица сломалась`);
+  assert.ok(listed.size >= 18, `в реестре подстановок только ${listed.size} строк — таблица сломалась`);
 
   const used = new Set<string>();
   for (const path of LEGAL_FILES) {

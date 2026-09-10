@@ -292,6 +292,7 @@ test("настройки читаются из окружения, ключа в
   assert.equal(tuned.retry.attempts, 1);
   assert.equal(tuned.pricing.inputKopecksPerMillion, 3000);
 
+  assert.equal(loadLlmConfig({ SDAI_LLM_PROVIDER: "openrouter" }).provider, "openrouter");
   assert.throws(() => loadLlmConfig({ SDAI_LLM_PROVIDER: "неизвестный" }), LlmConfigError);
   assert.throws(() => loadLlmConfig({ SDAI_LLM_ATTEMPTS: "0" }), LlmConfigError);
   assert.throws(() => loadLlmConfig({ SDAI_LLM_TIMEOUT_MS: "-1" }), LlmConfigError);

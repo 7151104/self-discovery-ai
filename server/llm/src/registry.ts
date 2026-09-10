@@ -1,20 +1,25 @@
 /**
- * Реестр провайдеров генерации (E4-12).
+ * Реестр провайдеров генерации (E4-12, вопрос 5).
  *
- * Здесь пока одна рабочая запись — заглушка. Поддельный провайдер с ходами
+ * Рабочие записи: `stub` — заглушка для тестов и локального контура без ключа;
+ * `openrouter` — Claude Sonnet 5 через OpenRouter. Поддельный провайдер с ходами
  * (`FakeProvider`) в реестр не входит: ему нужны заготовленные ответы, и его
- * собирают тесты напрямую. Когда основатель назовёт настоящую модель, сюда
- * добавится вторая строка и рядом появится модуль адаптера. Больше нигде
- * имени провайдера нет — смена реализации не требует правок вне `server/llm/`.
+ * собирают тесты напрямую. Смена модели — переменная `SDAI_LLM_MODEL`, не новый
+ * модуль. Больше нигде имени провайдера нет.
  */
 
 import type { TokenPricing } from "./provider.js";
 import type { GenerationProvider } from "./provider.js";
+import { createOpenRouterProvider } from "./openrouter-provider.js";
 import { StubProvider } from "./stub-provider.js";
 
 export interface ProviderFactoryInput {
   pricing: TokenPricing;
   model: string;
+  /** Пусто у заглушки. У OpenRouter пустой ключ — отказ собрать провайдера. */
+  apiKey?: string;
+  /** Подменяется в тестах адаптера. В рабочем контуре не передаётся. */
+  fetch?: typeof fetch;
 }
 
 type Factory = (input: ProviderFactoryInput) => GenerationProvider;
@@ -24,6 +29,13 @@ const FACTORIES = {
     new StubProvider({
       pricing: input.pricing,
       ...(input.model ? { model: input.model } : {}),
+    }),
+  openrouter: (input: ProviderFactoryInput) =>
+    createOpenRouterProvider({
+      apiKey: input.apiKey ?? "",
+      model: input.model,
+      pricing: input.pricing,
+      ...(input.fetch ? { fetch: input.fetch } : {}),
     }),
 } as const;
 

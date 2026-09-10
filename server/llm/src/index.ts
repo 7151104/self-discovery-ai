@@ -36,6 +36,15 @@ export {
   type ProviderName,
 } from "./registry.js";
 
+export {
+  DEFAULT_OPENROUTER_MODEL,
+  MissingLlmApiKey,
+  OPENROUTER_DEFAULT_PRICING,
+  OpenRouterProvider,
+  createOpenRouterProvider,
+  type OpenRouterProviderOptions,
+} from "./openrouter-provider.js";
+
 export { envelope, GOOD_TEXT, DEMO_ANSWERS, DEMO_PERSON, textOfVolume, sliceEnvelope } from "./fixtures.js";
 
 export {

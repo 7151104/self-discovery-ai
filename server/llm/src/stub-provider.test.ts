@@ -35,7 +35,7 @@ const OTHER_OPEN =
   "причину отложить и возвращаюсь к нему через несколько недель уже без всякого желания";
 
 test("реестр поднимает заглушку и отказывается от неизвестного имени", () => {
-  assert.deepEqual(knownLlmProviders(), ["stub"]);
+  assert.deepEqual(knownLlmProviders(), ["stub", "openrouter"]);
   const provider = createGenerationProvider({
     provider: "stub",
     pricing: { inputKopecksPerMillion: 0, outputKopecksPerMillion: 0 },

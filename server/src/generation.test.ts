@@ -9,14 +9,25 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { answering, DEMO_ANSWERS, envelope, FakeProvider, sliceEnvelope, textOfVolume, volumeOf, reportTypeOfSlice } from "../llm/dist/index.js";
+import {
+  answering,
+  DEMO_ANSWERS,
+  DEFAULT_OPENROUTER_MODEL,
+  envelope,
+  FakeProvider,
+  MissingLlmApiKey,
+  sliceEnvelope,
+  textOfVolume,
+  volumeOf,
+  reportTypeOfSlice,
+} from "../llm/dist/index.js";
 import type { AnswerInput, GenerationResponse, PageStateDto, PortionDto } from "./contract/index.js";
 import { rawContent, rawExtraContent } from "./engine.js";
 import { sliceAnswers, textLonger } from "../../engine/dist/slice-fixtures.js";
 import { buildKeyring } from "./db/crypto.js";
 import { up } from "./db/migrate.js";
 import { openDatabase } from "./db/sqlite.js";
-import { crisisGate, enqueueStep4 } from "./generation.js";
+import { createLlmRuntime, crisisGate, enqueueStep4 } from "./generation.js";
 import { setLogSink } from "./log.js";
 import { parseSliceQuestionId } from "./page.js";
 import {
@@ -43,6 +54,23 @@ const LLM_FAST = {
 
 /** Цена такая, чтобы в журнале была ненулевая сумма и потолок её не резал. */
 const PRICE = { inputKopecksPerMillion: 10_000, outputKopecksPerMillion: 10_000 };
+
+test("рантайм передаёт ключ в реестр и по умолчанию остаётся на заглушке", () => {
+  const stub = createLlmRuntime({ env: {}, autostart: false });
+  assert.equal(stub.provider.id, "stub");
+
+  assert.throws(
+    () => createLlmRuntime({ env: { SDAI_LLM_PROVIDER: "openrouter" }, autostart: false }),
+    MissingLlmApiKey,
+  );
+
+  const live = createLlmRuntime({
+    env: { SDAI_LLM_PROVIDER: "openrouter", SDAI_LLM_API_KEY: "test-key" },
+    autostart: false,
+  });
+  assert.equal(live.provider.id, "openrouter");
+  assert.equal(live.provider.model, DEFAULT_OPENROUTER_MODEL);
+});
 
 function demoAnswersForStep(step: 1 | 2 | 3 | 4): AnswerInput[] {
   return rawContent.questions

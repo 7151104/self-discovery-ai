@@ -65,6 +65,25 @@ test("после ответа фокус на первом контроле но
   const before = focused.length;
   app.draft("x");
   assert.equal(focused.length, before, "черновик не должен сдвигать фокус");
+
+  const openPage = pageStates.s3;
+  let paints = 0;
+  const draftHost: AppHost = {
+    location: { pathname: `/p/${openPage.profileId}` },
+    fetch: async () =>
+      new Response(JSON.stringify(openPage), { status: 200, headers: { "content-type": "application/json" } }),
+    motion: reducedMotion(),
+  };
+  const draftApp = createPageApp(draftHost, () => {
+    paints += 1;
+  });
+  t.after(() => draftApp.stop());
+  await draftApp.start();
+  paints = 0;
+  draftApp.draft("п");
+  draftApp.draft("пр");
+  draftApp.draft("про");
+  assert.equal(paints, 0, "набор внутри одного слова не перерисовывает страницу");
 });
 
 test("селектор первого контроля не меняет порядок Tab: это querySelector, не перестановка дерева", () => {

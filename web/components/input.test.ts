@@ -10,7 +10,14 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { renderOption, renderOptions, optionState } from "./option.js";
 import { renderScale, SCALE_VALUES } from "./scale.js";
-import { COUNTER_FROM_WORDS, SUBMIT_FROM_WORDS, countWords, openFieldState, renderOpenField } from "./open-field.js";
+import {
+  COUNTER_FROM_WORDS,
+  SUBMIT_FROM_WORDS,
+  countWords,
+  openDraftNeedsPaint,
+  openFieldState,
+  renderOpenField,
+} from "./open-field.js";
 import { findAll, renderToString, visibleText } from "../src/dom.js";
 import * as mock from "../showcase/mocks.js";
 import { join } from "node:path";
@@ -127,6 +134,19 @@ test("кнопка включается ровно от пятнадцати с�
   assert.equal(fourteen.submitEnabled, false);
   const fifteen = openFieldState(Array.from({ length: SUBMIT_FROM_WORDS }, () => "слово").join(" "));
   assert.equal(fifteen.submitEnabled, true);
+});
+
+test("черновик не требует перерисовки, пока не меняется видимая часть поля", () => {
+  assert.equal(openDraftNeedsPaint("", "п"), false);
+  assert.equal(openDraftNeedsPaint("раз два три четы", "раз два три четыр"), false);
+  assert.equal(openDraftNeedsPaint("раз два три четыре", "раз два три четыре п"), true);
+  assert.equal(
+    openDraftNeedsPaint(
+      Array.from({ length: SUBMIT_FROM_WORDS - 1 }, () => "слово").join(" "),
+      Array.from({ length: SUBMIT_FROM_WORDS }, () => "слово").join(" "),
+    ),
+    true,
+  );
 });
 
 test("на доборе среза кнопка включается с одного слова", () => {

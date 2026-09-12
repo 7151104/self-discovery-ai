@@ -37,6 +37,16 @@ export function openFieldState(text: string, submitFrom: number = SUBMIT_FROM_WO
   };
 }
 
+/** Нужна ли перерисовка при черновике: иначе textarea пересоздаётся и на телефоне падает клавиатура. */
+export function openDraftNeedsPaint(before: string, after: string, submitFrom: number = SUBMIT_FROM_WORDS): boolean {
+  const prev = openFieldState(before, submitFrom);
+  const next = openFieldState(after, submitFrom);
+  if (prev.counterVisible !== next.counterVisible) return true;
+  if (prev.submitEnabled !== next.submitEnabled) return true;
+  if (next.counterVisible && prev.words !== next.words) return true;
+  return false;
+}
+
 export interface OpenFieldProps {
   id: string;
   /** Текст вопроса. */
